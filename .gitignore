@@ -1,0 +1,29 @@
+# ============================================
+# PROJEYE ÖZEL
+# ============================================
+
+# GitClean Archiver Pro
+GitCleanArchiverPro.spec
+project_health_report.json
+*.pyc
+.eggs/
+
+# Sanal ortam
+venv/
+.venv/
+ENV/
+env/
+
+# Build çıktıları
+dist/
+build/
+installer/
+
+# Test coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# IDE ayarları (projeye özel)
+.vscode/settings.json
+.idea/workspace.xml
