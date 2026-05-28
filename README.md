@@ -89,30 +89,6 @@
 
 ---
 
-## 🖼️ Ekran Görüntüleri
-
-### Ana Dashboard
-```
-┌─────────────────────────────────────────────────────────────┐
-│  📁 Proje Aç                          🌓 Tema    🔍 Analiz  │
-├────────────┬────────────────────────────────────────────────┤
-│ 📂 Proje   │  📊 Proje Dashboard                            │
-│ Gezgini    │                                                │
-│            │  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐      │
-│ Proje Adı  │  │ 234  │  │45 MB │  │ 12   │  │  5   │      │
-│            │  │Dosya │  │Boyut │  │Klasör│  │Sorun │      │
-│ 🏥 72     │  └──────┘  └──────┘  └──────┘  └──────┘      │
-│   B+      │                                                │
-│            │  📈 Dosya Türleri    💡 Öneriler              │
-│ ⚡ Hızlı   │  [Pasta Grafiği]     1. Büyük dosyalar...     │
-│   İşlemler│                       2. Çift dosyalar...      │
-│            │  ⚡ Hızlı İşlemler                             │
-│ 🔍 Analiz  │  [🧹 Temizle] [📦 Zip] [📋 Kopyala]          │
-│ 🧹 Temizle │  ████████████░░░░ %72                         │
-│ 📦 Zip     │                                                │
-└────────────┴────────────────────────────────────────────────┘
-```
-
 ---
 
 ## 🏗️ Mimari Yapı
@@ -534,24 +510,3 @@ build_exe.bat
 
 ---
 
-## 📄 Lisans
-
-MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
-
----
-
-## 👨‍💻 Geliştirici
-
-**GitClean Team**
-
----
-
-## 🔗 Bağlantılar
-
-- [GitHub](https://github.com/gitclean/archiver-pro)
-- [Hata Bildirimi](https://github.com/gitclean/archiver-pro/issues)
-- [Wiki](https://github.com/gitclean/archiver-pro/wiki)
-
----
-
-**GitClean Archiver Pro** - Projelerinizi profesyonelce yönetin! 🚀
