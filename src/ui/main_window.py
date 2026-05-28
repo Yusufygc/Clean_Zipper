@@ -3,7 +3,7 @@ from pathlib import Path
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFrame, QTabWidget, QLineEdit, QTextEdit,
-    QFileDialog, QMessageBox, QSizePolicy
+    QFileDialog, QMessageBox, QSizePolicy, QComboBox
 )
 from PySide6.QtCore import Qt, QThread, Signal
 
@@ -14,6 +14,11 @@ from src.analyzers.type_analyzer import TypeAnalyzer
 from src.analyzers.duplicate_finder import DuplicateFinder
 from src.analyzers.empty_folder_finder import EmptyFolderFinder
 from src.analyzers.structure_analyzer import StructureAnalyzer
+
+# Aktif analizörlerin sisteme import edilmesi
+from src.analyzers.security_analyzer import SecurityLeakAnalyzer
+from src.analyzers.dead_weight_analyzer import DeadWeightAnalyzer
+from src.analyzers.code_complexity_analyzer import CodeComplexityAnalyzer
 
 
 # ================================================================== #
@@ -41,12 +46,13 @@ class ArchiveWorker(QThread):
     finished = Signal(dict)
     error = Signal(str)
 
-    def __init__(self, service: ProjectService, path: Path, output: Path, mode: str):
+    def __init__(self, service: ProjectService, path: Path, output: Path, mode: str, profile_name: str):
         super().__init__()
         self.service = service
         self.path = path
         self.output = output
         self.mode = mode
+        self.profile_name = profile_name
 
     def run(self):
         try:
@@ -56,11 +62,11 @@ class ArchiveWorker(QThread):
 
             if self.mode == "zip":
                 result = self.service.archive_service.create_zip(
-                    self.path, self.output, progress_callback=on_progress
+                    self.path, self.output, profile_name=self.profile_name, progress_callback=on_progress
                 )
             else:
                 result = self.service.archive_service.copy_project(
-                    self.path, self.output, progress_callback=on_progress
+                    self.path, self.output, profile_name=self.profile_name, progress_callback=on_progress
                 )
             self.finished.emit(result)
         except Exception as e:
@@ -100,10 +106,22 @@ class GitCleanArchiverPro(QMainWindow):
         self.resize(1280, 820)
         self.setMinimumSize(1050, 720)
 
-        # Setup services
+        # Servis kurulumu
         self.project_service = ProjectService()
-        for analyzer in [SizeAnalyzer(), TypeAnalyzer(),
-                         DuplicateFinder(), EmptyFolderFinder(), StructureAnalyzer()]:
+        
+        # Tüm aktif analizörlerin sisteme kaydedilmesi
+        active_analyzers = [
+            SizeAnalyzer(), 
+            TypeAnalyzer(),
+            DuplicateFinder(), 
+            EmptyFolderFinder(), 
+            StructureAnalyzer(),
+            SecurityLeakAnalyzer(),   # Güvenlik Sızıntısı Analizörü aktif
+            DeadWeightAnalyzer(),      # Ölü Kod ve Bağımlılık Analizörü aktif
+            CodeComplexityAnalyzer()   # Karmaşıklık ve Tasarım Desen Analizörü aktif
+        ]
+        
+        for analyzer in active_analyzers:
             self.project_service.doctor.register_analyzer(analyzer)
 
         self.current_project_path = None
@@ -113,7 +131,7 @@ class GitCleanArchiverPro(QMainWindow):
         self.archive_worker = None
         self.cleanup_worker = None
 
-        # Central widget and UI Layout
+        # Build Central Widget and UI Layout
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
         self.main_layout = QVBoxLayout(central_widget)
@@ -121,6 +139,8 @@ class GitCleanArchiverPro(QMainWindow):
         self.main_layout.setSpacing(0)
 
         self._build_ui(self.main_layout)
+
+        # Load QSS Style Sheet
         self._load_stylesheet()
 
     def _load_stylesheet(self):
@@ -139,6 +159,7 @@ class GitCleanArchiverPro(QMainWindow):
     def _build_ui(self, parent_layout):
         self._build_toolbar(parent_layout)
         
+        # Body frame containing sidebar + tabs
         body_frame = QFrame(self)
         body_frame.setStyleSheet("background: transparent;")
         body_layout = QHBoxLayout(body_frame)
@@ -172,47 +193,47 @@ class GitCleanArchiverPro(QMainWindow):
 
     def _build_sidebar(self, parent_layout):
         sb = QFrame(self)
-        sb.setFixedWidth(240)  # Uzun yolların rahat sığması için genişlik 240px yapıldı
-        sb.setObjectName("sidebar")  # style.qss dosyasındaki 'sidebar' stilini hedefler
+        sb.setFixedWidth(240) # Sidebar genişliği 240px yapılarak daha fazla alan tanındı
+        sb.setObjectName("sidebar") # style.qss targeting QFrame#sidebar
         
         layout = QVBoxLayout(sb)
         layout.setContentsMargins(16, 18, 16, 18)
         layout.setSpacing(12)
 
-        # Büyük, Bold ve Parlak "AKTİF PROJE" Başlığı
+        # Header Label (Aktif Proje başlığı)
         lbl_proj = QLabel("AKTİF PROJE", sb)
         lbl_proj.setStyleSheet("font-weight: 900; font-size: 15px; color: #0F172A; letter-spacing: 1px;")
         layout.addWidget(lbl_proj)
 
-        # Kurumsal İnce Bölücü Çizgi
+        # Divider
         div1 = QFrame(sb)
         div1.setFixedHeight(1)
         div1.setStyleSheet("background-color: #CBD5E1;")
         layout.addWidget(div1)
 
-        # Aktif Proje Adı (Klasör Adı)
+        # Project Name
         self._sidebar_name = QLabel("—", sb)
         self._sidebar_name.setStyleSheet("font-weight: 800; font-size: 14px; color: #0F172A;")
         self._sidebar_name.setWordWrap(True)
         layout.addWidget(self._sidebar_name)
 
-        # Proje Yolu (WordWrap aktif, seçilebilir ve stil bağlantılı)
+        # Project Path (Taşan kelimelerin kırılmasını sağlayan WordWrap ve Stil Bağlantısı)
         self._sidebar_path = QLabel("Henüz proje açılmadı.", sb)
-        self._sidebar_path.setObjectName("sidebar-path-label")  # style.qss'deki büyük ve parlak şablonu alır
+        self._sidebar_path.setObjectName("sidebar-path-label") # Bu nesne ismi style.qss'deki koyu ve büyük şablonu miras alır
         self._sidebar_path.setWordWrap(True)
         self._sidebar_path.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self._sidebar_path.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(self._sidebar_path)
 
-        # Bölücü Çizgi 2
+        # Divider 2
         div2 = QFrame(sb)
         div2.setFixedHeight(1)
         div2.setStyleSheet("background-color: #CBD5E1;")
         layout.addWidget(div2)
 
-        # Proje Seçme Butonu (Hayalet Mavi Stil)
+        # Open Project Button
         btn_open = QPushButton("Proje Dizini Aç", sb)
-        btn_open.setObjectName("btn-ghost")
+        btn_open.setObjectName("btn_ghost")
         btn_open.setFixedHeight(34)
         btn_open.clicked.connect(self._open_project)
         layout.addWidget(btn_open)
@@ -230,6 +251,10 @@ class GitCleanArchiverPro(QMainWindow):
         self.dashboard = DashboardPanel(self._tab_dash, doctor=self.project_service.doctor)
         self.dashboard.analyze_btn.clicked.connect(self._analyze)
         
+        # Raporu Dışa Aktar Butonunun tetikleyici metoduna bağlantı kurulması
+        self.dashboard.export_btn.clicked.connect(self._export_report)
+        
+        # Layout dashboard panel inside dashboard tab
         dash_lay = QVBoxLayout(self._tab_dash)
         dash_lay.setContentsMargins(0, 0, 0, 0)
         dash_lay.addWidget(self.dashboard)
@@ -253,16 +278,63 @@ class GitCleanArchiverPro(QMainWindow):
     def _build_archive_tab(self):
         layout = QVBoxLayout(self._tab_archive)
         layout.setContentsMargins(24, 20, 24, 20)
-        layout.setSpacing(16)
+        layout.setSpacing(14)
 
+        # Header Title
         title = QLabel("Proje Arşivleme ve Dağıtım", self._tab_archive)
         title.setStyleSheet("font-size: 16px; font-weight: 800; color: #0F172A;")
         layout.addWidget(title)
 
-        desc = QLabel(".gitignore kurallarına tam uyumlu ZIP paketi hazırlar veya temiz kopya dizini çıkarır.", self._tab_archive)
+        # Subtitle description
+        desc = QLabel(".gitignore kurallarına ve sıkıştırma profillerine uygun arşiv hazırlar veya temiz kopya çıkarır.", self._tab_archive)
         desc.setStyleSheet("font-size: 12px; font-weight: 500; color: #475569;")
         layout.addWidget(desc)
 
+        # Sıkıştırma Profil Yönetimi Seçim Paneli
+        profile_frame = QFrame(self._tab_archive)
+        profile_frame.setObjectName("card")
+        profile_frame.setStyleSheet("background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 6px;")
+        profile_layout = QHBoxLayout(profile_frame)
+        profile_layout.setContentsMargins(12, 10, 12, 10)
+        profile_layout.setSpacing(12)
+
+        profile_lbl = QLabel("Sıkıştırma Profili:", profile_frame)
+        profile_lbl.setStyleSheet("font-size: 12px; font-weight: 800; color: #0F172A;")
+        profile_layout.addWidget(profile_lbl)
+
+        self.profile_combo = QComboBox(profile_frame)
+        self.profile_combo.setFixedHeight(32)
+        self.profile_combo.setStyleSheet("""
+            QComboBox { 
+                background-color: #FFFFFF; 
+                border: 2px solid #94A3B8; 
+                border-radius: 4px; 
+                padding: 4px 10px;
+                font-weight: 700;
+                color: #0F172A;
+            }
+            QComboBox::drop-down { border: none; }
+        """)
+        
+        for p_name in self.project_service.archive_service.PROFILES.keys():
+            self.profile_combo.addItem(p_name)
+        profile_layout.addWidget(self.profile_combo, stretch=1)
+
+        self.profile_desc_lbl = QLabel("", profile_frame)
+        self.profile_desc_lbl.setStyleSheet("font-size: 11px; font-weight: 600; color: #475569;")
+        profile_layout.addWidget(self.profile_desc_lbl, stretch=2)
+        
+        def update_desc():
+            p_name = self.profile_combo.currentText()
+            p_info = self.project_service.archive_service.PROFILES.get(p_name, {})
+            self.profile_desc_lbl.setText(p_info.get("description", ""))
+            
+        self.profile_combo.currentTextChanged.connect(update_desc)
+        update_desc()
+        
+        layout.addWidget(profile_frame)
+
+        # Output folder row
         path_row = QHBoxLayout()
         path_row.setSpacing(10)
 
@@ -280,8 +352,10 @@ class GitCleanArchiverPro(QMainWindow):
         btn_browse.setFixedSize(80, 36)
         btn_browse.clicked.connect(self._browse_archive_path)
         path_row.addWidget(btn_browse)
+
         layout.addLayout(path_row)
 
+        # Button row: Zip & Copy
         btn_row = QHBoxLayout()
         btn_row.setSpacing(14)
 
@@ -291,7 +365,6 @@ class GitCleanArchiverPro(QMainWindow):
         btn_zip.setFixedHeight(40)
         btn_zip.clicked.connect(self._create_zip)
         btn_row.addWidget(btn_zip)
-    
 
         # Kopyalama Butonu -> Soluk Sarı (btn_paleyellow)
         btn_copy = QPushButton(" Temiz Dağıtım Kopyası Oluştur", self._tab_archive)
@@ -299,19 +372,23 @@ class GitCleanArchiverPro(QMainWindow):
         btn_copy.setFixedHeight(40)
         btn_copy.clicked.connect(self._create_copy)
         btn_row.addWidget(btn_copy)
+
         layout.addLayout(btn_row)
 
+        # Divider line
         div = QFrame(self._tab_archive)
         div.setFixedHeight(1)
         div.setStyleSheet("background-color: #E2E8F0;")
         layout.addWidget(div)
 
+        # Logging View
         log_lbl = QLabel("İşlem Raporlama Logu", self._tab_archive)
         log_lbl.setStyleSheet("font-size: 12px; font-weight: 800; color: #0F172A;")
         layout.addWidget(log_lbl)
 
         self.archive_log = QTextEdit(self._tab_archive)
         self.archive_log.setReadOnly(True)
+        self.archive_log.setPlainText("İşlem başlatıldığında sonuçlar burada görünür.")
         layout.addWidget(self.archive_log, stretch=1)
 
     # ── Cleanup Tab UI ──────────────────────────────────────────────── #
@@ -321,16 +398,17 @@ class GitCleanArchiverPro(QMainWindow):
         layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(16)
 
-        # Başlık bold, parlak ve büyük yapıldı
+        # Header Title
         title = QLabel("Proje Temizliği", self._tab_cleanup)
-        title.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;") 
+        title.setStyleSheet("font-size: 20px; font-weight: 800; color: #0F172A;")
         layout.addWidget(title)
 
-        # Açıklama fontu büyük ve rengi koyu yapıldı
+        # Subtitle description
         desc = QLabel("Geçici dosyaları, önbellek klasörlerini ve gereksiz artifact'ları siler.", self._tab_cleanup)
         desc.setStyleSheet("font-size: 13px; font-weight: 600; color: #334155;")
         layout.addWidget(desc)
 
+        # Button row: Preview & Cleanup
         btn_row = QHBoxLayout()
         btn_row.setSpacing(12)
 
@@ -349,12 +427,13 @@ class GitCleanArchiverPro(QMainWindow):
 
         layout.addLayout(btn_row)
 
+        # Divider line
         div = QFrame(self._tab_cleanup)
         div.setFixedHeight(1)
         div.setStyleSheet("background-color: #E2E8F0;")
         layout.addWidget(div)
 
-        # Önizleme / sonuç yazısı büyük bold ve parlak yapıldı
+        # Result View
         log_lbl = QLabel("Önizleme / Sonuç", self._tab_cleanup)
         log_lbl.setStyleSheet("font-size: 15px; font-weight: 800; color: #0F172A;")
         layout.addWidget(log_lbl)
@@ -391,32 +470,65 @@ class GitCleanArchiverPro(QMainWindow):
     def _set_status(self, text: str):
         self.statusBar().showMessage(text)
 
-   # 2. Uzun Yolların Taşmasını Önleyen Hücre Bölme Mantığı (_open_project metodu içi)
     def _open_project(self):
         d = QFileDialog.getExistingDirectory(self, "Proje Dizini Seçin", "")
         if not d:
             return
         
-        # DÜZELTME: Seçilen 'd' klasör yolunu nesne değişkenine atıyoruz ve servisi güncelliyoruz
         self.current_project_path = Path(d)
         self.project_service.set_project(self.current_project_path)
-        
-        # Seçilen yolun klasör adını yazdırır (Artık güvenli)
+
+        # Sidebar güncelleme
         self._sidebar_name.setText(self.current_project_path.name)
         
-        # Bilgisayardaki kesintisiz uzun dosya yollarının (\ veya _ karakterlerinden) 
-        # Qt QLabel tarafından algılanıp alt satıra katlanabilmesi için aralara 
-        # görünmez sıfır genişlikli boşluklar (\u200b) ekliyoruz:
+        # Dosya yolunu Qt'nin kelime sınırlarından katlayabilmesi için formatlıyoruz
         path_str = str(self.current_project_path)
-        formatted_path = (
-            path_str.replace('\\', '\\\u200b')
-                    .replace('/', '/\u200b')
-                    .replace('_', '_\u200b')
-                    .replace('-', '-\u200b')
-        )
+        formatted_path = path_str.replace('\\', '\\\u200b').replace('/', '/\u200b').replace('_', '_\u200b').replace('-', '-\u200b')
         self._sidebar_path.setText(formatted_path)
 
         self._analyze()
+
+    # ── YENİ: Sağlık Raporunu Dışa Aktarma Slotu ────────────────────── #
+    def _export_report(self):
+        if not self._require_project():
+            return
+        
+        # Rapor için varsayılan kurumsal dosya ismi üretiliyor
+        default_filename = f"{self.current_project_path.name}_saglik_raporu.html"
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Sağlık Raporunu Dışa Aktar",
+            default_filename,
+            "HTML Dosyası (*.html);;Tüm Dosyalar (*.*)"
+        )
+        if not path:
+            return
+
+        self._set_status("Kurumsal rapor üretiliyor…")
+        try:
+            # Analiz yapılıyor ve rapor HTML formatında diske yazılıyor
+            success = self.project_service.export_project_report(Path(path))
+            if success:
+                self._set_status("Rapor başarıyla kaydedildi.")
+                QMessageBox.information(
+                    self,
+                    "Rapor Başarılı",
+                    f"Kurumsal sağlık analizi ve kritik sorunlar raporu başarıyla kaydedildi:\n\n{path}"
+                )
+            else:
+                self._set_status("Rapor kaydedilemedi.")
+                QMessageBox.critical(
+                    self,
+                    "Hata",
+                    "Rapor dosyaya yazılırken bir yazma hatası oluştu."
+                )
+        except Exception as e:
+            self._set_status("Rapor dışa aktarma hatası.")
+            QMessageBox.critical(
+                self,
+                "Rapor Hatası",
+                f"Sistem analiz raporu oluşturulurken beklenmeyen bir hata meydana geldi:\n\n{str(e)}"
+            )
 
     # ── Background Scanning ─────────────────────────────────────────── #
 
@@ -424,6 +536,7 @@ class GitCleanArchiverPro(QMainWindow):
         if not self._require_project():
             return
         
+        # Prevent overlapping workers
         if self.analyze_worker and self.analyze_worker.isRunning():
             return
 
@@ -470,10 +583,14 @@ class GitCleanArchiverPro(QMainWindow):
             return
 
         output = self._get_archive_output(".zip")
-        self._set_status("ZIP oluşturuluyor…")
+        profile = self.profile_combo.currentText()
+        
+        self._set_status(f"ZIP oluşturuluyor ({profile})…")
         self.dashboard.progress_card.update_progress(5, "ZIP hazırlanıyor…")
 
-        self.archive_worker = ArchiveWorker(self.project_service, self.current_project_path, output, "zip")
+        self.archive_worker = ArchiveWorker(
+            self.project_service, self.current_project_path, output, "zip", profile_name=profile
+        )
         self.archive_worker.progress.connect(self._handle_archive_progress)
         self.archive_worker.finished.connect(lambda res: self._handle_archive_finished(res, output, "zip"))
         self.archive_worker.error.connect(self._handle_archive_error)
@@ -487,10 +604,14 @@ class GitCleanArchiverPro(QMainWindow):
             return
 
         output = self._get_archive_output("_clean")
-        self._set_status("Kopyalanıyor…")
+        profile = self.profile_combo.currentText()
+        
+        self._set_status(f"Kopyalanıyor ({profile})…")
         self.dashboard.progress_card.update_progress(5, "Kopyalama başlatılıyor…")
 
-        self.archive_worker = ArchiveWorker(self.project_service, self.current_project_path, output, "copy")
+        self.archive_worker = ArchiveWorker(
+            self.project_service, self.current_project_path, output, "copy", profile_name=profile
+        )
         self.archive_worker.progress.connect(self._handle_archive_progress)
         self.archive_worker.finished.connect(lambda res: self._handle_archive_finished(res, output, "copy"))
         self.archive_worker.error.connect(self._handle_archive_error)
@@ -511,9 +632,10 @@ class GitCleanArchiverPro(QMainWindow):
                 self,
                 "Başarılı",
                 f"İşlem başarıyla tamamlandı.\n\n"
-                f"Konum   : {output}\n"
-                f"Eklenen : {result.get('added_files', result.get('copied_files', 0))} dosya\n"
-                f"Atlanan : {result.get('skipped_files', 0)} dosya"
+                f"Seçilen Profil: {self.profile_combo.currentText()}\n"
+                f"Konum         : {output}\n"
+                f"Eklenen       : {result.get('added_files', result.get('copied_files', 0))} dosya\n"
+                f"Atlanan       : {result.get('skipped_files', 0)} dosya"
             )
         else:
             self._set_status("İşlem başarısız oldu.")
@@ -596,14 +718,15 @@ class GitCleanArchiverPro(QMainWindow):
     def _write_log(self, widget: QTextEdit, result: dict, output: Path, mode: str):
         sep = "─" * 50
         text = ""
+        profile_name = self.profile_combo.currentText()
         if mode == "zip":
-            text += f"ZIP İşlemi\n{sep}\n\n"
+            text += f"ZIP İşlemi ({profile_name} Profili)\n{sep}\n\n"
             text += f"Durum   : {'Başarılı' if result['success'] else 'Başarısız'}\n"
             text += f"Konum   : {output}\n"
             text += f"Eklenen : {result.get('added_files', 0)} dosya\n"
             text += f"Atlanan : {result.get('skipped_files', 0)} dosya\n"
         else:
-            text += f"Kopyalama İşlemi\n{sep}\n\n"
+            text += f"Kopyalama İşlemi ({profile_name} Profili)\n{sep}\n\n"
             text += f"Durum      : {'Başarılı' if result['success'] else 'Başarısız'}\n"
             text += f"Konum      : {output}\n"
             text += f"Kopyalanan : {result.get('copied_files', 0)} dosya\n"
