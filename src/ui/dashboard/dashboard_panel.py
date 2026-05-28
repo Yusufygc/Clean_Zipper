@@ -111,7 +111,7 @@ class DashboardPanel(QWidget):
         self.issues_layout.setAlignment(Qt.AlignTop)
         self.issues_scroll.setWidget(self.issues_container)
 
-        self.right_tabview.addTab(self.issues_scroll, "Kritik Sorunlar")
+        self.right_tabview.addTab(self.issues_scroll, "Tespit Edilen Sorunlar")
         layout.addWidget(self.right_tabview, stretch=1)
 
         parent_layout.addWidget(content_frame, stretch=1)
