@@ -77,14 +77,19 @@ def build_executable():
         print(f"[!] Info: '{icon_path}' not found. Building with default system icon.")
 
     # 5. Build parameters
+    version_info_path = root_dir / "version_info.txt"
     pyinstaller_args = [
         str(entry_point),
         "--name=GitCleanArchiverPro",
-        "--onedir",            # Directory distribution
-        "--windowed",          # Hide console window
-        "--clean",             # Clean cache
-        "--noconfirm"          # Do not ask confirmation
+        "--onefile",           # Tek dosya (dist klasörüne bağımlılığı kaldırır)
+        "--windowed",          # Konsol penceresini gizle
+        "--clean",             # Önbelleği temizle
+        "--noconfirm",         # Onay sorma
+        "--noupx"              # UPX sıkıştırmasını kapat (Virüs uyarısı riskini ciddi oranda düşürür)
     ]
+    
+    if version_info_path.exists():
+        pyinstaller_args.append(f"--version-file={version_info_path}")
 
     pyinstaller_args.extend(add_data_args)
     pyinstaller_args.extend(icon_args)
@@ -98,8 +103,8 @@ def build_executable():
         PyInstaller.__main__.run(pyinstaller_args)
         print("\n" + "=" * 60)
         print("[OK] BUILD COMPLETED SUCCESSFULLY!")
-        print(f"[*] Output Directory: {dist_dir / 'GitCleanArchiverPro'}")
-        print(f"[*] Executable File: {dist_dir / 'GitCleanArchiverPro' / 'GitCleanArchiverPro.exe'}")
+        print(f"[*] Output Directory: {dist_dir}")
+        print(f"[*] Executable File: {dist_dir / 'GitCleanArchiverPro.exe'}")
         print("=" * 60)
     except Exception as e:
         print(f"\n[X] Compilation failed: {e}")
