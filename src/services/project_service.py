@@ -36,3 +36,16 @@ class ProjectService:
         if not self._current_project:
             raise ValueError("Once bir proje secin!")
         return self.backup_service.create_backup(self._current_project, backup_name)
+
+    # ── YENİ: Kritik Sorunları ve Sağlık Analizini HTML Olarak Dışa Aktarma ──
+    def export_project_report(self, output_path: Path) -> bool:
+        if not self._current_project:
+            raise ValueError("Önce bir proje seçin!")
+        
+        # Tam teşekküllü teşhis analizi çalıştırılıyor
+        analysis = self.doctor.diagnose(self._current_project)
+        
+        # Raporlama servisi çağrılarak HTML raporu diske yazılıyor
+        from src.services.report_service import ReportService
+        reporter = ReportService()
+        return reporter.export_report(analysis, output_path)
