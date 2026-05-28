@@ -1,5 +1,15 @@
-﻿import sys
+import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
-from src.ui.main_window import main
-main()
+
+from PySide6.QtWidgets import QApplication
+from src.ui.main_window import GitCleanArchiverPro
+
+def main():
+    app = QApplication(sys.argv)
+    window = GitCleanArchiverPro()
+    window.show()
+    sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()
