@@ -1,9 +1,3 @@
-# 📚 GitClean Archiver Pro - Kapsamlı Dokümantasyon
-
-İşte projenin tamamını anlatan kapsamlı bir README.md dokümanı. Bunu proje kök dizinine kaydedin:
-
-```powershell
-@"
 # 🚀 GitClean Archiver Pro
 
 > **Profesyonel Proje Yönetim, Analiz ve Optimizasyon Aracı**
@@ -561,27 +555,3 @@ MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
 ---
 
 **GitClean Archiver Pro** - Projelerinizi profesyonelce yönetin! 🚀
-"@ | Out-File -FilePath "README.md" -Encoding UTF8
-
-Write-Host "✅ README.md olusturuldu!" -ForegroundColor Green
-Write-Host ""
-Write-Host "Dosya konumu: $(Get-Location)\README.md" -ForegroundColor Cyan
-```
-
----
-
-## ✅ **Dokümantasyon oluşturuldu!**
-
-Bu komutu PowerShell'de çalıştırın, proje kök dizininde kapsamlı bir `README.md` dosyası oluşturacaktır.
-
-Dokümantasyon şunları içerir:
-- 📋 Proje genel bakışı ve kullanım senaryoları
-- ✨ Tüm özelliklerin detaylı açıklaması
-- 🏗️ Mimari yapı ve veri akış diyagramı
-- 🔧 Adım adım kurulum kılavuzu
-- 📖 Kullanım kılavuzu
-- 📊 Sağlık skorlama sistemi detayları
-- 📚 Her modülün API referansı
-- 🧪 Geliştirme rehberi (yeni analizör ekleme)
-- 📦 Build ve dağıtım talimatları
-- ❓ Sık sorulan sorular
