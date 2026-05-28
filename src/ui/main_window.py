@@ -172,37 +172,47 @@ class GitCleanArchiverPro(QMainWindow):
 
     def _build_sidebar(self, parent_layout):
         sb = QFrame(self)
-        sb.setFixedWidth(220)
-        sb.setObjectName("sidebar") # style.qss targeting QFrame#sidebar
+        sb.setFixedWidth(240)  # Uzun yolların rahat sığması için genişlik 240px yapıldı
+        sb.setObjectName("sidebar")  # style.qss dosyasındaki 'sidebar' stilini hedefler
         
         layout = QVBoxLayout(sb)
         layout.setContentsMargins(16, 18, 16, 18)
         layout.setSpacing(12)
 
-        # "AKTİF PROJE" Başlığı (İstenen büyük ve bold yapı)
+        # Büyük, Bold ve Parlak "AKTİF PROJE" Başlığı
         lbl_proj = QLabel("AKTİF PROJE", sb)
         lbl_proj.setStyleSheet("font-weight: 900; font-size: 15px; color: #0F172A; letter-spacing: 1px;")
         layout.addWidget(lbl_proj)
 
+        # Kurumsal İnce Bölücü Çizgi
+        div1 = QFrame(sb)
+        div1.setFixedHeight(1)
+        div1.setStyleSheet("background-color: #CBD5E1;")
+        layout.addWidget(div1)
+
+        # Aktif Proje Adı (Klasör Adı)
         self._sidebar_name = QLabel("—", sb)
         self._sidebar_name.setStyleSheet("font-weight: 800; font-size: 14px; color: #0F172A;")
         self._sidebar_name.setWordWrap(True)
         layout.addWidget(self._sidebar_name)
 
-        # Proje Yolu (Taşarsa aşağı satıra kayacak wrap düzeni)
+        # Proje Yolu (WordWrap aktif, seçilebilir ve stil bağlantılı)
         self._sidebar_path = QLabel("Henüz proje açılmadı.", sb)
-        self._sidebar_path.setObjectName("sidebar-path-label") 
+        self._sidebar_path.setObjectName("sidebar-path-label")  # style.qss'deki büyük ve parlak şablonu alır
         self._sidebar_path.setWordWrap(True)
         self._sidebar_path.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self._sidebar_path.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(self._sidebar_path)
 
+        # Bölücü Çizgi 2
         div2 = QFrame(sb)
         div2.setFixedHeight(1)
         div2.setStyleSheet("background-color: #CBD5E1;")
         layout.addWidget(div2)
 
+        # Proje Seçme Butonu (Hayalet Mavi Stil)
         btn_open = QPushButton("Proje Dizini Aç", sb)
-        btn_open.setObjectName("btn_ghost")
+        btn_open.setObjectName("btn-ghost")
         btn_open.setFixedHeight(34)
         btn_open.clicked.connect(self._open_project)
         layout.addWidget(btn_open)
@@ -381,16 +391,30 @@ class GitCleanArchiverPro(QMainWindow):
     def _set_status(self, text: str):
         self.statusBar().showMessage(text)
 
+   # 2. Uzun Yolların Taşmasını Önleyen Hücre Bölme Mantığı (_open_project metodu içi)
     def _open_project(self):
         d = QFileDialog.getExistingDirectory(self, "Proje Dizini Seçin", "")
         if not d:
             return
         
+        # DÜZELTME: Seçilen 'd' klasör yolunu nesne değişkenine atıyoruz ve servisi güncelliyoruz
         self.current_project_path = Path(d)
         self.project_service.set_project(self.current_project_path)
-
+        
+        # Seçilen yolun klasör adını yazdırır (Artık güvenli)
         self._sidebar_name.setText(self.current_project_path.name)
-        self._sidebar_path.setText(str(self.current_project_path))
+        
+        # Bilgisayardaki kesintisiz uzun dosya yollarının (\ veya _ karakterlerinden) 
+        # Qt QLabel tarafından algılanıp alt satıra katlanabilmesi için aralara 
+        # görünmez sıfır genişlikli boşluklar (\u200b) ekliyoruz:
+        path_str = str(self.current_project_path)
+        formatted_path = (
+            path_str.replace('\\', '\\\u200b')
+                    .replace('/', '/\u200b')
+                    .replace('_', '_\u200b')
+                    .replace('-', '-\u200b')
+        )
+        self._sidebar_path.setText(formatted_path)
 
         self._analyze()
 
