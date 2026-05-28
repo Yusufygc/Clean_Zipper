@@ -302,7 +302,7 @@ QScrollBar::handle:vertical:hover {
 /* DIALOG VE MESAJ KUTULARI (QMessageBox)                            */
 /* ───────────────────────────────────────────────────────────────── */
 
-QMessageBox {
+QDialog, QMessageBox {
     background-color: #FFFFFF;
 }
 
