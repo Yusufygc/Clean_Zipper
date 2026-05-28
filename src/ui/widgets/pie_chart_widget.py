@@ -1,157 +1,161 @@
-import customtkinter as ctk
 import math
 from typing import Dict
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QFrame
+from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QPaintEvent
+from PySide6.QtCore import Qt, QRectF
 
-
-_CANVAS_BG   = "#EBEBEB"
-_TRACK_COLOR = "#D5D5D5"
-
-# Kurumsal, profesyonel renk paleti (light arka plan üstünde okunabilir)
 _SLICE_COLORS = [
-    "#1565C0",  # koyu mavi
-    "#2E7D32",  # koyu yeşil
-    "#6A1B9A",  # koyu mor
-    "#E65100",  # koyu turuncu
-    "#00838F",  # koyu camgöbeği
-    "#AD1457",  # koyu pembe
-    "#558B2F",  # zeytin yeşili
-    "#4527A0",  # derin mor
-    "#00695C",  # zümrüt
-    "#283593",  # lacivert
+    "#2563EB", "#16A34A", "#7C3AED", "#EA580C", "#06B6D4",
+    "#DB2777", "#4D7C0F", "#4338CA", "#0F766E", "#1E3A8A"
 ]
 
-
-class PieChartWidget(ctk.CTkFrame):
-    """Light tema uyumlu, legend'lı donut pasta grafik widget'ı."""
-
-    def __init__(self, parent, data: Dict[str, float] = None,
-                 title: str = "Dağılım", size: int = 200, **kwargs):
-        super().__init__(parent, fg_color="transparent", **kwargs)
-        self.data = data or {}
-        self.title = title
+class PieCanvas(QWidget):
+    def __init__(self, parent=None, size: int = 200):
+        super().__init__(parent)
         self.size = size
+        self.data_dict = {}
+        self.setFixedSize(size, size)
 
-        ctk.CTkLabel(
-            self, text=title,
-            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
-            text_color=("gray20", "gray80")
-        ).pack(pady=(8, 4))
+    def set_data(self, data: Dict[str, float]):
+        self.data_dict = data
+        self.update()
 
-        self.canvas = ctk.CTkCanvas(
-            self, width=size, height=size,
-            highlightthickness=0, bg=_CANVAS_BG
-        )
-        self.canvas.pack()
+    def paintEvent(self, event: QPaintEvent):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        self.legend_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.legend_frame.pack(fill="x", padx=10, pady=(6, 8))
-
-        if self.data:
-            self._draw_chart()
-
-    # ------------------------------------------------------------------ #
-
-    def _draw_chart(self):
-        self.canvas.delete("all")
-        if not self.data:
+        if not self.data_dict:
             return
 
-        total = sum(self.data.values())
+        total = sum(self.data_dict.values())
         if total == 0:
             return
 
         s = self.size
-        cx, cy   = s // 2, s // 2
-        r        = s // 2 - 12
-        inner_r  = r * 0.50
+        cx, cy = s / 2.0, s / 2.0
+        r = s / 2.0 - 12.0
+        inner_r = r * 0.55  # Donut boşluğu kurumsal oran
+
+        rect = QRectF(cx - r, cy - r, 2 * r, 2 * r)
+
+        # Net Çizgi Çeperi
+        painter.setPen(QPen(QColor("#E2E8F0"), 1))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(rect)
 
         start = 90.0
         slice_data = []
-        for i, (label, value) in enumerate(self.data.items()):
+        for i, (label, value) in enumerate(self.data_dict.items()):
             if value <= 0:
                 continue
             extent = (value / total) * 360.0
-            color  = _SLICE_COLORS[i % len(_SLICE_COLORS)]
+            color = _SLICE_COLORS[i % len(_SLICE_COLORS)]
             slice_data.append((label, value, extent, color))
 
-        # Dış çerçeve
-        self.canvas.create_oval(
-            cx - r - 1, cy - r - 1, cx + r + 1, cy + r + 1,
-            outline=_TRACK_COLOR, width=1, fill=""
-        )
-
         for label, value, extent, color in slice_data:
-            self.canvas.create_arc(
-                cx - r, cy - r, cx + r, cy + r,
-                start=start, extent=-extent,
-                fill=color, outline=_CANVAS_BG, width=2
-            )
-            # Yüzde etiketi (dilim yeterince büyükse)
-            pct = (value / total) * 100
+            painter.setPen(QPen(QColor("#FFFFFF"), 2))  # Dilimler arası beyaz kurumsal şerit
+            painter.setBrush(QBrush(QColor(color)))
+            painter.drawPie(rect, int(start * 16), int(-extent * 16))
+
+            pct = (value / total) * 100.0
             if pct > 8:
-                mid_angle = math.radians(start - extent / 2)
-                lx = cx + (r * 0.68) * math.cos(mid_angle)
-                ly = cy - (r * 0.68) * math.sin(mid_angle)
-                self.canvas.create_text(
-                    lx, ly,
-                    text=f"{pct:.0f}%",
-                    font=("Segoe UI", 8, "bold"),
-                    fill="white"
-                )
+                mid_angle = math.radians(start - extent / 2.0)
+                lx = cx + (r * 0.72) * math.cos(mid_angle)
+                ly = cy - (r * 0.72) * math.sin(mid_angle)
+
+                painter.setPen(QColor("#FFFFFF"))
+                painter.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+                painter.drawText(QRectF(lx - 20, ly - 8, 40, 16), Qt.AlignmentFlag.AlignCenter, f"{pct:.0f}%")
+
             start -= extent
 
-        # Donut deliği
-        self.canvas.create_oval(
-            cx - inner_r, cy - inner_r,
-            cx + inner_r, cy + inner_r,
-            fill=_CANVAS_BG, outline=_CANVAS_BG
-        )
+        # Donut Deliği - SAF BEYAZA BOYANDI (Light Tema Uyumu)
+        inner_rect = QRectF(cx - inner_r, cy - inner_r, 2 * inner_r, 2 * inner_r)
+        painter.setPen(QPen(QColor("#E2E8F0"), 1))
+        painter.setBrush(QBrush(QColor("#FFFFFF")))
+        painter.drawEllipse(inner_rect)
 
-        # Merkez: en büyük kategori etiketi
         if slice_data:
             top_label, top_val, _, top_color = max(slice_data, key=lambda x: x[1])
-            pct = (top_val / total) * 100
-            self.canvas.create_text(
-                cx, cy - 9,
-                text=f"{pct:.0f}%",
-                font=("Segoe UI", 12, "bold"),
-                fill=top_color
-            )
+            pct = (top_val / total) * 100.0
+
+            painter.setPen(QColor(top_color))
+            painter.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
+            painter.drawText(QRectF(cx - inner_r, cy - 14, 2 * inner_r, 18), Qt.AlignmentFlag.AlignCenter, f"{pct:.0f}%")
+
             short = top_label[:9] + "…" if len(top_label) > 9 else top_label
-            self.canvas.create_text(
-                cx, cy + 10,
-                text=short,
-                font=("Segoe UI", 8),
-                fill="#666666"
-            )
+            painter.setPen(QColor("#64748B"))
+            painter.setFont(QFont("Segoe UI", 9, QFont.Weight.Medium))
+            painter.drawText(QRectF(cx - inner_r, cy + 6, 2 * inner_r, 14), Qt.AlignmentFlag.AlignCenter, short)
 
-        self._build_legend(slice_data, total)
+class PieChartWidget(QWidget):
+    def __init__(self, parent=None, data: Dict[str, float] = None, title: str = "Dağılım", size: int = 210, **kwargs):
+        super().__init__(parent)
+        self.data = data or {}
+        self.title = title
+        self.size = size
 
-    def _build_legend(self, slice_data, total):
-        for w in self.legend_frame.winfo_children():
-            w.destroy()
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(8, 8, 8, 8)
+        self.layout.setSpacing(10)
 
-        grid = ctk.CTkFrame(self.legend_frame, fg_color="transparent")
-        grid.pack()
+        self.title_lbl = QLabel(self.title, self)
+        self.title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_lbl.setStyleSheet("font-weight: 700; font-size: 14px; color: #1E293B;")
+        self.layout.addWidget(self.title_lbl)
 
-        for i, (label, value, _, color) in enumerate(slice_data[:6]):
-            pct  = (value / total) * 100
-            cell = ctk.CTkFrame(grid, fg_color="transparent")
-            cell.grid(row=i // 2, column=i % 2, sticky="w", padx=4, pady=1)
+        self.canvas = PieCanvas(self, size=self.size)
+        self.layout.addWidget(self.canvas, alignment=Qt.AlignmentFlag.AlignCenter)
 
-            ctk.CTkFrame(
-                cell, width=10, height=10,
-                corner_radius=2, fg_color=color
-            ).pack(side="left", padx=(0, 4))
+        self.legend_widget = QWidget(self)
+        self.legend_layout = QGridLayout(self.legend_widget)
+        self.legend_layout.setContentsMargins(4, 4, 4, 4)
+        self.legend_layout.setHorizontalSpacing(16)
+        self.legend_layout.setVerticalSpacing(6)
+        self.layout.addWidget(self.legend_widget, alignment=Qt.AlignmentFlag.AlignCenter)
 
-            short = label[:11] + "…" if len(label) > 11 else label
-            ctk.CTkLabel(
-                cell,
-                text=f"{short}  {pct:.0f}%",
-                font=ctk.CTkFont(family="Segoe UI", size=10),
-                text_color="gray30"
-            ).pack(side="left")
+        if self.data:
+            self.update_data(self.data)
 
     def update_data(self, new_data: Dict[str, float]):
         self.data = new_data
-        self._draw_chart()
+        self.canvas.set_data(new_data)
+        self._build_legend()
+
+    def _build_legend(self):
+        while self.legend_layout.count():
+            item = self.legend_layout.takeAt(0)
+            widget = item.widget()
+            if widget: widget.deleteLater()
+
+        if not self.data: return
+        total = sum(self.data.values())
+        if total == 0: return
+
+        slice_data = []
+        for i, (label, value) in enumerate(self.data.items()):
+            if value <= 0: continue
+            color = _SLICE_COLORS[i % len(_SLICE_COLORS)]
+            slice_data.append((label, value, color))
+
+        for i, (label, value, color) in enumerate(slice_data[:6]):
+            pct = (value / total) * 100.0
+            
+            cell = QWidget(self.legend_widget)
+            cell_layout = QHBoxLayout(cell)
+            cell_layout.setContentsMargins(0, 0, 0, 0)
+            cell_layout.setSpacing(8)
+
+            marker = QFrame(cell)
+            marker.setFixedSize(12, 12)
+            marker.setStyleSheet(f"background-color: {color}; border-radius: 3px;")
+            cell_layout.addWidget(marker)
+
+            short = label[:12] + "…" if len(label) > 12 else label
+            lbl = QLabel(f"<b>{short}</b>  {pct:.0f}%", cell)
+            lbl.setStyleSheet("font-size: 11px; color: #334155;")
+            cell_layout.addWidget(lbl)
+
+            row = i // 2
+            col = i % 2
+            self.legend_layout.addWidget(cell, row, col)
