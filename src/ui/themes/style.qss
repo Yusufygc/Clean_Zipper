@@ -297,3 +297,21 @@ QScrollBar::handle:vertical {
 QScrollBar::handle:vertical:hover {
     background: #94A3B8;
 }
+
+/* ───────────────────────────────────────────────────────────────── */
+/* DIALOG VE MESAJ KUTULARI (QMessageBox)                            */
+/* ───────────────────────────────────────────────────────────────── */
+
+QMessageBox {
+    background-color: #FFFFFF;
+}
+
+QMessageBox QLabel {
+    color: #0F172A;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QMessageBox QPushButton {
+    min-width: 80px;
+}
