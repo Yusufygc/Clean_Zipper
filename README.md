@@ -471,13 +471,16 @@ build_exe.bat
 
 ### PyInstaller Parametreleri
 
+Uygulamanın sorunsuz, taşınabilir ve güvenilir bir biçimde derlenmesi için aşağıdaki parametreler kullanılmaktadır:
+
 | Parametre | Açıklama |
 |-----------|----------|
-| `--onefile` | Tek exe dosyası |
-| `--windowed` | Konsol olmadan |
-| `--icon=icon.ico` | Özel ikon |
-| `--add-data=src;src` | Kaynak kodları ekle |
-| `--hidden-import` | Gizli import'lar |
+| `--onefile` | Tüm uygulamayı tek bir bağımsız `.exe` dosyası haline getirir |
+| `--windowed` | Arka planda konsol penceresinin açılmasını engeller |
+| `--icon=...` | Uygulama exe'sine ve görev çubuğuna özel `app_icon.ico` ikonunu gömer |
+| `--noupx` | UPX sıkıştırmasını devre dışı bırakarak yanlış pozitif virüs algılamalarını önler |
+| `--version-file=...` | Telif hakkı ve sürüm (.exe içine) ekleyerek anti-virüs güvenilirliğini artırır |
+| `--add-data=...` | Stil, ikon ve diğer gerekli kaynak klasörlerini derlenmiş dosyaya dâhil eder |
 
 ---
 
