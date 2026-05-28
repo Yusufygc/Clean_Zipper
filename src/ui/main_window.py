@@ -276,7 +276,7 @@ class GitCleanArchiverPro(QMainWindow):
         btn_row.setSpacing(14)
 
         # Zipleme Butonu -> Mor (btn_purple)
-        btn_zip = QPushButton("🚀 ZIP Arşivi Oluştur", self._tab_archive)
+        btn_zip = QPushButton(" ZIP Arşivi Oluştur", self._tab_archive)
         btn_zip.setObjectName("btn_purple")
         btn_zip.setFixedHeight(40)
         btn_zip.clicked.connect(self._create_zip)
@@ -284,7 +284,7 @@ class GitCleanArchiverPro(QMainWindow):
     
 
         # Kopyalama Butonu -> Soluk Sarı (btn_paleyellow)
-        btn_copy = QPushButton("📋 Temiz Dağıtım Kopyası Oluştur", self._tab_archive)
+        btn_copy = QPushButton(" Temiz Dağıtım Kopyası Oluştur", self._tab_archive)
         btn_copy.setObjectName("btn_paleyellow")
         btn_copy.setFixedHeight(40)
         btn_copy.clicked.connect(self._create_copy)

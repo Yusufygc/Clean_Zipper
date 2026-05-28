@@ -138,7 +138,7 @@ QPushButton#btn_iceblue:hover {
 /* Arşivleme Mor Butonu (Zipleme - Çerçevesi 2px Yapılarak Dengelendi) */
 QPushButton#btn_purple {
     background-color: #8B5CF6;
-    color: #FFFFFF;
+    color: #8B5CF6;
     border: 2px solid #7C3AED;
     border-radius: 6px;
     padding: 8px 16px;
@@ -182,7 +182,7 @@ QPushButton#btn_success:hover {
 /* Tehlike/Temizlik Butonu (Kırmızı) */
 QPushButton#btn_danger {
     background-color: #DC2626;
-    color: #FFFFFF;
+    color: #DC2626;
     border: 2px solid #B91C1C;
     border-radius: 6px;
     padding: 8px 16px;
