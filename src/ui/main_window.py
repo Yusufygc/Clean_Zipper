@@ -92,7 +92,12 @@ class GitCleanArchiverPro(QMainWindow):
         if qss_file.exists():
             try:
                 with open(qss_file, "r", encoding="utf-8") as f:
-                    self.setStyleSheet(f.read())
+                    from PySide6.QtWidgets import QApplication
+                    app = QApplication.instance()
+                    if app:
+                        app.setStyleSheet(f.read())
+                    else:
+                        self.setStyleSheet(f.read())
             except Exception as e:
                 print(f"Warning: Could not load stylesheet: {e}")
 
