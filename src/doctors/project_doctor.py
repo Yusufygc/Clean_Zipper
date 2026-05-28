@@ -45,18 +45,22 @@ class ProjectDoctor:
     
     def quick_scan(self, project_path: Path) -> Dict:
         analysis = self.diagnose(project_path)
+        
+        # Sadece gerçek kod kalitesi sorunları ve uyarıları sayılıyor (INFO düzeyindeki loglar hariç)
+        actual_issues_count = len(analysis.issues) + len(analysis.warnings)
+        
         return {
             'health_score': analysis.health_score,
             'health_status': analysis.health_status.value,
             'total_size_mb': analysis.total_size_mb,
             'total_files': analysis.total_files,
             'total_dirs': analysis.total_dirs,
-            'issues_count': len(analysis.issues),
+            'issues_count': actual_issues_count, # Karttaki sayı artık listedeki eleman sayısıyla tam uyumlu
             'potential_savings_mb': analysis.potential_savings_mb,
             'file_type_distribution': analysis.file_type_distribution,
             'top_recommendations': self._recommendation_engine.get_top_recommendations(analysis),
             'project_path': str(project_path),
-            'all_issues': analysis.issues + analysis.warnings + analysis.suggestions
+            'all_issues': analysis.issues + analysis.warnings # Sadece gerçek hatalar ve uyarılar listeleniyor
         }
     
     def _collect_stats(self, project_path: Path, analysis: ProjectAnalysis):
