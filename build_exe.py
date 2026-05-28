@@ -57,13 +57,18 @@ def build_executable():
 
     add_data_args = []
     if style_qss_source.exists():
-        add_data_args = ["--add-data", f"{style_qss_source}{sep}{style_qss_dest}"]
+        add_data_args.extend(["--add-data", f"{style_qss_source}{sep}{style_qss_dest}"])
         print(f"[OK] Added stylesheet to package: {style_qss_source.name}")
     else:
         print("[!] WARNING: style.qss not found! Styles may be missing in built app.")
+        
+    resources_source = root_dir / "resources"
+    if resources_source.exists():
+        add_data_args.extend(["--add-data", f"{resources_source}{sep}resources"])
+        print(f"[OK] Added resources directory to package.")
 
     # 4. Configure Icon
-    icon_path = root_dir / "assets" / "icons" / "app_icon.ico"
+    icon_path = root_dir / "resources" / "icons" / "app_icon.ico"
     icon_args = []
     if icon_path.exists():
         icon_args = ["--icon", str(icon_path)]

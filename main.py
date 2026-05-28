@@ -1,4 +1,5 @@
 import sys
+import ctypes
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -23,8 +24,21 @@ def main():
     light_palette.setColor(QPalette.ColorRole.ButtonText, QColor("#0F172A"))
     app.setPalette(light_palette)
     
-    icon_path = Path(__file__).parent / "resources" / "icons" / "app_icon.ico"
+    # 3. İkon Yolu Çözümleme (PyInstaller Desteği)
+    if hasattr(sys, '_MEIPASS'):
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).parent
+        
+    icon_path = base_path / "resources" / "icons" / "app_icon.ico"
     app.setWindowIcon(QIcon(str(icon_path)))
+    
+    # 4. Görev çubuğunda ikonun görünmesi için AppUserModelID ayarı (Windows)
+    try:
+        myappid = 'gitclean.archiver.pro.2.0.0'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    except Exception:
+        pass
     
     window = GitCleanArchiverPro()
     window.show()
