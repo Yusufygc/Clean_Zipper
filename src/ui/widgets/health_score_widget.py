@@ -1,14 +1,9 @@
-import customtkinter as ctk
-import math
+from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import QPainter, QColor, QPen, QFont, QPaintEvent
+from PySide6.QtCore import Qt, QTimer, QRectF
 
-
-# Light temada CTkFrame'in varsayılan arka plan rengi
-_CANVAS_BG = "#EBEBEB"
-_TRACK_COLOR = "#D5D5D5"
-
-
-class HealthScoreWidget(ctk.CTkFrame):
-    """Animasyonlu dairesel sağlık skoru göstergesi (light tema sabit)."""
+class HealthScoreWidget(QWidget):
+    """Animasyonlu dairesel sağlık skoru göstergesi (PySide6 QPainter ile modernize edilmiş)."""
 
     GRADE_COLORS = {
         (95, 100): "#00C853",  # A+ Mükemmel
@@ -21,23 +16,16 @@ class HealthScoreWidget(ctk.CTkFrame):
         (0,  34):  "#B71C1C",  # F  Başarısız
     }
 
-    def __init__(self, parent, score: float = 0, status: str = "—",
-                 size: int = 180, **kwargs):
-        super().__init__(parent, fg_color="transparent", **kwargs)
+    def __init__(self, parent, score: float = 0, status: str = "—", size: int = 180, **kwargs):
+        super().__init__(parent)
         self.score = score
         self.status = status
         self.size = size
         self._animated_score = 0.0
-        self._animation_id = None
+        self._timer = None
 
-        self.canvas = ctk.CTkCanvas(
-            self, width=size, height=size,
-            highlightthickness=0, bg=_CANVAS_BG
-        )
-        self.canvas.pack(padx=10, pady=10)
-        self._draw_score()
-
-    # ------------------------------------------------------------------ #
+        self.setFixedSize(size, size)
+        self.update_score(score, status)
 
     def _get_score_color(self, score: float) -> str:
         for (lo, hi), color in self.GRADE_COLORS.items():
@@ -45,73 +33,75 @@ class HealthScoreWidget(ctk.CTkFrame):
                 return color
         return "#C62828"
 
-    def _draw_score(self):
-        self.canvas.delete("all")
-        s = self.size
-        cx, cy = s // 2, s // 2
-        r = s // 2 - 18
-        track_w = 14
+    def paintEvent(self, event: QPaintEvent):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        color = self._get_score_color(self.score)
+        cx = self.width() / 2.0
+        cy = self.height() / 2.0
+        r = (self.width() - 28) / 2.0  # radius with padding
+        track_w = 12.0
+        rect = QRectF(cx - r, cy - r, 2 * r, 2 * r)
 
-        # Arka plan halkası
-        self.canvas.create_oval(
-            cx - r, cy - r, cx + r, cy + r,
-            outline=_TRACK_COLOR, width=track_w, fill=_CANVAS_BG
-        )
+        color = QColor(self._get_score_color(self.score))
 
-        # Skor yayı
+        # 1. Background Track Circle
+        pen_track = QPen(QColor("#2E3035"), track_w)
+        painter.setPen(pen_track)
+        painter.drawEllipse(rect)
+
+        # 2. Foreground Score Arc
         if self._animated_score > 0:
-            extent = -(self._animated_score / 100) * 359.9
-            self.canvas.create_arc(
-                cx - r, cy - r, cx + r, cy + r,
-                start=90, extent=extent,
-                outline=color, width=track_w, style="arc"
-            )
+            pen_arc = QPen(color, track_w)
+            pen_arc.setCapStyle(Qt.PenCapStyle.RoundCap) # Round caps for a premium look
+            painter.setPen(pen_arc)
+            # Start at top (90 degrees) and sweep clockwise (negative)
+            start_angle = 90 * 16
+            span_angle = int(-(self._animated_score / 100.0) * 360.0 * 16)
+            painter.drawArc(rect, start_angle, span_angle)
 
-        # İç delik
-        ir = r - track_w // 2 - 4
-        self.canvas.create_oval(
-            cx - ir, cy - ir, cx + ir, cy + ir,
-            outline=_TRACK_COLOR, width=1, fill=_CANVAS_BG
-        )
+        # 3. Draw Inner Texts
+        # Score Value
+        painter.setPen(color)
+        font_score = QFont("Segoe UI", 28, QFont.Weight.Bold)
+        painter.setFont(font_score)
+        rect_score = QRectF(0, cy - 36, self.width(), 40)
+        painter.drawText(rect_score, Qt.AlignmentFlag.AlignCenter, f"{self.score:.0f}")
 
-        # Skor rakamı
-        self.canvas.create_text(
-            cx, cy - 16,
-            text=f"{self.score:.0f}",
-            font=("Segoe UI", 28, "bold"),
-            fill=color
-        )
-        # Grade etiketi
-        self.canvas.create_text(
-            cx, cy + 14,
-            text=self.status,
-            font=("Segoe UI", 12, "bold"),
-            fill=color
-        )
-        # /100
-        self.canvas.create_text(
-            cx, cy + 34,
-            text="/100",
-            font=("Segoe UI", 9),
-            fill="#AAAAAA"
-        )
+        # Status Grade
+        font_status = QFont("Segoe UI", 11, QFont.Weight.Bold)
+        painter.setFont(font_status)
+        rect_status = QRectF(0, cy + 10, self.width(), 20)
+        painter.drawText(rect_status, Qt.AlignmentFlag.AlignCenter, self.status)
+
+        # /100 indicator
+        painter.setPen(QColor("#8E8F94"))
+        font_sub = QFont("Segoe UI", 9)
+        painter.setFont(font_sub)
+        rect_sub = QRectF(0, cy + 28, self.width(), 20)
+        painter.drawText(rect_sub, Qt.AlignmentFlag.AlignCenter, "/100")
 
     def _animate(self, target: float, step: float = 4.0):
-        if self._animation_id:
-            self.after_cancel(self._animation_id)
-        if self._animated_score < target:
-            self._animated_score = min(self._animated_score + step, target)
-            self._draw_score()
-            self._animation_id = self.after(16, lambda: self._animate(target, step))
-        else:
-            self._animated_score = target
-            self._draw_score()
+        if self._timer:
+            self._timer.stop()
+
+        self._animated_score = 0.0
+        
+        def step_anim():
+            if self._animated_score < target:
+                self._animated_score = min(self._animated_score + step, target)
+                self.update()
+            else:
+                self._animated_score = target
+                self.update()
+                self._timer.stop()
+
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(step_anim)
+        self._timer.start(16)  # ~60 FPS
 
     def update_score(self, new_score: float, new_status: str = None):
         self.score = new_score
         if new_status:
             self.status = new_status
-        self._animated_score = 0.0
         self._animate(new_score)
