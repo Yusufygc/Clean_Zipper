@@ -10,7 +10,9 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
         # Yaygın sızıntı kelimeleri yakalamak için hassas regex şablonları
         self.secret_patterns = {
             "API Anahtarı / Şifre": re.compile(r'(key|secret|password|passwd|token)\s*=\s*[\'"][A-Za-z0-9_\-]{8,}[\'"]', re.IGNORECASE),
-            "Veritabanı URL Sızıntısı": re.compile(r'mongodb(\+srv)?://|postgres://|mysql://', re.IGNORECASE)
+            # Kendi kodumuzu yanlışlıkla sızıntı olarak işaretlememesi (False Positive) için
+            # regex şablonlarını parçalayarak (concatenation) birleştiriyoruz.
+            "Veritabanı URL Sızıntısı": re.compile(r'mongo' + r'db(\+srv)?://|post' + r'gres://|my' + r'sql://', re.IGNORECASE)
         }
 
     @property
