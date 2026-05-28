@@ -109,7 +109,7 @@ class GitCleanArchiverPro(QMainWindow):
         self._build_toolbar(parent_layout)
         
         body_frame = QFrame(self)
-        body_frame.setStyleSheet("background: transparent;")
+        body_frame.setStyleSheet("QFrame { background: transparent; }")
         body_layout = QHBoxLayout(body_frame)
         body_layout.setContentsMargins(8, 6, 8, 0)
         body_layout.setSpacing(6)
