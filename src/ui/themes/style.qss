@@ -1,0 +1,299 @@
+/* ================================================================= */
+/* style.qss - GitClean Archiver Pro Kurumsal Light Tema Tasarımı   */
+/* ================================================================= */
+
+/* Genel Pencere Yapısı */
+QMainWindow {
+    background-color: #F8FAFC; /* Slate Light Arka Plan */
+}
+
+QWidget {
+    font-family: "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
+    color: #1E293B; /* Slate 800 - Yüksek Kontrastlı Koyu Gri */
+}
+
+/* ───────────────────────────────────────────────────────────────── */
+/* SOL SİDEBAR (Kurumsal Koyu Gri Tasarım)                          */
+/* ───────────────────────────────────────────────────────────────── */
+
+QFrame#sidebar {
+    background-color: #E2E8F0; /* Belirgin Koyu Gri Sidebar */
+    border-right: 2px solid #CBD5E1;
+}
+
+/* Sidebar İçindeki Yazılar */
+QFrame#sidebar QLabel {
+    color: #1E293B;
+    font-size: 12px;
+}
+
+/* Aktif Proje Başlığı (Büyük ve Bold Yapıldı) */
+QFrame#sidebar QLabel[text="AKTİF PROJE"] {
+    font-weight: 900;
+    color: #0F172A;
+    font-size: 15px;
+    letter-spacing: 1px;
+}
+
+/* Proje Path Yazısı (Büyük, Koyu ve Çok Parlak) */
+QLabel#sidebar-path-label {
+    font-size: 13px;
+    font-weight: 800;
+    color: #0F172A; /* Tam Siyah/Lacivert Tonu */
+    padding: 4px 0px;
+}
+
+/* ───────────────────────────────────────────────────────────────── */
+/* SEKMELER (QTabWidget)                                            */
+/* ───────────────────────────────────────────────────────────────── */
+
+QTabWidget::pane {
+    border: 1px solid #CBD5E1;
+    background-color: #FFFFFF;
+    border-radius: 8px;
+}
+
+QTabBar::tab {
+    background-color: #F1F5F9;
+    color: #475569;
+    padding: 12px 24px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    font-weight: 800; /* Çok daha kalın ve belirgin sekmeler */
+    font-size: 13px;
+    margin-right: 4px;
+    border: 1px solid #CBD5E1;
+    border-bottom: none;
+}
+
+QTabBar::tab:hover {
+    color: #0F172A;
+    background-color: #E2E8F0;
+}
+
+QTabBar::tab:selected {
+    color: #FFFFFF;
+    background-color: #2563EB; /* Seçildiğinde Canlı Kurumsal Mavi */
+    border-color: #2563EB;
+    font-weight: 900;
+}
+
+/* ───────────────────────────────────────────────────────────────── */
+/* BUTONLAR (Yüksek Kontrastlı & Kurumsal Renk Şeması)             */
+/* ───────────────────────────────────────────────────────────────── */
+
+QPushButton {
+    background-color: #FFFFFF;
+    color: #0F172A;
+    border: 2px solid #94A3B8;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+QPushButton:hover {
+    background-color: #F1F5F9;
+    border-color: #64748B;
+}
+
+QPushButton:pressed {
+    background-color: #E2E8F0;
+}
+
+QPushButton:disabled {
+    color: #94A3B8;
+    background-color: #F1F5F9;
+    border-color: #E2E8F0;
+}
+
+/* Birincil Aksiyon Butonu (Mavi - Genel İşlemler) */
+QPushButton#btn_primary {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    border: 2px solid #1D4ED8;
+}
+
+QPushButton#btn_primary:hover {
+    background-color: #1D4ED8;
+    border-color: #1E40AF;
+}
+
+/* Buz Mavisi Buton (Yenile Butonu Özel Tasarımı) */
+QPushButton#btn_iceblue {
+    background-color: #E0F2FE;
+    color: #0369A1;
+    border: 2px solid #7DD3FC;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+QPushButton#btn_iceblue:hover {
+    background-color: #BAE6FD;
+    border-color: #38BDF8;
+}
+
+/* Arşivleme Mor Butonu (Zipleme - Çerçevesi 2px Yapılarak Dengelendi) */
+QPushButton#btn_purple {
+    background-color: #8B5CF6;
+    color: #FFFFFF;
+    border: 2px solid #7C3AED;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+QPushButton#btn_purple:hover {
+    background-color: #7C3AED;
+    border-color: #6D28D9;
+}
+
+/* Arşivleme Soluk Sarı Butonu (Kopyalama) */
+QPushButton#btn_paleyellow {
+    background-color: #FEF08A;
+    color: #713F12;
+    border: 2px solid #FDE047;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+QPushButton#btn_paleyellow:hover {
+    background-color: #FEF9C3;
+    border-color: #FACC15;
+}
+
+/* Başarı Butonu (Yeşil) */
+QPushButton#btn_success {
+    background-color: #16A34A;
+    color: #FFFFFF;
+    border: 2px solid #15803D;
+}
+
+QPushButton#btn_success:hover {
+    background-color: #15803D;
+    border-color: #166534;
+}
+
+/* Tehlike/Temizlik Butonu (Kırmızı) */
+QPushButton#btn_danger {
+    background-color: #DC2626;
+    color: #FFFFFF;
+    border: 2px solid #B91C1C;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+QPushButton#btn_danger:hover {
+    background-color: #B91C1C;
+    border-color: #991B1B;
+}
+
+/* Hayalet Buton (Çerçeveli Kurumsal Mavi) */
+QPushButton#btn_ghost {
+    background: #FFFFFF;
+    border: 2px solid #2563EB;
+    color: #2563EB;
+}
+
+/* ───────────────────────────────────────────────────────────────── */
+/* KARTLAR & PANELLER (Ön Plana Çıkan Gölgeli Yapılar)             */
+/* ───────────────────────────────────────────────────────────────── */
+
+QFrame#card {
+    background-color: #FFFFFF;
+    border: 1px solid #CBD5E1; /* Belirgin Çerçeve */
+    border-radius: 8px;
+}
+
+QFrame#card:hover {
+    border-color: #2563EB; /* Kartların üzerine gelindiğinde mavi vurgu */
+}
+
+/* ───────────────────────────────────────────────────────────────── */
+/* GİRDİLER VE METİN ALANLARI (Yüksek Okunabilirlik)                */
+/* ───────────────────────────────────────────────────────────────── */
+
+QLineEdit {
+    background-color: #FFFFFF;
+    border: 2px solid #94A3B8; /* Kalın kurumsal çerçeve */
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #0F172A;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QLineEdit:focus {
+    border: 2px solid #2563EB;
+    background-color: #FFFFFF;
+}
+
+/* Log / Kod Görünüm Kutuları */
+QTextEdit, QTextBrowser {
+    background-color: #F8FAFC;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    padding: 12px;
+    color: #0F172A; /* Tamamen parlak ve koyu antrasit */
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ───────────────────────────────────────────────────────────────── */
+/* İLERLEME ÇUBUĞU VE STATUS BAR                                    */
+/* ───────────────────────────────────────────────────────────────── */
+
+QProgressBar {
+    background-color: #E2E8F0;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    text-align: center;
+    color: #FFFFFF; /* Ortaladaki %100 yazısı beyaz olsun */
+    font-weight: 900;
+    font-size: 12px;
+}
+
+QProgressBar::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2563EB, stop:1 #60A5FA); /* Gradyan Mavi */
+    border-radius: 6px;
+}
+
+QStatusBar {
+    background-color: #FFFFFF;
+    color: #475569;
+    border-top: 1px solid #E2E8F0;
+    font-weight: 600;
+}
+
+QStatusBar::item {
+    border: none;
+}
+
+/* ───────────────────────────────────────────────────────────────── */
+/* KAYDIRMA ÇUBUKLARI (Scrollbars)                                   */
+/* ───────────────────────────────────────────────────────────────── */
+
+QScrollBar:vertical {
+    border: none;
+    background: #F1F5F9;
+    width: 10px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #CBD5E1;
+    min-height: 30px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #94A3B8;
+}
