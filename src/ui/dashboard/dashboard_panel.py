@@ -39,8 +39,14 @@ class DashboardPanel(QWidget):
         # Yenile Butonu (Buz Mavisi stiliyle başlık hizasında sabitlendi)
         self.analyze_btn = QPushButton("Yeniden Analiz Et", header_frame)
         self.analyze_btn.setObjectName("btn_iceblue") # QSS'te tanımlı buz mavisi sınıfı
-        self.analyze_btn.setFixedSize(140, 34)
+        self.analyze_btn.setFixedSize(146, 34)
         header_layout.addWidget(self.analyze_btn)
+
+        # Raporu Dışa Aktar Butonu (Kurumsal çerçeveli hayalet mavi stil)
+        self.export_btn = QPushButton("Raporu Dışa Aktar", header_frame)
+        self.export_btn.setObjectName("btn_ghost") # QSS'te tanımlı hayalet buton sınıfı
+        self.export_btn.setFixedSize(146, 34)
+        header_layout.addWidget(self.export_btn)
 
         parent_layout.addWidget(header_frame)
 
