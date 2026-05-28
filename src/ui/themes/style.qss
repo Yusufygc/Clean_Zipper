@@ -138,7 +138,7 @@ QPushButton#btn_iceblue:hover {
 /* Arşivleme Mor Butonu (Zipleme - Çerçevesi 2px Yapılarak Dengelendi) */
 QPushButton#btn_purple {
     background-color: #8B5CF6;
-    color: #8B5CF6;
+    color: #ffffff;
     border: 2px solid #7C3AED;
     border-radius: 6px;
     padding: 8px 16px;
@@ -182,7 +182,7 @@ QPushButton#btn_success:hover {
 /* Tehlike/Temizlik Butonu (Kırmızı) */
 QPushButton#btn_danger {
     background-color: #DC2626;
-    color: #DC2626;
+    color: #ffffff;
     border: 2px solid #B91C1C;
     border-radius: 6px;
     padding: 8px 16px;
@@ -306,12 +306,25 @@ QDialog, QMessageBox {
     background-color: #FFFFFF;
 }
 
+/* Zemin beyaz olacağı için yazıları koyu kurumsal renge (#0F172A) çeviriyoruz */
 QMessageBox QLabel {
-    color: #0F172A;
+    color: #000000;
     font-size: 13px;
     font-weight: 600;
 }
 
+/* Butonlara hafif kurumsal stil verelim */
 QMessageBox QPushButton {
+    background-color: #FFFFFF;
+    color: #3120c6;
+    border: 2px solid #94A3B8;
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-weight: 800;
     min-width: 80px;
+}
+
+QMessageBox QPushButton:hover {
+    background-color: #F1F5F9;
+    border-color: #2563EB; /* Üzerine gelince mavi çerçeve */
 }
