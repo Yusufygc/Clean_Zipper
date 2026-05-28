@@ -1,57 +1,46 @@
-import customtkinter as ctk
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsDropShadowEffect
+from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt
 
+class StatsCard(QFrame):
+    """Gölge efektli ve net çerçeveli kompakt kurumsal istatistik kartı."""
+    
+    _ICON_COLORS = {"📄": "#2563EB", "💾": "#7C3AED", "📁": "#EA580C", "⚠️": "#DC2626"}
 
-class StatsCard(ctk.CTkFrame):
-    """Nötr, minimal kurumsal istatistik kartı."""
+    def __init__(self, parent, title: str, value: str, icon: str = "📊", **kwargs):
+        super().__init__(parent)
+        self.setObjectName("card")
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
+        
+        # Soft Gölgelendirme (Shadow) Entegrasyonu
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(10)
+        shadow.setColor(QColor(0, 0, 0, 35)) # Hafif soluk kurumsal gölge
+        shadow.setOffset(0, 3)
+        self.setGraphicsEffect(shadow)
+        
+        icon_color = self._ICON_COLORS.get(icon, "#2563EB")
 
-    # İkona göre nötr ikon renkleri (bant yok, değer rengi yok)
-    _ICON_COLORS = {
-        "📄": "#1565C0",
-        "💾": "#6A1B9A",
-        "📁": "#E65100",
-        "⚠️": "#C62828",
-    }
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(4)
 
-    def __init__(self, parent, title: str, value: str, icon: str = "📊",
-                 width: int = 170, height: int = 90, **kwargs):
-        super().__init__(
-            parent, width=width, height=height,
-            corner_radius=8,
-            border_width=1,
-            border_color=("gray80", "gray30"),
-            **kwargs
-        )
-        self.pack_propagate(False)
+        top_row = QHBoxLayout()
+        top_row.setContentsMargins(0, 0, 0, 0)
+        top_row.setSpacing(8)
 
-        icon_color = self._ICON_COLORS.get(icon, "#1565C0")
+        self.icon_lbl = QLabel(icon, self)
+        self.icon_lbl.setStyleSheet(f"color: {icon_color}; font-size: 18px;")
+        top_row.addWidget(self.icon_lbl)
 
-        body = ctk.CTkFrame(self, fg_color="transparent")
-        body.pack(fill="both", expand=True, padx=14, pady=10)
+        self.title_lbl = QLabel(title.upper(), self)
+        self.title_lbl.setStyleSheet("color: #334155; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;")
+        top_row.addWidget(self.title_lbl, stretch=1)
+        layout.addLayout(top_row)
 
-        # Üst satır: ikon solda, başlık sağda
-        top_row = ctk.CTkFrame(body, fg_color="transparent")
-        top_row.pack(fill="x")
-
-        ctk.CTkLabel(
-            top_row, text=icon,
-            font=ctk.CTkFont(size=18),
-            text_color=icon_color
-        ).pack(side="left")
-
-        ctk.CTkLabel(
-            top_row, text=title.upper(),
-            font=ctk.CTkFont(family="Segoe UI", size=9),
-            text_color="gray50"
-        ).pack(side="right", pady=(4, 0))
-
-        # Değer — büyük, koyu, nötr
-        self._value_lbl = ctk.CTkLabel(
-            body, text=str(value),
-            font=ctk.CTkFont(family="Segoe UI", size=24, weight="bold"),
-            text_color=("gray10", "gray90"),
-            anchor="w"
-        )
-        self._value_lbl.pack(fill="x", pady=(4, 0))
+        self._value_lbl = QLabel(str(value), self)
+        self._value_lbl.setStyleSheet("color: #0F172A; font-size: 24px; font-weight: 800; margin-top: 2px;")
+        layout.addWidget(self._value_lbl)
 
     def update_value(self, new_value: str):
-        self._value_lbl.configure(text=str(new_value))
+        self._value_lbl.setText(str(new_value))
