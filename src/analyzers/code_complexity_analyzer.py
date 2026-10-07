@@ -48,7 +48,7 @@ class CodeComplexityAnalyzer(BaseAnalyzer):
 
     @property
     def category(self) -> str:
-        return "quality"
+        return "complexity"
 
     def analyze(self, project_path: Path) -> List[AnalysisResult]:
         results = []

@@ -21,7 +21,7 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
 
     @property
     def category(self) -> str:
-        return "quality"
+        return "security"
 
     def analyze(self, project_path: Path) -> List[AnalysisResult]:
         results = []

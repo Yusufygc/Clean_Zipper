@@ -34,7 +34,7 @@ class DeadWeightAnalyzer(BaseAnalyzer):
 
     @property
     def category(self) -> str:
-        return "quality"
+        return "dependency"
 
     def analyze(self, project_path: Path) -> List[AnalysisResult]:
         results = []

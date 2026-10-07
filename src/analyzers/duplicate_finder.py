@@ -28,7 +28,9 @@ class DuplicateFinder(BaseAnalyzer):
                     results.append(self._create_result(
                         title=f"Cift dosyalar: {file_list[0].name}",
                         description=f"{len(file_list)-1} kopya, {waste/(1024*1024):.1f} MB gereksiz",
-                        severity=Severity.HIGH, size_impact=waste
+                        severity=Severity.HIGH, size_impact=waste,
+                        file_path=file_list[0],
+                        kind='duplicate_group', paths=list(file_list), reclaimable=True
                     ))
         return results
     

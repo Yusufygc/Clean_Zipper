@@ -47,7 +47,7 @@
 ## ✨ Özellikler
 
 ### 🏥 Proje Doktoru
-- **7 kategoride sağlık analizi** (Boyut, Yapı, Kalite, Çiftler, Türler, Boş Klasörler, Organizasyon)
+- **6 kategoride bulgu tabanlı sağlık analizi** (Güvenlik, Karmaşıklık, Çiftler, Boyut, Yapı, Bağımlılık)
 - **A+ 'dan F' e kadar notlandırma** sistemi
 - **Kritik sorunların otomatik tespiti**
 - **İyileştirme önerileri** ve tahmini kazanç hesaplama
@@ -265,15 +265,20 @@ print(f"Yedek adı: {result['backup_name']}")
 
 ### Skor Kategorileri ve Ağırlıkları
 
-| Kategori | Ağırlık | Değerlendirme Kriteri |
-|----------|---------|----------------------|
-| **Boyut** | %25 | Toplam proje boyutu, büyük dosyalar |
-| **Yapı** | %20 | Boş klasörler, klasör derinliği |
-| **Kalite** | %20 | Kritik ve yüksek öncelikli sorunlar |
-| **Çiftler** | %15 | Tekrarlayan dosyalar |
-| **Türler** | %10 | Dosya türü dağılımı |
-| **Boş Klasör** | %5 | Boş klasör sayısı |
-| **Organizasyon** | %5 | Dosya/klasör oranı |
+Skor, analizörlerin ürettiği bulgulardan hesaplanır. Sabit değer yoktur.
+
+| Kategori | Ağırlık | Kaynak |
+|----------|---------|--------|
+| **Güvenlik** | %25 | Sızan anahtar/şifre, açıkta `.env` gibi dosyalar |
+| **Karmaşıklık** | %20 | Şişmiş dosya, God Object, yüksek siklomatik karmaşıklık |
+| **Çiftler** | %15 | Tekrarlayan dosya grupları |
+| **Boyut** | %15 | Toplam proje boyutu, büyük dosyalar |
+| **Yapı** | %15 | Boş klasörler, klasör derinliği |
+| **Bağımlılık** | %10 | Kullanılmayan kütüphaneler, eksik `requirements.txt` |
+
+Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz.
+
+**Hesaplama:** her bulgunun şiddeti ceza puanı getirir (KRİTİK 40, YÜKSEK 15, ORTA 5, DÜŞÜK 1, BİLGİ 0). Kategori skoru `100 × e^(−ceza/60)` formülüyle bulunur. Genel skor, kategori skorlarının ağırlıklı ortalamasıdır. Çalışmayan veya hata veren analizörün kategorisi ağırlıktan çıkarılır; hiçbir analizör çalışmazsa skor 0 olur.
 
 ### Notlandırma Tablosu
 
@@ -499,7 +504,7 @@ Uygulamanın sorunsuz, taşınabilir ve güvenilir bir biçimde derlenmesi için
 **C:** Proje kök dizinindeki `.gitignore` dosyası otomatik olarak okunur ve zip/kopyalama işlemlerinde bu kurallar uygulanır.
 
 ### S: Sağlık skoru nasıl hesaplanır?
-**C:** 7 farklı kategoride ağırlıklı ortalama ile. Detaylar için [Sağlık Skorlama Sistemi](#-sağlık-skorlama-sistemi) bölümüne bakın.
+**C:** 6 kategoride, bulguların şiddetine göre hesaplanan ağırlıklı ortalama ile. Detaylar için [Sağlık Skorlama Sistemi](#-sağlık-skorlama-sistemi) bölümüne bakın.
 
 ---
 

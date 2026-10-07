@@ -81,6 +81,12 @@ class ProjectAnalysis:
     suggestions: List[AnalysisResult] = field(default_factory=list)
     health_score: float = 0.0
     health_status: HealthStatus = HealthStatus.FAILING
+    category_scores: Dict[str, float] = field(default_factory=dict)
+    failed_analyzers: List[str] = field(default_factory=list)
+    
+    @property
+    def all_findings(self) -> List[AnalysisResult]:
+        return self.issues + self.warnings + self.suggestions
     
     @property
     def total_size_mb(self) -> float:
@@ -88,11 +94,11 @@ class ProjectAnalysis:
     
     @property
     def potential_savings_bytes(self) -> int:
-        savings = 0
-        for issue in self.issues + self.warnings:
-            if issue.size_impact:
-                savings += issue.size_impact
-        return savings
+        # Yalnızca gerçekten geri kazanılabilir bulgular (ör. çift dosya kopyaları) sayılır.
+        return sum(
+            f.size_impact for f in self.all_findings
+            if f.size_impact and f.metadata.get('reclaimable')
+        )
     
     @property
     def potential_savings_mb(self) -> float:

@@ -23,6 +23,7 @@ class EmptyFolderFinder(BaseAnalyzer):
                     title=f"Bos klasor: {Path(root_path).name}",
                     description="Bu klasor bos.",
                     severity=Severity.LOW,
-                    file_path=Path(root_path)
+                    file_path=Path(root_path),
+                    kind='empty_dir'
                 ))
         return results

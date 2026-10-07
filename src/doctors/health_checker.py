@@ -1,21 +1,53 @@
-﻿from typing import List
+import math
+from typing import Dict, Iterable, List
+
+from src.core.interfaces import IHealthChecker
 from src.models.analysis_models import ProjectAnalysis, AnalysisResult, Severity, HealthStatus
 
-class HealthChecker:
-    WEIGHTS = {'size': 0.25, 'structure': 0.20, 'quality': 0.20, 'duplicates': 0.15, 'types': 0.10, 'empty': 0.05, 'organization': 0.05}
-    
+
+class HealthChecker(IHealthChecker):
+    """Bulgulardan kategori bazlı ve genel sağlık skoru üretir.
+
+    Her kategorinin cezası bulguların şiddet puanlarının toplamıdır.
+    Alt skor = 100 * exp(-ceza / DECAY): ilk bulgular skoru hızlı düşürür,
+    çok sayıda bulgu skoru sıfıra doğru yumuşakça yaklaştırır.
+    """
+
+    SEVERITY_PENALTY = {
+        Severity.CRITICAL: 40,
+        Severity.HIGH: 15,
+        Severity.MEDIUM: 5,
+        Severity.LOW: 1,
+        Severity.INFO: 0,
+    }
+    # 'type' kategorisi yalnızca bilgi amaçlı olduğundan puanlanmaz.
+    WEIGHTS = {
+        'security': 0.25,
+        'complexity': 0.20,
+        'duplicate': 0.15,
+        'size': 0.15,
+        'structure': 0.15,
+        'dependency': 0.10,
+    }
+    DECAY = 60
+
+    def calculate_category_scores(self, findings: Iterable[AnalysisResult],
+                                  ran_categories: Iterable[str]) -> Dict[str, float]:
+        """Çalışmış her puanlanabilir kategori için 0-100 arası alt skor döner."""
+        penalties = {c: 0 for c in ran_categories if c in self.WEIGHTS}
+        for finding in findings:
+            if finding.category in penalties:
+                penalties[finding.category] += self.SEVERITY_PENALTY.get(finding.severity, 0)
+        return {c: 100 * math.exp(-p / self.DECAY) for c, p in penalties.items()}
+
     def calculate_score(self, analysis: ProjectAnalysis) -> float:
-        scores = {
-            'size': self._calc_size(analysis),
-            'structure': self._calc_structure(analysis),
-            'quality': self._calc_quality(analysis),
-            'duplicates': self._calc_duplicates(analysis),
-            'types': 80,
-            'empty': 90 if len(analysis.empty_dirs) < 5 else 70,
-            'organization': 85
-        }
-        return min(max(sum(scores[k] * self.WEIGHTS[k] for k in self.WEIGHTS), 0), 100)
-    
+        scores = analysis.category_scores
+        total_weight = sum(self.WEIGHTS[c] for c in scores)
+        if total_weight == 0:
+            return 0.0
+        score = sum(s * self.WEIGHTS[c] for c, s in scores.items()) / total_weight
+        return min(max(score, 0.0), 100.0)
+
     def get_health_status(self, score: float) -> HealthStatus:
         if score >= 95: return HealthStatus.EXCELLENT
         elif score >= 85: return HealthStatus.GOOD
@@ -25,11 +57,6 @@ class HealthChecker:
         elif score >= 45: return HealthStatus.POOR
         elif score >= 35: return HealthStatus.CRITICAL
         else: return HealthStatus.FAILING
-    
+
     def get_critical_issues(self, analysis: ProjectAnalysis) -> List[AnalysisResult]:
         return [i for i in analysis.issues if i.severity in [Severity.HIGH, Severity.CRITICAL]]
-    
-    def _calc_size(self, a): return 100 if a.total_size_mb < 10 else max(0, 100 - a.total_size_mb / 10)
-    def _calc_structure(self, a): return max(0, 100 - len(a.empty_dirs) * 3)
-    def _calc_quality(self, a): return max(0, 100 - len(a.issues) * 10)
-    def _calc_duplicates(self, a): return 100 if not a.duplicate_files else max(0, 100 - len(a.duplicate_files) * 15)

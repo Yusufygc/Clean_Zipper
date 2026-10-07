@@ -38,7 +38,7 @@ class SizeAnalyzer(BaseAnalyzer):
         results.append(self._create_result(
             title=f"Toplam proje boyutu: {total_mb:.1f} MB",
             description=f"Proje {total_mb:.1f} MB disk alani kapliyor.",
-            severity=severity, size_impact=total_size
+            severity=severity, kind='total_size', total_bytes=total_size
         ))
         
         for file_info in sorted(large_files, key=lambda x: x.size_bytes, reverse=True)[:10]:
@@ -46,6 +46,7 @@ class SizeAnalyzer(BaseAnalyzer):
                 title=f"Buyuk dosya: {file_info.path.name}",
                 description=f"{file_info.size_mb:.1f} MB",
                 severity=Severity.HIGH if file_info.size_mb > 50 else Severity.MEDIUM,
-                file_path=file_info.path, size_impact=file_info.size_bytes
+                file_path=file_info.path, size_impact=file_info.size_bytes,
+                kind='large_file'
             ))
         return results
