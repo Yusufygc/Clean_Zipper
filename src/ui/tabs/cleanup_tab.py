@@ -1,24 +1,26 @@
 from pathlib import Path
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QTextEdit, QMessageBox
+    QFrame, QTextEdit, QMessageBox, QCheckBox
 )
 from PySide6.QtCore import QThread, Signal
+from src.services.cleanup_service import CleanupService
 from src.services.project_service import ProjectService
 
 class CleanupWorker(QThread):
     finished = Signal(dict)
     error = Signal(str)
 
-    def __init__(self, service: ProjectService, path: Path):
+    def __init__(self, service: ProjectService, path: Path, categories: list):
         super().__init__()
         self.service = service
         self.path = path
+        self.categories = categories
 
     def run(self):
         try:
             result = self.service.cleanup_service.cleanup(
-                self.path, dry_run=False
+                self.path, categories=self.categories, dry_run=False
             )
             self.finished.emit(result)
         except Exception as e:
@@ -30,6 +32,7 @@ class CleanupTab(QWidget):
         self.main_window = main_window
         self.project_service = main_window.project_service
         self.cleanup_worker = None
+        self.category_checks = {}
         self._build_ui()
 
     def _build_ui(self):
@@ -46,6 +49,13 @@ class CleanupTab(QWidget):
         desc = QLabel("Geçici dosyaları, önbellek klasörlerini ve gereksiz artifact'ları siler.", self)
         desc.setStyleSheet("font-size: 13px; font-weight: 600; color: #334155;")
         layout.addWidget(desc)
+
+        # Kategori seçimi
+        for name, spec in CleanupService.CLEANUP_CATEGORIES.items():
+            check = QCheckBox(spec['label'], self)
+            check.setChecked(spec['default_enabled'])
+            self.category_checks[name] = check
+            layout.addWidget(check)
 
         # Button row: Preview & Cleanup
         btn_row = QHBoxLayout()
@@ -82,12 +92,20 @@ class CleanupTab(QWidget):
         self.cleanup_log.setPlainText("Önizleme için Önizleme butonuna tıklayın.")
         layout.addWidget(self.cleanup_log, stretch=1)
 
+    def _selected_categories(self) -> list:
+        return [name for name, check in self.category_checks.items() if check.isChecked()]
+
     def _preview_cleanup(self):
         if not self.main_window._require_project():
             return
             
+        categories = self._selected_categories()
+        if not categories:
+            self.cleanup_log.setPlainText("En az bir temizlik kategorisi seçin.")
+            return
+
         preview = self.project_service.cleanup_service.preview_cleanup(
-            self.main_window.current_project_path
+            self.main_window.current_project_path, categories
         )
         
         sep = "─" * 50
@@ -120,7 +138,7 @@ class CleanupTab(QWidget):
 
         self.main_window._set_status("Temizlik yapılıyor…")
 
-        self.cleanup_worker = CleanupWorker(self.project_service, self.main_window.current_project_path)
+        self.cleanup_worker = CleanupWorker(self.project_service, self.main_window.current_project_path, categories)
         self.cleanup_worker.finished.connect(self._handle_cleanup_finished)
         self.cleanup_worker.error.connect(self._handle_cleanup_error)
         self.cleanup_worker.start()
@@ -132,13 +150,22 @@ class CleanupTab(QWidget):
                 self,
                 "Tamamlandı",
                 f"Temizlik başarıyla tamamlandı.\n\n"
-                f"Silinen  : {result['cleaned_files']} dosya\n"
+                f"Geri Dönüşüm Kutusu'na taşınan: {result['cleaned_files']} dosya\n"
                 f"Kazanılan: {result['cleaned_size'] / 1024:.1f} KB"
             )
-            self._preview_cleanup()
         else:
             self.main_window._set_status("Temizlik sırasında hata oluştu.")
-            QMessageBox.critical(self.main_window, "Hata", "Temizlik işlemi başarısız oldu.")
+            failed = result["failed"]
+            details = "\n".join(f"{Path(p).name}: {msg}" for p, msg in failed[:10])
+            if len(failed) > 10:
+                details += f"\n… ve {len(failed) - 10} hata daha"
+            QMessageBox.warning(
+                self.main_window,
+                "Temizlik Kısmen Tamamlandı",
+                f"Taşınan: {result['cleaned_files']} dosya\n"
+                f"Taşınamayan: {len(failed)} öğe\n\n{details}"
+            )
+        self._preview_cleanup()
 
     def _handle_cleanup_error(self, err_msg: str):
         self.main_window._set_status(f"Hata: {err_msg}")

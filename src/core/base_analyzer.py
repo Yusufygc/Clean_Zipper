@@ -7,6 +7,7 @@ from pathlib import Path
 import os
 from datetime import datetime
 
+from src.core.constants import EXCLUDED_DIRS
 from src.core.interfaces import IAnalyzer
 from src.models.analysis_models import AnalysisResult, Severity, FileInfo
 
@@ -14,7 +15,7 @@ from src.models.analysis_models import AnalysisResult, Severity, FileInfo
 class BaseAnalyzer(IAnalyzer):
     def __init__(self, priority: int = 100):
         self._priority = priority
-        self._excluded_dirs: Set[str] = {'.git', '__pycache__', '.venv', 'venv', 'node_modules', '.idea', '.vs'}
+        self._excluded_dirs: Set[str] = set(EXCLUDED_DIRS)
     
     @property
     def name(self) -> str:
