@@ -11,10 +11,10 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | 5 | Analizör kaydı UI içinde, arayüzler yarım uygulanmış | 🟠 | Tamamlandı (2026-10-08) |
 | 6 | Sadece Python ve `requirements.txt` destekleniyor | 🟠 | Tamamlandı (2026-10-08) |
 | 7 | Hatalar sessizce yutuluyor, logger yok | 🟠 | Tamamlandı (2026-10-08) |
-| 8 | Test yok | 🟠 | Başladı (183 test) |
+| 8 | Test yok | 🟠 | Başladı (234 test) |
 | 9 | Çift dosya bulucu tüm dosyayı belleğe okuyor | 🟠 | Tamamlandı (2026-10-08, parçalı hash) |
-| 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Kısmen (`EXCLUDED_DIRS`: `CleanupService` ve `BaseAnalyzer` bağlı, `ArchiveService`/`BackupService` bekliyor) |
-| 11 | Arşiv profil regex'leri iç içe klasörleri kaçırıyor | 🟡 | Bekliyor |
+| 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Kısmen (`exclusions.py`: analiz, temizlik ve arşiv ortak; `BackupService` bilerek yalnızca `.git` dışlıyor, karar bekliyor) |
+| 11 | Arşiv profil regex'leri iç içe klasörleri kaçırıyor | 🟡 | Tamamlandı (2026-10-08) |
 | 12 | Karmaşıklık analizörü eksikleri | 🟡 | Bekliyor |
 | 13 | Build ve bağımlılık hijyeni | 🟡 | Bekliyor |
 
@@ -32,5 +32,5 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 - Java/Go yalnızca örnek kodla doğrulandı (diskte gerçek kod yoktu). Kotlin/PHP/Swift: yalnızca yeni bir `LanguageSpec` gerekir.
 - Donmuş exe içinde analiz çalıştırılamadı (Windows Uygulama Denetimi imzasız exe'yi engelliyor); paket içeriği doğrulandı.
 - UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı.
-- `pathspec` `'gitwildmatch'` adı bu sürümde kullanımdan kalkmış (DeprecationWarning); `'gitignore'` fabrikasına geçiş Bulgu 13 ile birlikte (`requirements.txt` alt sınırı yükselmeli).
-- Sıradaki adaylar: 11 (arşiv profil regex'leri), 12 (params/derinlik/fonksiyon uzunluğu eşikleri), `.gitignore`'a duyarlı analiz.
+- Karar bekliyor (kullanıcı "sonra konuşalım" dedi): `BackupService` yedeği "olduğu gibi" mi kalsın, ortak dışlama mı uygulansın. Bulgu 12 unutulmayacak.
+- Sıradaki adaylar: 12 (params/derinlik/fonksiyon uzunluğu eşikleri), `.gitignore`'a duyarlı analiz.

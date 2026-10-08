@@ -162,7 +162,7 @@ gitclean-archiver-pro/
 ├── resources/                    # 📦 Kaynaklar
 │   ├── icons/                    #    Uygulama ikonları
 │   ├── templates/                #    Rapor şablonları
-│   └── profiles/                 #    Hazır profiller
+│   └── profiles/                 #    Arşiv profilleri (JSON, gitignore sözdizimi)
 │
 ├── main.py                       # 🚀 Ana giriş noktası
 ├── build_exe.py                  # 🔨 Build script'i
@@ -500,6 +500,29 @@ class MyCustomAnalyzer(BaseAnalyzer):
 
 Başka bir sınıf adıyla çakışma `ValueError` verir. Bir analizörü kapatmak için `ProjectService(disabled_analyzers=["MyCustomAnalyzer"])`.
 Not: yeni bir kategori puanlanmaz; puanlanması için `HealthChecker.WEIGHTS` güncellenmelidir.
+
+### Arşiv Profilleri
+
+Arşivlemede hangi dosyaların elendiği **profil** dosyalarıyla belirlenir: paketli `resources/profiles/*.json` ve kullanıcının `~/.gitclean/profiles/*.json` dosyaları (aynı adlı kullanıcı profili paketliyi geçersiz kılar, yeni adlar eklenir). Dosya adı sırası listeleme sırasıdır; bozuk dosya atlanır ve loglanır.
+
+```json
+{
+  "name": "Benim Profilim",
+  "description": "Kısa açıklama",
+  "extends": "Müşteri Teslimi (Temiz)",
+  "exclude": ["*.bak", "/scripts/", "!tests/keep.py"]
+}
+```
+
+Desenler **gitignore sözdizimidir**: `tests/` her derinlikte klasör, `/README*` yalnızca kökte, `*.test.*` her derinlikte dosya, `!` ile istisna. `extends` ile başka profilin desenleri devralınır.
+
+| Profil | Eler |
+|--------|------|
+| Geliştirici (Standart) | yalnızca `.gitignore` kuralları |
+| Müşteri Teslimi (Temiz) | her derinlikte `tests/ test/ __tests__/ benchmarks/` ve test dosyaları (`test_*.py`, `*_test.py`, `conftest.py`, `*.test.*`, `*.spec.*`), kökte `/docs/ /doc/ /.github/`, her derinlikte `.env*` |
+| Yayınlama / Dağıtım (Minimal) | Temiz'in hepsi + kökte `README*`, `LICENSE*`, `CONTRIBUTING*`, `pytest.ini`, `tox.ini`, `requirements-dev.txt`, `.gitattributes` |
+
+Her profilde ayrıca analizle aynı klasör dışlaması geçerlidir: `venv`, `.venv`, `node_modules`, `dist`, `build`, `.next`, `coverage` ..., yanında `Cargo.toml`/`pom.xml` olan `target`, yanında `.csproj` olan `bin`/`obj` ve `pyvenv.cfg` içeren her sanal ortam. Bilinmeyen profil adı hata verir (sessizce "hiçbir şeyi eleme" olmaz).
 
 ### Loglama ve Hata Yönetimi
 

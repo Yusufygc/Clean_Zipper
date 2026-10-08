@@ -193,3 +193,78 @@ def test_backup_fatal_error_removes_partial_zip_and_empty_dir(project, tmp_path,
     assert result["success"] is False and "disk dolu" in result["error"]
     assert not (tmp_path / "backups" / "b3").exists()
     assert "Traceback" in caplog.text
+
+
+# ---- profiller: iç içe eşleşme, ortak dışlama, hatalı profil ------------------------------------
+
+@pytest.fixture
+def nested(tmp_path):
+    root = tmp_path / "nested"
+    for rel in ["app.py", "src/tests/a.py", "pkg/test/b.py", "src/test_x.py", "docs/guide.md", "pkg/docs/api.md",
+                "README.md", "pkg/README.md", ".env", "backend/.env", "backend/.env.local",
+                "LICENSE", "pkg/LICENSE", ".venv/lib/a.py", "myenv/pyvenv.cfg", "myenv/Lib/x.py",
+                "rust/Cargo.toml", "rust/target/debug/a.rlib", "rust/src/main.rs", ".next/server/a.js"]:
+        write(root / rel, "home = x" if rel.endswith("pyvenv.cfg") else "x")
+    return root
+
+
+def zipped(service, root, tmp_path, profile):
+    out = tmp_path / f"{abs(hash(profile))}.zip"
+    result = service.create_zip(root, out, profile_name=profile)
+    assert result["success"], result["error"]
+    return set(names(out))
+
+
+def test_standard_profile_still_skips_virtualenvs_and_build_dirs(nested, tmp_path):
+    included = zipped(ArchiveService(), nested, tmp_path, "Geliştirici (Standart)")
+    assert not any(p.startswith((".venv/", "myenv/", "rust/target/", ".next/")) for p in included)   # eskiden .venv/myenv giriyordu
+    assert {"src/tests/a.py", "backend/.env", "README.md", "rust/src/main.rs"} <= included              # Standart hiçbir şeyi elemez
+
+
+def test_clean_profile_removes_nested_tests_but_keeps_nested_docs_and_readme(nested, tmp_path):
+    included = zipped(ArchiveService(), nested, tmp_path, "Müşteri Teslimi (Temiz)")
+    assert not any("test" in p for p in included)
+    assert "docs/guide.md" not in included
+    assert {"app.py", "pkg/docs/api.md", "README.md", "pkg/README.md"} <= included
+    assert not any(p.split("/")[-1].startswith(".env") for p in included)            # Temiz profil de gizli dosya taşımaz
+
+
+def test_minimal_profile_never_ships_env_files_at_any_depth(nested, tmp_path):
+    included = zipped(ArchiveService(), nested, tmp_path, "Yayınlama / Dağıtım (Minimal)")
+    assert not any(p.split("/")[-1].startswith(".env") for p in included)
+    assert "README.md" not in included and "LICENSE" not in included          # kök dosyaları elenir
+    assert {"pkg/README.md", "pkg/LICENSE", "pkg/docs/api.md", "app.py"} <= included
+
+
+def test_copy_project_uses_the_same_profile_rules(nested, tmp_path):
+    target = tmp_path / "kopya"
+    result = ArchiveService().copy_project(nested, target, profile_name="Yayınlama / Dağıtım (Minimal)")
+    assert result["success"]
+    copied = {p.relative_to(target).as_posix() for p in target.rglob("*") if p.is_file()}
+    assert "backend/.env" not in copied and "src/tests/a.py" not in copied and "app.py" in copied
+
+
+def test_unknown_profile_is_an_error_not_a_silent_no_filter(nested, tmp_path, caplog):
+    out = tmp_path / "o.zip"
+    with caplog.at_level(logging.ERROR):
+        zip_result = ArchiveService().create_zip(nested, out, profile_name="Müşteri Teslimi (Temız)")   # yazım hatası
+        copy_result = ArchiveService().copy_project(nested, tmp_path / "c", profile_name="yok")
+    for result in (zip_result, copy_result):
+        assert result["success"] is False and "Bilinmeyen arşiv profili" in result["error"]
+        assert "Geçerli profiller" in result["error"]
+    assert not out.exists() and not (tmp_path / "c").exists()
+    assert "Bilinmeyen arşiv profili" in caplog.text
+
+
+def test_profiles_view_keeps_the_ui_dictionary_shape(tmp_path):
+    view = ArchiveService().PROFILES
+    assert list(view) == ["Geliştirici (Standart)", "Müşteri Teslimi (Temiz)", "Yayınlama / Dağıtım (Minimal)"]
+    for entry in view.values():
+        assert set(entry) == {"excludes", "description"} and entry["description"] and isinstance(entry["excludes"], list)
+
+
+def test_custom_profiles_can_be_injected(nested, tmp_path):
+    from src.services.archive_profiles import ArchiveProfile
+    service = ArchiveService(profiles={"Özel": ArchiveProfile("Özel", "yalnız logo", ["*.md"])})
+    included = zipped(service, nested, tmp_path, "Özel")
+    assert "app.py" in included and not any(p.endswith(".md") for p in included)

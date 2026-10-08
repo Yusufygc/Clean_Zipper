@@ -1,0 +1,5 @@
+{
+  "name": "Geliştirici (Standart)",
+  "description": "Sadece .gitignore kurallarını uygular. Geliştirici araçları ve testler korunur.",
+  "exclude": []
+}

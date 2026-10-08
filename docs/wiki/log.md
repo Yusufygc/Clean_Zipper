@@ -1,5 +1,16 @@
 # Değişiklik Günlüğü
 
+## [2026-10-08] [REVIEW] | Bulgu 11 (+ Bulgu 10'un arşiv kısmı): arşiv profilleri gitignore sözdizimiyle
+- Sorun (konsolda doğrulandı): `re.match` yalnızca yol başında eşleştiğinden temiz profillerde `src/tests/a.py`, `pkg/test/b.py`, `src/test_x.py`, `*.test.ts` sızıyordu; Minimal profilde `backend/.env` (gizli dosya) arşive giriyordu; Standart profilde `.venv`/`myenv` giriyordu; bilinmeyen profil adı sessizce "hiçbir şeyi eleme" oluyordu.
+- Profiller artık `resources/profiles/*.json` (`01-standart`, `02-musteri-teslimi`, `03-yayinlama`; `extends` desteği) ve `~/.gitclean/profiles/*.json` (geçersiz kılma/ekleme). `src/services/archive_profiles.py`: yükleme, doğrulama, döngü korumalı `extends`, bozuk dosya atlama + loglama, hiç profil yoksa eleme yapmayan varsayılan, PyInstaller `_MEIPASS` yolu.
+- Desenler gitignore sözdizimi (pathspec): klasör adları her derinlikte (`tests/`), dosya adı kuralları kökte (`/README*`), `.env*` her derinlikte. `make_pathspec` yardımcı: `'gitignore'` fabrikası, eski pathspec'te `'gitwildmatch'` (DeprecationWarning kalktı).
+- `src/core/exclusions.py` (`is_excluded_dir`): `ProjectIndex` ve `ArchiveService` aynı klasör dışlamasını kullanıyor (EXCLUDED_DIRS + bağlamsal `target`/`bin`/`obj` + `pyvenv.cfg`).
+- `ArchiveService`: `profiles` enjekte edilebilir, `PROFILES` özelliği UI uyumlu sözlük; bilinmeyen profil `success=False` ve "Geçerli profiller: ..." mesajı.
+- Gerçek proje ölçümü (eski/yeni kod, aynı proje): C# projesi (P005) 383 dosya / 23.2 MB → 58 dosya / 0.05 MB (`bin/obj` derleme çıktısı artık girmiyor); TS/Rust projesi (P023) temiz profillerde 4 `*.test.ts` sızıntısı → 0; bu repo Standart 104 → 99 (araç önbellekleri).
+- Testler: `test_archive_profiles.py` (40), `test_exclusions.py`, `test_archive_service.py` genişletildi, `tests/conftest.py` (kullanıcı profil klasörü yalıtımı); toplam 234 test.
+- Kullanıcı kararı: "Müşteri Teslimi (Temiz)" profiline `.env*` eklendi (her derinlikte); Minimal bunu `extends` ile devralıyor, kendi listesinden kaldırıldı.
+- Doğrulanamadı: donmuş exe içinde profil yükleme (Uygulama Denetimi imzasız exe'yi engelliyor); `_MEIPASS` yolu birim testle doğrulandı. Bkz. [[roadmap]].
+
 ## [2026-10-08] [REVIEW] | Bulgu 7: hata yönetimi ve loglama
 - `src/utils/logging_config.py`: `setup_logging()` (dönen dosya `~/.gitclean/logs/gitclean.log`, `GITCLEAN_LOG_LEVEL`, idempotent) ve `sys.excepthook` / `threading.excepthook` ile yakalanmayan istisnaların kaydı. `main.py` çağırıyor. Gerçek bir alt süreçte doğrulandı: yakalanmayan `RuntimeError` log dosyasında traceback ile görünüyor.
 - `src/core/errors.py`: `GitCleanError`, `ProjectNotSelectedError(ValueError)`; `ProjectService` düz `ValueError` yerine bunu fırlatıyor.

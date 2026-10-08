@@ -2,10 +2,11 @@ import logging
 import os
 import zipfile
 import shutil
-import re
 from pathlib import Path
-from typing import Optional, Callable, Dict, List, Tuple
+from typing import Optional, Callable, Dict, List, Mapping, Tuple
 
+from src.core.exclusions import is_excluded_dir
+from src.services.archive_profiles import ArchiveProfile, load_profiles
 from src.utils.gitignore_parser import GitignoreParser
 
 logger = logging.getLogger(__name__)
@@ -14,56 +15,25 @@ ProgressCallback = Callable[[int, int], None]
 
 
 class ArchiveService:
-    """Farklı sıkıştırma profillerini destekleyen kurumsal arşivleme servisi.
+    """Profil tabanlı arşivleme servisi.
+
+    Profiller `resources/profiles/*.json` (ve kullanıcının `~/.gitclean/profiles`) dosyalarından gelir,
+    desenler gitignore sözdizimidir. Dışlanan klasörler (venv, node_modules, .next ...) her profilde atlanır.
 
     Sonuç sözlüğü: `success` çıktı üretildi mi, `complete` hiçbir dosya atlanmadan mı üretildi,
     `failed_files` eklenemeyen dosyalar (yol, hata), `error` ölümcül hata mesajı.
     """
 
-    # Arşivleme Profillerinin Tanımları ve Filtre Kuralları (Düzenli İfadeler)
-    PROFILES = {
-        "Geliştirici (Standart)": {
-            "excludes": [],
-            "description": "Sadece .gitignore kurallarını uygular. Geliştirici araçları ve testler korunur."
-        },
-        "Müşteri Teslimi (Temiz)": {
-            "excludes": [
-                r"tests?/.*", r"test_.*\.py", r"docs?/.*", r"\.pytest_cache/.*",
-                r"\.coverage", r"htmlcov/.*", r"benchmarks?/.*", r"\.github/.*",
-                r"venv/.*", r"\.venv/.*"
-            ],
-            "description": "Testler, dökümanlar ve CI/CD ayarları elenerek sadece temiz teslimat kodu kalır."
-        },
-        "Yayınlama / Dağıtım (Minimal)": {
-            "excludes": [
-                r"tests?/.*", r"test_.*\.py", r"docs?/.*", r"\.pytest_cache/.*",
-                r"\.coverage", r"htmlcov/.*", r"benchmarks?/.*", r"\.github/.*",
-                r"requirements-dev\.txt", r"\.env.*", r"pytest\.ini", r"tox\.ini",
-                r"\.gitattributes", r"CONTRIBUTING.*", r"LICENSE.*", r"README.*",
-                r"venv/.*", r"\.venv/.*"
-            ],
-            "description": "Sadece çalışması için gerekli kaynak dosyalar kalır. Geliştirme bağımlılıkları ve konfigürasyonları elenir."
-        }
-    }
-
-    def __init__(self, parser: Optional[GitignoreParser] = None):
+    def __init__(self, parser: Optional[GitignoreParser] = None,
+                 profiles: Optional[Mapping[str, ArchiveProfile]] = None):
         self.parser = parser
-        # Genel olarak her koşulda atlanacak kritik sistem klasörleri
-        self._excluded_dirs = {'.git', '__pycache__', 'venv', 'node_modules', '.idea', '.vs', 'dist', 'build'}
+        self.profiles: Mapping[str, ArchiveProfile] = profiles if profiles is not None else load_profiles()
 
-    def _should_exclude_by_profile(self, relative_path_str: str, profile_name: str) -> bool:
-        """Dosyanın seçilen profile göre elenmesi gerekip gerekmediğini doğrular."""
-        profile = self.PROFILES.get(profile_name)
-        if not profile:
-            return False
-
-        # Path seperator'ları standardizasyon için '/' yapıyoruz
-        rp_normalized = relative_path_str.replace('\\', '/')
-
-        for pattern in profile["excludes"]:
-            if re.match(pattern, rp_normalized, re.IGNORECASE):
-                return True
-        return False
+    @property
+    def PROFILES(self) -> Dict[str, Dict]:
+        """UI için {ad: {"excludes": desenler, "description": açıklama}} görünümü (profil sırasıyla)."""
+        return {name: {"excludes": list(p.patterns), "description": p.description}
+                for name, p in self.profiles.items()}
 
     def _refuse_if_gitignore_unreadable(self, result: Dict) -> bool:
         """Okunamayan .gitignore ile arşivleme gizli dosyaları sızdırabilir; işlem reddedilir."""
@@ -73,15 +43,24 @@ class ArchiveService:
             return True
         return False
 
-    def _collect_files(self, source_dir: Path, profile_name: str, result: Dict,
+    def _resolve_profile(self, profile_name: str, result: Dict) -> Optional[ArchiveProfile]:
+        """Bilinmeyen profil adı sessizce 'hiçbir şeyi eleme' olmaz: işlem hata ile durur."""
+        profile = self.profiles.get(profile_name)
+        if profile is None:
+            result['error'] = f"Bilinmeyen arşiv profili: {profile_name!r}. Geçerli profiller: {', '.join(self.profiles)}"
+            logger.error(result['error'])
+        return profile
+
+    def _collect_files(self, source_dir: Path, profile: ArchiveProfile, result: Dict,
                        skip_root_dir: Optional[str] = None,
                        skip_file: Optional[Path] = None) -> List[Tuple[Path, Path]]:
         """Kaynak ağacı gezer, .gitignore ve profil süzgecinden geçen (mutlak, göreli) yolları döner."""
         files: List[Tuple[Path, Path]] = []
         for root, dirs, filenames in os.walk(source_dir):
             root_path = Path(root)
+            sibling_names = dirs + filenames
             dirs[:] = [d for d in dirs
-                       if d not in self._excluded_dirs
+                       if not is_excluded_dir(os.path.join(root, d), d, sibling_names)
                        and not (skip_root_dir and root_path == source_dir and d == skip_root_dir)]
             for name in filenames:
                 fp = root_path / name
@@ -95,8 +74,8 @@ class ArchiveService:
                 if self.parser and self.parser.should_ignore(str(fp)):
                     result['skipped_files'] += 1
                     continue
-                # 2. Seçilen Sıkıştırma Profil Filtrelerini Uygula
-                if self._should_exclude_by_profile(str(rp), profile_name):
+                # 2. Seçilen Profilin Desenlerini Uygula
+                if profile.matches(rp.as_posix()):
                     result['skipped_files'] += 1
                     continue
                 files.append((fp, rp))
@@ -124,7 +103,8 @@ class ArchiveService:
 
         result = {'success': False, 'complete': False, 'total_files': 0, 'added_files': 0,
                   'skipped_files': 0, 'failed_files': [], 'error': None}
-        if self._refuse_if_gitignore_unreadable(result):
+        profile = self._resolve_profile(profile_name, result)
+        if profile is None or self._refuse_if_gitignore_unreadable(result):
             return result
 
         try:
@@ -134,7 +114,7 @@ class ArchiveService:
             zip_inside_source = False
 
         files_to_add = self._collect_files(
-            source_dir, profile_name, result, skip_file=output_path if zip_inside_source else None)
+            source_dir, profile, result, skip_file=output_path if zip_inside_source else None)
         result['total_files'] = len(files_to_add)
 
         try:
@@ -165,7 +145,8 @@ class ArchiveService:
 
         result = {'success': False, 'complete': False, 'copied_files': 0,
                   'skipped_files': 0, 'failed_files': [], 'error': None}
-        if self._refuse_if_gitignore_unreadable(result):
+        profile = self._resolve_profile(profile_name, result)
+        if profile is None or self._refuse_if_gitignore_unreadable(result):
             return result
 
         try:
@@ -173,7 +154,7 @@ class ArchiveService:
         except (ValueError, IndexError):
             skip_root_dir = None
 
-        files_to_copy = self._collect_files(source_dir, profile_name, result, skip_root_dir=skip_root_dir)
+        files_to_copy = self._collect_files(source_dir, profile, result, skip_root_dir=skip_root_dir)
         total = len(files_to_copy)
 
         try:

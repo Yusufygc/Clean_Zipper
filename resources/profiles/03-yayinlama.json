@@ -1,0 +1,9 @@
+{
+  "name": "Yayınlama / Dağıtım (Minimal)",
+  "description": "Sadece çalışması için gerekli kaynak dosyalar kalır. Geliştirme bağımlılıkları ve konfigürasyonları elenir.",
+  "extends": "Müşteri Teslimi (Temiz)",
+  "exclude": [
+    "/requirements-dev.txt", "/pytest.ini", "/tox.ini", "/.gitattributes",
+    "/CONTRIBUTING*", "/LICENSE*", "/README*"
+  ]
+}

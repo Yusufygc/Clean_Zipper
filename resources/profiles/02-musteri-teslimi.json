@@ -1,0 +1,10 @@
+{
+  "name": "Müşteri Teslimi (Temiz)",
+  "description": "Testler, dökümanlar ve CI/CD ayarları elenerek sadece temiz teslimat kodu kalır.",
+  "exclude": [
+    "tests/", "test/", "__tests__/", "benchmarks/", ".pytest_cache/", "htmlcov/", ".coverage",
+    "test_*.py", "*_test.py", "conftest.py", "*.test.*", "*.spec.*", "*.Tests/",
+    "/docs/", "/doc/", "/.github/",
+    ".env*"
+  ]
+}

@@ -6,6 +6,15 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+def make_pathspec(lines) -> pathspec.PathSpec:
+    """gitignore sözdizimiyle desen kümesi. Yeni pathspec'te 'gitignore', eskisinde 'gitwildmatch' fabrikası."""
+    lines = list(lines)
+    try:
+        return pathspec.PathSpec.from_lines('gitignore', lines)
+    except LookupError:
+        return pathspec.PathSpec.from_lines('gitwildmatch', lines)
+
+
 class GitignoreParser:
     def __init__(self, root_path: str):
         self.root_path = root_path
@@ -26,7 +35,7 @@ class GitignoreParser:
             self.load_error = f".gitignore okunamadı: {e}"
             logger.error("%s (%s)", self.load_error, gitignore_path)
             return
-        self.spec = pathspec.PathSpec.from_lines('gitwildmatch', content.splitlines())
+        self.spec = make_pathspec(content.splitlines())
 
     def should_ignore(self, file_path: str) -> bool:
         if not self.spec:
