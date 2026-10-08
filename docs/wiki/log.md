@@ -1,5 +1,13 @@
 # Değişiklik Günlüğü
 
+## [2026-10-09] [FEAT] | QML arayüzü Aşama 4: Arşivleme, temiz kopya ve yedekleme modülü
+- Uygulama:
+  - `ArchiveViewModel` (`QObject`): `ArchiveService` ve `BackupService` köprüsü; `ArchiveWorker` (`QThread`) ile asenkron arşiv (.zip), temiz kopya ve yedek üretimi; `archive_profiles` JSON profillerinin dinamik listelenmesi ve seçimi; dosya bazlı canlı ilerleme takibi.
+  - Güvenlik ve bütünlük: Okunamayan .gitignore durumunda sızıntı koruması hata uyarısı; kısmi/eksiksiz sonuç ayrımı (`complete` bayrağı); eklenemeyen dosyalar dökümü (`failed_files`).
+  - Hızlı yedekleme paneli: `~/.gitclean_backups` dizinine tek tıkla zip yedeği alma; üretilebilir klasörler (venv, node_modules) hariç tutma sayımı ve boyut raporu; mevcut yedeklerin listelenmesi.
+  - `ArchiveView.qml`: 3 modlu geçiş (Zip Arşivi, Temiz Kopya, Proje Yedeği), profil seçim kartları, hedef konum seçiciler (`FileDialog` & `FolderDialog`), canlı ilerleme çubuğu ve detaylı sonuç paneli. Sıfır emoji, saf SVG ikonlar.
+- Testler: `tests/unit/test_archive_viewmodel.py` (4 test: başlangıç profilleri, zip arşivi oluşturma, temiz dizin kopyası oluşturma, yedek alma); tüm duman ve AST testleri yeşil. Toplam 646 test.
+
 ## [2026-10-09] [FEAT] | QML arayüzü Aşama 3: Detaylı bulgular ve teşhis gezgini (Findings Explorer)
 - Uygulama:
   - `FindingsViewModel` & `FindingsListModel` (`QAbstractListModel`): `doctor.diagnose()` ile derin teşhis köprüsü; `DiagnoseWorker` (`QThread`) ile arka planda tarama; sanallaştırılmış liste veri modeli; anlık metin arama ve şiddet (Kritik, Yüksek, Orta, Düşük, Bilgi) filtresi.
