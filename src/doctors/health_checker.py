@@ -22,12 +22,17 @@ class HealthChecker(IHealthChecker):
     }
     # 'type' kategorisi yalnızca bilgi amaçlı olduğundan puanlanmaz.
     WEIGHTS = {
-        'security': 0.25,
-        'complexity': 0.20,
-        'duplicate': 0.15,
-        'size': 0.15,
-        'structure': 0.15,
-        'dependency': 0.10,
+        'security': 0.20,
+        'complexity': 0.16,
+        'duplicate': 0.10,
+        'size': 0.08,
+        'structure': 0.08,
+        'dependency': 0.08,
+        'deadcode': 0.06,
+        'architecture': 0.06,
+        'reliability': 0.08,
+        'testing': 0.06,
+        'hygiene': 0.04,
     }
     DECAY = 60
 

@@ -170,12 +170,13 @@ def test_complexity_flags_function_over_limit_only(tmp_path):
 
 
 def test_complexity_flags_god_class_and_bloated_file(tmp_path):
-    methods = "".join(f"    def m{i}(self):\n        pass\n" for i in range(13))
+    methods = "".join(f"    def m{i}(self):\n        pass\n" for i in range(21))      # V2 sınırı: 20 metot
     write(tmp_path / "god.py", f"class God:\n{methods}")
-    write(tmp_path / "long.py", "x = 1\n" * 401)
+    write(tmp_path / "long.py", "x = 1\n" * 501)                                      # V2 sınırı: 500 satır
+    write(tmp_path / "fine.py", "class Ok:\n" + "".join(f"    def m{i}(self):\n        pass\n" for i in range(20)))
     results = CodeComplexityAnalyzer().analyze(ProjectIndex.build(tmp_path))
     assert sorted((r.file_path.name, r.severity) for r in results) == [
-        ("god.py", Severity.HIGH), ("long.py", Severity.HIGH)]
+        ("god.py", Severity.HIGH), ("long.py", Severity.MEDIUM)]
 
 
 def test_complexity_skips_broken_python(tmp_path):
@@ -323,3 +324,94 @@ def test_with_gitignore_support_disabled_ignore_status_is_unknown_so_file_is_fla
     write(tmp_path / ".env", "SECRET=1")
     [finding] = sensitive_findings(tmp_path, respect_gitignore=False)
     assert finding.severity == Severity.CRITICAL                       # eski, ihtiyatlı davranış
+
+
+# ---- V2 eşikleri: birleşik fonksiyon bulgusu, şiddet, yapılandırma -------------------------------
+
+from src.core.thresholds import QualityThresholds
+
+
+def analyzer_with(**overrides):
+    analyzer = CodeComplexityAnalyzer()
+    analyzer.thresholds = QualityThresholds(**overrides)
+    return analyzer
+
+
+def function_findings(tmp_path, source, name="m.py", **overrides):
+    target = write(tmp_path / name, source)
+    results = analyzer_with(**overrides).analyze(ProjectIndex.build(target.parent))   # yalnızca bu dosyanın klasörü
+    return [r for r in results if r.metadata.get("rule") == "function-metrics"]
+
+
+def test_function_exceeding_several_metrics_gets_one_combined_finding(tmp_path):
+    params = ", ".join(f"p{i}" for i in range(7))                            # 7 > 5
+    body = "\n".join(f"    if p0 == {i}:\n        pass" for i in range(11))  # siklomatik 12, bilişsel 11
+    [finding] = function_findings(tmp_path, f"def big({params}):\n{body}\n")
+    assert finding.metadata["violations"] == {"cyclomatic": 12, "params": 7}
+    assert "siklomatik karmaşıklık 12 (Limit: 10)" in finding.description and "parametre sayısı 7 (Limit: 5)" in finding.description
+    assert finding.severity == Severity.MEDIUM                               # en yüksek metrik: siklomatik ORTA
+    assert "Extract Method" in finding.recommendation and "Parameter Object" in finding.recommendation
+
+
+def test_severity_escalates_at_twice_the_threshold(tmp_path):
+    body = "\n".join(f"    if x == {i}:\n        pass" for i in range(20))   # siklomatik 21 >= 2 x 10
+    [finding] = function_findings(tmp_path, f"def f(x):\n{body}\n")
+    assert finding.severity == Severity.HIGH
+
+
+def test_only_low_priority_metrics_give_low_severity(tmp_path):
+    many_params = "def f(" + ", ".join(f"a{i}" for i in range(6)) + "):\n    pass\n"
+    [finding] = function_findings(tmp_path, many_params)
+    assert finding.severity == Severity.LOW and finding.metadata["violations"] == {"params": 6}
+
+
+def test_function_length_and_nesting_and_cognitive_thresholds(tmp_path):
+    long_body = "    x = 0\n" * 50                                              # 52 satır > 50
+    deep = "def deep(a):\n    if a:\n        if a:\n            if a:\n                if a:\n                    if a:\n                        pass\n"
+    results = function_findings(tmp_path, f"def long_one():\n{long_body}\n{deep}")
+    by_name = {r.metadata["function"]: r.metadata["violations"] for r in results}
+    assert by_name["long_one"] == {"length": 51}          # def satırı dahil 51 satır > 50
+    assert by_name["deep"] == {"nesting": 5}               # bilişsel 1+2+3+4+5 = 15: eşiğin kendisi aşım değil
+
+
+def test_thresholds_are_configurable_and_exact_boundary_is_not_a_violation(tmp_path):
+    source = "def f(a, b, c):\n    if a:\n        pass\n"
+    assert function_findings(tmp_path, source, name="a/m.py") == []           # varsayılan: 3 parametre sorun değil
+    [finding] = function_findings(tmp_path, source, name="b/m.py", parameters=2)
+    assert finding.metadata["violations"] == {"params": 3}
+    assert function_findings(tmp_path, source, name="c/m.py", parameters=3) == []  # eşiğin kendisi aşım sayılmaz
+
+
+def test_module_import_count_threshold(tmp_path):
+    imports = "\n".join(f"import mod{i}" for i in range(26))
+    write(tmp_path / "many.py", imports + "\nx = 1\n")
+    write(tmp_path / "few.py", "import os\nimport sys\n")
+    results = [r for r in analyzer_with().analyze(ProjectIndex.build(tmp_path)) if r.metadata.get("rule") == "module-imports"]
+    assert [(r.file_path.name, r.severity, r.metadata["imports"]) for r in results] == [("many.py", Severity.LOW, 26)]
+
+
+def test_project_doctor_passes_thresholds_to_analyzers(tmp_path):
+    from src.doctors.project_doctor import ProjectDoctor
+    write(tmp_path / "m.py", "def f(a, b, c):\n    pass\n")
+    doctor = ProjectDoctor([CodeComplexityAnalyzer()], thresholds=QualityThresholds(parameters=2))
+    analysis = doctor.diagnose(tmp_path)
+    assert [f.metadata["violations"] for f in analysis.all_findings if f.metadata.get("rule") == "function-metrics"] == [{"params": 3}]
+
+
+def test_project_service_thresholds_option(tmp_path):
+    from src.services.project_service import ProjectService
+    write(tmp_path / "m.py", "def f(a, b, c):\n    pass\n")
+    service = ProjectService(thresholds=QualityThresholds(parameters=2))
+    service.set_project(tmp_path)
+    titles = [i.title for i in service.analyze_project()["all_issues"]] + \
+             [f.title for f in service.doctor.diagnose(tmp_path).all_findings]
+    assert any(t.startswith("Karmaşık Fonksiyon: f()") for t in titles)
+
+
+def test_brace_languages_report_the_same_combined_findings(tmp_path):
+    branches = "\n".join(f"  if (x == {i}) {{ y = {i}; }}" for i in range(11))
+    write(tmp_path / "App.java", f"class App {{\n void f(int x, int y) {{\n{branches}\n }}\n}}\n")
+    results = analyzer_with().analyze(ProjectIndex.build(tmp_path))
+    [finding] = [r for r in results if r.metadata.get("rule") == "function-metrics"]
+    assert finding.metadata["language"] == "java" and finding.metadata["approximate"] is True
+    assert finding.metadata["violations"]["cyclomatic"] == 12

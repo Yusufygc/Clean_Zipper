@@ -4,12 +4,14 @@ from pathlib import Path
 
 from src.core.interfaces import IAnalyzer
 from src.core.project_index import ProjectIndex
+from src.core.thresholds import QualityThresholds
 from src.models.analysis_models import AnalysisResult, Severity
 
 
 class BaseAnalyzer(IAnalyzer):
     def __init__(self, priority: int = 100):
         self._priority = priority
+        self.thresholds = QualityThresholds()      # ProjectDoctor / ProjectService üzerinden geçersiz kılınabilir
 
     @property
     def name(self) -> str:

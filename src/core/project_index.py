@@ -65,6 +65,7 @@ class ProjectIndex:
         self._git_tracked: Optional[Set[str]] = None
         self._git_tracked_loaded = False
         self._memo: Dict[str, Dict[str, Any]] = {}
+        self._memo_cost: Dict[str, int] = {}
 
     @classmethod
     def build(cls, root: Path, excluded: FrozenSet[str] = EXCLUDED_DIRS,
@@ -169,12 +170,26 @@ class ProjectIndex:
             self._git_tracked_loaded = True
         return self._git_tracked
 
-    def memo(self, namespace: str, entry: FileEntry, factory: Callable[[], Any]) -> Any:
-        """Dosya başına türetilmiş veriyi (None dahil) bir kez üretir; analizörler arasında paylaşılır."""
+    def memo(self, namespace: str, entry: FileEntry, factory: Callable[[], Any],
+             cost: Optional[Callable[[Any], int]] = None, budget: Optional[int] = None) -> Any:
+        """Dosya başına türetilmiş veriyi (None dahil) bir kez üretir; analizörler arasında paylaşılır.
+
+        `cost` ve `budget` verilirse ad alanının toplam maliyeti bütçeyi aşınca yeni değerler saklanmaz
+        (yine hesaplanıp döner, yalnızca önbelleğe alınmaz): büyük metinler için bellek tavanı.
+        """
         bucket = self._memo.setdefault(namespace, {})
-        if entry.rel not in bucket:
-            bucket[entry.rel] = factory()
-        return bucket[entry.rel]
+        if entry.rel in bucket:
+            return bucket[entry.rel]
+        value = factory()
+        if cost is None:
+            bucket[entry.rel] = value
+        else:
+            used = self._memo_cost.get(namespace, 0)
+            price = cost(value)
+            if budget is None or used + price <= budget:
+                bucket[entry.rel] = value
+                self._memo_cost[namespace] = used + price
+        return value
 
     # ------------------------------------------------------------------ #
     #  İçerik erişimi                                                    #

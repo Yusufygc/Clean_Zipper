@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Optional
 
 from src.core.project_index import FileEntry, ProjectIndex
-from src.languages.base import LanguageSupport, SourceMetrics
+from src.languages.base import LanguageSupport, SourceMetrics, StrippedSource
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,8 @@ GENERATED_FILE_PATTERNS = (
 )
 
 MEMO_NAMESPACE = 'source_metrics'
+STRIPPED_NAMESPACE = 'stripped_source'
+STRIPPED_CHAR_BUDGET = 64_000_000        # temiz + yorumsuz görünüm toplam karakter tavanı (bellek)
 
 
 class LanguageRegistry:
@@ -68,6 +70,33 @@ def parse_file(index: ProjectIndex, entry: FileEntry,
     if language is None or is_generated(entry.path.name):
         return None
     return index.memo(MEMO_NAMESPACE, entry, lambda: _analyze(index, entry, language, registry))
+
+
+def get_stripped(index: ProjectIndex, entry: FileEntry,
+                 registry: LanguageRegistry = default_languages) -> Optional[StrippedSource]:
+    """Yorum/string temizlenmiş görünüm (`no_comments`, `clean`); ölçümü olmayan dosyada ve çözümlenemezse None.
+
+    `parse_file` ile aynı eleme kuralları (desteklenmeyen, üretilmiş, küçültülmüş, ikilik) geçerlidir.
+    Önbellek bütçelidir; bütçe aşılırsa sonuç yine döner, yalnızca saklanmaz.
+    """
+    metrics = parse_file(index, entry, registry)
+    if metrics is None:
+        return None
+    language = registry.get(metrics.language)
+    return index.memo(
+        STRIPPED_NAMESPACE, entry, lambda: _strip(index, entry, language),
+        cost=lambda value: 0 if value is None else 2 * len(value.clean), budget=STRIPPED_CHAR_BUDGET)
+
+
+def _strip(index: ProjectIndex, entry: FileEntry, language: LanguageSupport) -> Optional[StrippedSource]:
+    text = index.read_text(entry)
+    if text is None:
+        return None
+    try:
+        return language.stripped(text)
+    except Exception:
+        logger.warning("Dosya temizlenemedi, atlandı: %s (%s)", entry.rel, language.id, exc_info=True)
+        return None
 
 
 def _analyze(index: ProjectIndex, entry: FileEntry, language: LanguageSupport,

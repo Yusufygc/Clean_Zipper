@@ -41,7 +41,7 @@ C = LanguageSpec(
     id='c', display_name='C', extensions=('.c', '.h'), family='c_like',
     string_patterns=(b.DOUBLE_QUOTED,), char_literal=True, preprocessor=True,
     decision_pattern=_C_DECISION, import_patterns=(_C_INCLUDE,), keywords=_C_LIKE_KEYWORDS,
-    class_kinds=('struct',), header_cleaners=(r'__attribute__\s*\(\(.*?\)\)', r'__declspec\s*\([^)]*\)'),
+    ternary_pattern=_TERNARY, class_kinds=('struct',), header_cleaners=(r'__attribute__\s*\(\(.*?\)\)', r'__declspec\s*\([^)]*\)'),
     # .h dosyası C++ işaretleri taşıyorsa C++ sayılır
     refine_pattern=r'(?m)^\s*(?:template\s*<|namespace\s+\w+|class\s+\w+\s*[:{;]|public\s*:|private\s*:|protected\s*:)|\bstd::',
     refine_to='cpp',
@@ -50,13 +50,13 @@ CPP = LanguageSpec(
     id='cpp', display_name='C++', extensions=('.cc', '.cpp', '.cxx', '.c++', '.hpp', '.hh', '.hxx', '.ipp', '.tpp'),
     family='c_like', string_patterns=(b.CPP_RAW_STRING, b.DOUBLE_QUOTED), char_literal=True, preprocessor=True,
     decision_pattern=_C_DECISION, import_patterns=(_C_INCLUDE,), keywords=_C_LIKE_KEYWORDS,
-    class_kinds=('class', 'struct'), new_guard=True,
+    ternary_pattern=_TERNARY, class_kinds=('class', 'struct'), new_guard=True,
     header_cleaners=(r'\[\[[^\]]*\]\]', r'__attribute__\s*\(\(.*?\)\)', r'__declspec\s*\([^)]*\)'),
 )
 JAVA = LanguageSpec(
     id='java', display_name='Java', extensions=('.java',), family='c_like',
     string_patterns=(b.TRIPLE_QUOTED, b.DOUBLE_QUOTED), char_literal=True,
-    decision_pattern=_C_DECISION,
+    decision_pattern=_C_DECISION, ternary_pattern=_TERNARY,
     import_patterns=(r'(?m)^[ \t]*import\s+(?:static\s+)?([\w.]+?)(?:\.\*)?\s*;',), keywords=_C_LIKE_KEYWORDS,
     class_kinds=('class', 'interface', 'record'), new_guard=True,
     header_cleaners=(r'@[\w.]+(?:\s*\((?:[^()]|\([^()]*\))*\))?',),
@@ -65,7 +65,7 @@ CSHARP = LanguageSpec(
     id='csharp', display_name='C#', extensions=('.cs',), family='c_like',
     string_patterns=(b.TRIPLE_QUOTED, b.CSHARP_VERBATIM, b.CSHARP_INTERPOLATED, b.DOUBLE_QUOTED),
     char_literal=True, preprocessor=True,
-    decision_pattern=_CSHARP_DECISION,
+    decision_pattern=_CSHARP_DECISION, ternary_pattern=_TERNARY,
     import_patterns=(r'(?m)^[ \t]*(?:global\s+)?using\s+(?:static\s+)?(?:\w+\s*=\s*)?([\w.]+)\s*;',),
     keywords=_C_LIKE_KEYWORDS, class_kinds=('class', 'interface', 'record', 'struct'),
     class_header_parens=True, new_guard=True,
@@ -74,25 +74,26 @@ CSHARP = LanguageSpec(
 JAVASCRIPT = LanguageSpec(
     id='javascript', display_name='JavaScript', extensions=('.js', '.jsx', '.mjs', '.cjs'), family='js',
     string_patterns=(b.DOUBLE_QUOTED, b.SINGLE_QUOTED, b.TEMPLATE_LITERAL), regex_literal=True,
-    decision_pattern=_JS_DECISION, import_patterns=_JS_IMPORTS, keywords=_JS_KEYWORDS,
+    decision_pattern=_JS_DECISION, ternary_pattern=_TERNARY, import_patterns=_JS_IMPORTS, keywords=_JS_KEYWORDS,
     class_kinds=('class',), class_header_parens=True, new_guard=True, header_cleaners=_JS_CLEANERS,
 )
 TYPESCRIPT = LanguageSpec(
     id='typescript', display_name='TypeScript', extensions=('.ts', '.tsx', '.mts', '.cts'), family='js',
     string_patterns=(b.DOUBLE_QUOTED, b.SINGLE_QUOTED, b.TEMPLATE_LITERAL), regex_literal=True,
-    decision_pattern=_JS_DECISION, import_patterns=_JS_IMPORTS, keywords=_JS_KEYWORDS,
+    decision_pattern=_JS_DECISION, ternary_pattern=_TERNARY, import_patterns=_JS_IMPORTS, keywords=_JS_KEYWORDS,
     class_kinds=('class', 'interface'), class_header_parens=True, new_guard=True, header_cleaners=_JS_CLEANERS,
 )
 GO = LanguageSpec(
     id='go', display_name='Go', extensions=('.go',), family='go',
     string_patterns=(b.GO_RAW_STRING, b.DOUBLE_QUOTED), char_literal=True,
-    decision_pattern=_GO_DECISION,
+    decision_pattern=_GO_DECISION, structural_keywords=('if', 'for', 'switch', 'select'),
     import_patterns=(r'(?m)^[ \t]*import\s+(?:[\w.]+\s+)?"([^"\n]+)"',), keywords=frozenset(),
 )
 RUST = LanguageSpec(
     id='rust', display_name='Rust', extensions=('.rs',), family='rust',
     string_patterns=(b.RUST_RAW_STRING, b.DOUBLE_QUOTED), char_literal=True,
-    decision_pattern=_RUST_DECISION,
+    decision_pattern=_RUST_DECISION, structural_keywords=('if', 'for', 'while', 'loop', 'match'),
+    bool_or_pattern=r'(?<!\bmove)(?<=[\w)\]])\s*\|\|',
     import_patterns=(r'(?m)^[ \t]*(?:pub(?:\([^)]*\))?\s+)?use\s+(?:::)?([\w:]+)',
                      r'(?m)^[ \t]*(?:pub\s+)?extern\s+crate\s+(\w+)'),
     keywords=frozenset(),

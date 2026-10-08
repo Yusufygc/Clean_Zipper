@@ -2,6 +2,7 @@
 from typing import Callable, Dict, Optional
 from src.core.errors import ProjectNotSelectedError
 from src.core.registry import default_registry, load_builtin_analyzers
+from src.core.thresholds import QualityThresholds
 from src.doctors.project_doctor import ProjectDoctor
 from src.services.archive_service import ArchiveService
 from src.services.cleanup_service import CleanupService
@@ -9,10 +10,11 @@ from src.services.backup_service import BackupService
 from src.utils.gitignore_parser import GitignoreParser
 
 class ProjectService:
-    def __init__(self, disabled_analyzers=(), respect_gitignore: bool = True):
+    def __init__(self, disabled_analyzers=(), respect_gitignore: bool = True,
+                 thresholds: Optional[QualityThresholds] = None):
         load_builtin_analyzers()
         self.doctor = ProjectDoctor(default_registry.create_all(disabled=disabled_analyzers),
-                                    respect_gitignore=respect_gitignore)
+                                    respect_gitignore=respect_gitignore, thresholds=thresholds)
         self.archive_service = ArchiveService()
         self.cleanup_service = CleanupService()
         self.backup_service = BackupService()

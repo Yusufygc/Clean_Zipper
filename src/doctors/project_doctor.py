@@ -5,6 +5,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 from datetime import datetime
 from src.core.interfaces import IAnalyzer
 from src.core.project_index import ProjectIndex
+from src.core.thresholds import QualityThresholds
 from src.doctors.health_checker import HealthChecker
 from src.doctors.recommendation_engine import RecommendationEngine
 from src.models.analysis_models import ProjectAnalysis, AnalysisResult, Severity, FileInfo
@@ -19,8 +20,10 @@ ANALYZER_PROGRESS_SHARE = 85
 
 
 class ProjectDoctor:
-    def __init__(self, analyzers: Optional[Iterable[IAnalyzer]] = None, respect_gitignore: bool = True):
+    def __init__(self, analyzers: Optional[Iterable[IAnalyzer]] = None, respect_gitignore: bool = True,
+                 thresholds: Optional[QualityThresholds] = None):
         self.respect_gitignore = respect_gitignore
+        self.thresholds = thresholds
         self._analyzers: List[IAnalyzer] = []
         self._health_checker = HealthChecker()
         self._recommendation_engine = RecommendationEngine()
@@ -28,6 +31,8 @@ class ProjectDoctor:
             self.register_analyzer(analyzer)
 
     def register_analyzer(self, analyzer: IAnalyzer):
+        if self.thresholds is not None and hasattr(analyzer, 'thresholds'):
+            analyzer.thresholds = self.thresholds
         self._analyzers.append(analyzer)
         self._analyzers.sort(key=lambda a: a.get_priority())
 

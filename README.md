@@ -284,16 +284,16 @@ Skor, analizörlerin ürettiği bulgulardan hesaplanır. Sabit değer yoktur.
 
 | Kategori | Ağırlık | Kaynak |
 |----------|---------|--------|
-| **Güvenlik** | %25 | Sızan anahtar/şifre, açıkta `.env` gibi dosyalar |
-| **Karmaşıklık** | %20 | Şişmiş dosya, God Object, yüksek siklomatik karmaşıklık |
-| **Çiftler** | %15 | Tekrarlayan dosya grupları |
-| **Boyut** | %15 | Toplam proje boyutu, büyük dosyalar |
-| **Yapı** | %15 | Boş klasörler, klasör derinliği |
-| **Bağımlılık** | %10 | Kullanılmayan kütüphaneler, eksik `requirements.txt` |
+| **Güvenlik** | %20 | Sızan anahtar/şifre, `.env`, commit edilmiş hassas dosya |
+| **Karmaşıklık** | %16 | V2 eşikleri: karmaşıklık, uzunluk, derinlik, parametre, God Object, dosya boyutu |
+| **Çiftler** | %10 | Tekrarlayan dosya grupları |
+| **Boyut** | %8 | Toplam proje boyutu, büyük dosyalar |
+| **Yapı** | %8 | Boş klasörler, klasör derinliği |
+| **Bağımlılık** | %8 | Kullanılmayan kütüphaneler, eksik `requirements.txt` |
 
-Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz.
+Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz. Yeni kategoriler (`deadcode`, `architecture`, `reliability`, `testing`, `hygiene`) ilgili analizörler eklendikçe devreye girer.
 
-**Hesaplama:** her bulgunun şiddeti ceza puanı getirir (KRİTİK 40, YÜKSEK 15, ORTA 5, DÜŞÜK 1, BİLGİ 0). Kategori skoru `100 × e^(−ceza/60)` formülüyle bulunur. Genel skor, kategori skorlarının ağırlıklı ortalamasıdır. Çalışmayan veya hata veren analizörün kategorisi ağırlıktan çıkarılır; hiçbir analizör çalışmazsa skor 0 olur.
+**Hesaplama:** her bulgunun şiddeti ceza puanı getirir (KRİTİK 40, YÜKSEK 15, ORTA 5, DÜŞÜK 1, BİLGİ 0). Kategori skoru `100 × e^(−ceza/60)` formülüyle bulunur. Genel skor, kategori skorlarının ağırlıklı ortalamasıdır. Hiçbir analizör çalışmazsa skor 0 olur.
 
 ### Notlandırma Tablosu
 
@@ -500,6 +500,23 @@ class MyCustomAnalyzer(BaseAnalyzer):
 
 Başka bir sınıf adıyla çakışma `ValueError` verir. Bir analizörü kapatmak için `ProjectService(disabled_analyzers=["MyCustomAnalyzer"])`.
 Not: yeni bir kategori puanlanmaz; puanlanması için `HealthChecker.WEIGHTS` güncellenmelidir.
+
+### Kalite Eşikleri (V2)
+
+`QualityThresholds` (`src/core/thresholds.py`) V2 denetim şablonunun ölçüm eşiklerini taşır; bir değer eşiği **aşarsa** (`>`) bulgu üretilir, eşiğin 2 katı ve üstü bir seviye yukarı raporlanır. `ProjectService(thresholds=QualityThresholds(parameters=7))` ile geçersiz kılınır.
+
+| Metrik | Eşik | Öncelik |
+|--------|------|---------|
+| Siklomatik karmaşıklık | > 10 | ORTA |
+| Bilişsel karmaşıklık | > 15 | ORTA |
+| İç içe blok derinliği | > 4 | ORTA |
+| Fonksiyon uzunluğu | > 50 satır | DÜŞÜK |
+| Parametre sayısı | > 5 | DÜŞÜK |
+| Sınıf uzunluğu / sınıf metodu | > 300 satır / > 20 metot | YÜKSEK (God Object) |
+| Dosya uzunluğu | > 500 satır | ORTA |
+| Dosya başına benzersiz import | > 25 | DÜŞÜK |
+
+Bir fonksiyon birden çok eşiği aşarsa **tek** bulgu üretilir (aşılan metrikler birlikte listelenir). Python metrikleri `ast` ile kesindir: siklomatik karmaşıklık `radon` kurallarıyla, bilişsel karmaşıklık SonarSource kurallarıyla hesaplanır (gerçek kodda `radon` ile %100, `cognitive_complexity` paketiyle %99 uyum doğrulandı). Diğer dillerde parametre sayısı, iç içe derinlik ve bilişsel karmaşıklık sözcük tabanlı çözümlemeyle **yaklaşık** hesaplanır; süslü parantezsiz tek satırlık `if` gibi yapılar iç içe sayılamaz.
 
 ### `.gitignore` ve Git Duyarlılığı
 
