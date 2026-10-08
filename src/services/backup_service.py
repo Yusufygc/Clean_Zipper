@@ -2,10 +2,14 @@ import logging
 import os
 import zipfile
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Iterator, List, Dict, Optional
 from datetime import datetime
 
+from src.core.exclusions import is_excluded_dir
+
 logger = logging.getLogger(__name__)
+
+MAX_REPORTED_EXCLUDED = 100         # sonuçta ayrıntısı listelenen dışlanan klasör sayısı (toplam sayı her zaman verilir)
 
 
 class BackupService:
@@ -14,25 +18,31 @@ class BackupService:
         self._backup_root.mkdir(parents=True, exist_ok=True)
 
     def create_backup(self, project_path: Path, backup_name: Optional[str] = None) -> Dict:
-        """Projeyi zip olarak yedekler. `complete` False ise bazı dosyalar eklenemedi (`failed_files`)."""
+        """Projeyi zip olarak yedekler. `complete` False ise bazı dosyalar eklenemedi (`failed_files`).
+
+        Yedek felaket kurtarma içindir: `.gitignore`'a BAKMAZ, çünkü `.env`, yerel veritabanları, modeller gibi git'te
+        olmayan ve geri getirilemeyen dosyalar çoğunlukla ignore'dadır. Yalnızca yeniden üretilebilir klasörler
+        (`.git`, `venv`, `node_modules`, `__pycache__`, `dist`, `build`, önbellekler) dışarıda kalır; hangileri
+        olduğu sonuçta `excluded_dirs` (en çok 100) ve `excluded_dir_count` olarak bildirilir.
+        """
         if not backup_name:
             backup_name = f"{project_path.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         backup_dir = self._backup_root / backup_name
         zip_path = backup_dir / f"{backup_name}.zip"
         result = {'success': False, 'complete': False, 'backup_name': backup_name, 'size': 0,
-                  'failed_files': [], 'error': None}
+                  'failed_files': [], 'error': None, 'excluded_dirs': [], 'excluded_dir_count': 0}
         try:
             backup_dir.mkdir(parents=True, exist_ok=True)
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-                for root, dirs, files in os.walk(project_path):
-                    if '.git' in dirs: dirs.remove('.git')
-                    for file in files:
-                        fp = Path(root) / file
-                        try:
-                            zf.write(fp, str(fp.relative_to(project_path)))
-                        except OSError as e:
-                            result['failed_files'].append((str(fp), str(e)))
-                            logger.warning("Yedeğe eklenemedi: %s (%s)", fp, e)
+                excluded: List[str] = []
+                for fp in self._backup_files(Path(project_path), zip_path, excluded):
+                    try:
+                        zf.write(fp, str(fp.relative_to(project_path)))
+                    except OSError as e:
+                        result['failed_files'].append((str(fp), str(e)))
+                        logger.warning("Yedeğe eklenemedi: %s (%s)", fp, e)
+                result['excluded_dir_count'] = len(excluded)
+                result['excluded_dirs'] = excluded[:MAX_REPORTED_EXCLUDED]
             result['size'] = zip_path.stat().st_size
             result['success'] = True
             result['complete'] = not result['failed_files']
@@ -41,6 +51,25 @@ class BackupService:
             result['error'] = str(e)
             self._cleanup_partial(zip_path, backup_dir)
         return result
+
+    @staticmethod
+    def _backup_files(project_path: Path, zip_path: Path, excluded: List[str]) -> Iterator[Path]:
+        """Yedeğe girecek dosyalar. Girilmeyen klasörlerin proje köküne göre yolu `excluded`a eklenir.
+        Yedek zip'inin kendisi (yedek klasörü proje içindeyse) atlanır."""
+        own_zip = zip_path.resolve()
+        for root, dirs, files in os.walk(project_path):
+            siblings = dirs + files
+            kept = []
+            for name in dirs:
+                if is_excluded_dir(os.path.join(root, name), name, siblings):
+                    excluded.append((Path(root) / name).relative_to(project_path).as_posix())
+                else:
+                    kept.append(name)
+            dirs[:] = kept
+            for name in files:
+                path = Path(root) / name
+                if path.resolve() != own_zip:
+                    yield path
 
     @staticmethod
     def _cleanup_partial(zip_path: Path, backup_dir: Path):
