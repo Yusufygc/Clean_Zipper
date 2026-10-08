@@ -14,6 +14,7 @@ from src.qml_ui.viewmodels.scan_viewmodel import ScanViewModel
 from src.qml_ui.viewmodels.findings_viewmodel import FindingsViewModel
 from src.qml_ui.viewmodels.archive_viewmodel import ArchiveViewModel
 from src.qml_ui.viewmodels.cleanup_viewmodel import CleanupViewModel
+from src.qml_ui.viewmodels.settings_viewmodel import SettingsViewModel
 from src.utils.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,7 @@ def create_qml_app():
     findings_vm = FindingsViewModel(app_vm.service)
     archive_vm = ArchiveViewModel(app_vm.service)
     cleanup_vm = CleanupViewModel(app_vm.service)
+    settings_vm = SettingsViewModel(app_vm.service)
 
     # Proje açıldığında otomatik hızlı tarama ve derin teşhis tetikle
     app_vm.projectChanged.connect(lambda: scan_vm.startQuickScan() if app_vm.hasProject else None)
@@ -68,6 +70,7 @@ def create_qml_app():
     engine.rootContext().setContextProperty("findingsVM", findings_vm)
     engine.rootContext().setContextProperty("archiveVM", archive_vm)
     engine.rootContext().setContextProperty("cleanupVM", cleanup_vm)
+    engine.rootContext().setContextProperty("settingsVM", settings_vm)
 
     # 5. QML Ana Penceresini Yükleme
     main_qml_path = qml_dir / "MainView.qml"

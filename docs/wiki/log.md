@@ -1,5 +1,14 @@
 # Değişiklik Günlüğü
 
+## [2026-10-09] [FEAT] | QML arayüzü Aşama 6: Yapılandırma, kalite eşikleri ve nihai entegrasyon
+- Uygulama:
+  - `SettingsViewModel` (`QObject`): `ProjectService`, `ProjectDoctor` ve `QualityThresholds` köprüsü; `.gitignore` kurallarını açma/kapama, 18 analizörün (Architecture, Security, Complexity, DeadCode, vb.) bağımsız aktif/pasif kontrolü, kod kalite eşikleri (döngüsel karmaşıklık, bilişsel karmaşıklık, fonksiyon/sınıf/dosya satır sınırları) yönetimi.
+  - Yapay zeka ajan görev entegrasyonu: `exportAgentTasks()` ve `verifyAgentTasks()` slotları ile bulguları yapay zeka ajanları (Cursor, Claude, Copilot vb.) için partilere bölerek diske yazma ve görev durumunu doğrulama desteği.
+  - `SettingsView.qml`: Kart tabanlı yapılandırma ekranı; Git entegrasyonu kartı, 5'li sayısal eşik kontrolü (stepper butonları), 18 analizörün zengin Türkçe başlık/açıklama/rozet içeren grid seçimi, hızlı "Tümünü Aç / Tümünü Kapat" butonları, AI Ajan görev dışa aktarımı ve doğrulama kartı, bildirim çubuğu. Sıfır emoji kuralına tam uyum, saf SVG ikonlar ve modern reaktif tema geçişi.
+  - `MainView.qml` & `app.py`: `settingsVM` kök bağlamına bağlandı, 5 sekme geçişi tamamlandı.
+- Testler: `tests/unit/test_settings_viewmodel.py` (5 test: varsayılanlar, eşik değerleri ve sınır kısıtlamaları, analizör aç/kapa/tümünü seç/tümünü kaldır, ayarları doktora uygulama ve sıfırlama, ajan görevleri dışa aktarma ve doğrulama); `tests/unit/test_qml_smoke.py` güncellendi (5 sekme geçişi duman testi).
+- Doğrulama: Tüm 683 test yeşil (`pytest` 682 geçti, 1 atlandı), AST hata yakalama ve loglama hijyeni kurallarına %100 uyum sağlandı.
+
 ## [2026-10-09] [FEATURE] | Bulguları ajana çözdürme: görev dosyası dışa aktarımı
 - Yeni `ProjectService.export_agent_tasks(klasör, batch_size=15)` ve `verify_agent_tasks(klasör, only=None)`. Modüller: `agent_guidance.py` (dalgalar, kural -> dalga, kural başına "ne yapılacak / neleri yapma / risk / commit tipi"), `agent_tasks.py` (öğe çıkarma, kararlı parmak izi, dalga ve parti planı, `verify`), `agent_task_export.py` (`tasks.json`, `tasks/*.md`, `README.md`, `verify.py`). Kararlar [[decisions]] içinde.
 - Dalgalar: 0 insan (sırlar, `.env`, `tracked-artifacts`, LICENSE) -> 1 güvenlik -> 2 güvenilirlik -> 3 mekanik temizlik -> 4 bağımlılık / hijyen -> 5 test -> 6 refactor. Parti en fazla 15 öğe; aynı dosya bir arada. Birden çok kalemli bulgular (`unused-import`, `unused-variable`) kalem başına öğe olur. Parmak izi satırdan bağımsız. Sır değeri ve sır dosyası kaynak satırı hiçbir çıktıya yazılmaz.
