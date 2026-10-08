@@ -1,5 +1,14 @@
 # Değişiklik Günlüğü
 
+## [2026-10-09] [FEAT] | QML arayüzü Aşama 3: Detaylı bulgular ve teşhis gezgini (Findings Explorer)
+- Uygulama:
+  - `FindingsViewModel` & `FindingsListModel` (`QAbstractListModel`): `doctor.diagnose()` ile derin teşhis köprüsü; `DiagnoseWorker` (`QThread`) ile arka planda tarama; sanallaştırılmış liste veri modeli; anlık metin arama ve şiddet (Kritik, Yüksek, Orta, Düşük, Bilgi) filtresi.
+  - Güvenlik maskelemesi: Sır içeren bulgularda (`hardcoded-secret`, `provider-secret`, `secret-in-history`, `.env`, `*.pem`, `*.key`) kaynak satırının asla gösterilmemesi kuralı (`is_sensitive_finding`) uygulandı.
+  - Efor tahmini: Her bulgu için `audit_catalog.py` üzerinden S, M, L, XL tahmini düzeltme eforu atandı (`get_finding_effort`).
+  - QML bileşenleri: `FindingCard` (renk kodlu dikey şerit, şiddet/kategori/efor/kural rozetleri, dosya & satır konumu, öneri bloğu), `SeverityFilterPill` (aktif sayaçlı hap butonları).
+  - `FindingsView.qml`: Arama kutusu, filtre hapları, derin teşhis yenileme butonu, ilerleme çubuğu, dikey kaydırılabilir liste ve temiz boş durum ekranı. Sıfır emoji, saf SVG ikonlar.
+- Testler: `tests/unit/test_findings_viewmodel.py` (3 test: model başlangıç durumu, sır sızıntısı maskeleme doğrulaması, şiddet ve metin arama filtreleme); toplam test sayısı 642'ye yükseldi.
+
 ## [2026-10-09] [FEAT] | QML arayüzü Aşama 2: Dashboard ve sağlık analizi modülü
 - Uygulama:
   - `ScanViewModel` (`QObject`): `ProjectService.analyze_project` köprüsü; `ScanWorker` (`QThread`) ile UI'ı dondurmayan asenkron analiz; `health_score`, `health_status`, `category_scores` (11 kategori), dosya/boyut metrikleri, `failed_analyzers`, `skipped_files`, `gitignore_applied` ve `top_recommendations` reaktif özellikleri.

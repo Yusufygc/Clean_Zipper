@@ -9,3 +9,5 @@ CategoryBar 1.0 CategoryBar.qml
 DistributionBar 1.0 DistributionBar.qml
 IntegrityCard 1.0 IntegrityCard.qml
 RecommendationList 1.0 RecommendationList.qml
+FindingCard 1.0 FindingCard.qml
+SeverityFilterPill 1.0 SeverityFilterPill.qml

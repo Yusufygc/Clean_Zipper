@@ -1,5 +1,7 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
+
 import "../singletons"
 import "../components"
 
@@ -7,31 +9,305 @@ Item {
     id: root
 
     ColumnLayout {
-        anchors.centerIn: parent
+        anchors.fill: parent
+        anchors.margins: 20
         spacing: 16
 
-        SvgIcon {
-            source: AppIcons.shield
-            size: 48
-            color: AppTheme.info
-            Layout.alignment: Qt.AlignHCenter
+        // ══════════════════════════════════════════════════════════
+        // 1. ÜST ARAÇ ÇUBUĞU (ACTION BAR & SEARCH)
+        // ══════════════════════════════════════════════════════════
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            ColumnLayout {
+                spacing: 2
+                Text {
+                    text: AppStrings.tabFindings
+                    color: AppTheme.textPrimary
+                    font.family: AppTheme.fontFamily
+                    font.pixelSize: AppTheme.fontSizeLarge
+                    font.bold: true
+                    renderType: Text.NativeRendering
+                }
+                Text {
+                    text: "Toplam " + findingsVM.totalCount + " adet bulgu ve yapısal kural tespiti"
+                    color: AppTheme.textSecondary
+                    font.family: AppTheme.fontFamily
+                    font.pixelSize: AppTheme.fontSizeSmall
+                    renderType: Text.NativeRendering
+                }
+            }
+
+            Item { Layout.fillWidth: true } // Yay
+
+            // Arama Kutusu
+            Rectangle {
+                Layout.preferredWidth: 260
+                Layout.preferredHeight: 36
+                radius: AppTheme.radiusBase
+                color: AppTheme.surface
+                border.color: searchInput.activeFocus ? AppTheme.accent : AppTheme.border
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    spacing: 8
+
+                    SvgIcon {
+                        source: AppIcons.search
+                        size: 16
+                        color: searchInput.activeFocus ? AppTheme.accent : AppTheme.textMuted
+                    }
+
+                    TextInput {
+                        id: searchInput
+                        Layout.fillWidth: true
+                        color: AppTheme.textPrimary
+                        font.family: AppTheme.fontFamily
+                        font.pixelSize: AppTheme.fontSizeSmall
+                        selectByMouse: true
+                        renderType: Text.NativeRendering
+
+                        Text {
+                            text: "Bulgu, kural veya dosya ara..."
+                            color: AppTheme.textMuted
+                            font.family: AppTheme.fontFamily
+                            font.pixelSize: AppTheme.fontSizeSmall
+                            visible: !searchInput.text && !searchInput.activeFocus
+                            renderType: Text.NativeRendering
+                        }
+
+                        onTextChanged: findingsVM.setSearchQuery(text)
+                    }
+
+                    IconButton {
+                        iconSource: AppIcons.cross
+                        iconSize: 12
+                        visible: searchInput.text !== ""
+                        Layout.preferredWidth: 20
+                        Layout.preferredHeight: 20
+                        onClicked: {
+                            searchInput.text = ""
+                            findingsVM.setSearchQuery("")
+                        }
+                    }
+                }
+            }
+
+            // Derin Teşhis Çalıştır Butonu
+            CustomButton {
+                text: "Derin Teşhis Yenile"
+                iconSource: AppIcons.refresh
+                variant: "accent"
+                enabled: appVM.hasProject && !findingsVM.isDiagnosing
+                onClicked: findingsVM.startDeepDiagnosis()
+            }
         }
 
-        Text {
-            text: AppStrings.tabFindings
-            color: AppTheme.textPrimary
-            font.family: AppTheme.fontFamily
-            font.pixelSize: AppTheme.fontSizeTitle
-            font.bold: true
-            Layout.alignment: Qt.AlignHCenter
+        // ══════════════════════════════════════════════════════════
+        // 2. ANALİZ İLERLEME ÇUBUĞU (PROGRESS BANNER)
+        // ══════════════════════════════════════════════════════════
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 38
+            radius: AppTheme.radiusSmall
+            color: AppTheme.surfaceHover
+            border.color: AppTheme.border
+            border.width: 1
+            visible: findingsVM.isDiagnosing
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                spacing: 12
+
+                SvgIcon {
+                    source: AppIcons.refresh
+                    size: 16
+                    color: AppTheme.accent
+                }
+
+                Text {
+                    text: findingsVM.progressText
+                    color: AppTheme.textPrimary
+                    font.family: AppTheme.fontFamily
+                    font.pixelSize: AppTheme.fontSizeSmall
+                    font.bold: true
+                    Layout.preferredWidth: 240
+                    elide: Text.ElideRight
+                    renderType: Text.NativeRendering
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 6
+                    radius: 3
+                    color: AppTheme.isDark ? "#1E293B" : "#E2E8F0"
+
+                    Rectangle {
+                        width: parent.width * (findingsVM.progressPercent / 100)
+                        height: parent.height
+                        radius: 3
+                        color: AppTheme.accent
+                        Behavior on width { NumberAnimation { duration: 150 } }
+                    }
+                }
+
+                Text {
+                    text: "%" + findingsVM.progressPercent
+                    color: AppTheme.accent
+                    font.family: AppTheme.fontFamily
+                    font.pixelSize: AppTheme.fontSizeSmall
+                    font.bold: true
+                    Layout.preferredWidth: 36
+                    horizontalAlignment: Text.AlignRight
+                    renderType: Text.NativeRendering
+                }
+            }
         }
 
-        Text {
-            text: AppStrings.searchPlaceholder
-            color: AppTheme.textSecondary
-            font.family: AppTheme.fontFamily
-            font.pixelSize: AppTheme.fontSizeBase
-            Layout.alignment: Qt.AlignHCenter
+        // ══════════════════════════════════════════════════════════
+        // 3. ŞİDDET FİLTRELEME ŞERİDİ (SEVERITY FILTER PILLS)
+        // ══════════════════════════════════════════════════════════
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            SeverityFilterPill {
+                label: "Tümü"
+                count: findingsVM.totalCount
+                severityKey: "ALL"
+                isActive: findingsVM.selectedSeverity === "ALL"
+                activeColor: AppTheme.accent
+                onClicked: findingsVM.setSeverityFilter("ALL")
+            }
+
+            SeverityFilterPill {
+                label: "Kritik"
+                count: findingsVM.criticalCount
+                severityKey: "CRITICAL"
+                isActive: findingsVM.selectedSeverity === "CRITICAL"
+                activeColor: AppTheme.danger
+                onClicked: findingsVM.setSeverityFilter("CRITICAL")
+            }
+
+            SeverityFilterPill {
+                label: "Yüksek"
+                count: findingsVM.highCount
+                severityKey: "HIGH"
+                isActive: findingsVM.selectedSeverity === "HIGH"
+                activeColor: "#EA580C"
+                onClicked: findingsVM.setSeverityFilter("HIGH")
+            }
+
+            SeverityFilterPill {
+                label: "Orta (Uyarı)"
+                count: findingsVM.mediumCount
+                severityKey: "MEDIUM"
+                isActive: findingsVM.selectedSeverity === "MEDIUM"
+                activeColor: AppTheme.warning
+                onClicked: findingsVM.setSeverityFilter("MEDIUM")
+            }
+
+            SeverityFilterPill {
+                label: "Düşük"
+                count: findingsVM.lowCount
+                severityKey: "LOW"
+                isActive: findingsVM.selectedSeverity === "LOW"
+                activeColor: AppTheme.primary
+                onClicked: findingsVM.setSeverityFilter("LOW")
+            }
+
+            SeverityFilterPill {
+                label: "Bilgi"
+                count: findingsVM.infoCount
+                severityKey: "INFO"
+                isActive: findingsVM.selectedSeverity === "INFO"
+                activeColor: AppTheme.success
+                onClicked: findingsVM.setSeverityFilter("INFO")
+            }
+
+            Item { Layout.fillWidth: true }
+        }
+
+        // ══════════════════════════════════════════════════════════
+        // 4. BULGULAR LİSTESİ (FINDINGS LISTVIEW)
+        // ══════════════════════════════════════════════════════════
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            // Boş Durum (Empty State)
+            ColumnLayout {
+                anchors.centerIn: parent
+                spacing: 12
+                visible: findingsList.count === 0 && !findingsVM.isDiagnosing
+
+                SvgIcon {
+                    source: AppIcons.check
+                    size: 48
+                    color: AppTheme.success
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                Text {
+                    text: appVM.hasProject 
+                          ? AppStrings.noIssuesFound 
+                          : AppStrings.selectProjectPrompt
+                    color: AppTheme.textPrimary
+                    font.family: AppTheme.fontFamily
+                    font.pixelSize: AppTheme.fontSizeMedium
+                    font.bold: true
+                    Layout.alignment: Qt.AlignHCenter
+                    renderType: Text.NativeRendering
+                }
+
+                Text {
+                    text: appVM.hasProject 
+                          ? "Filtre kriterlerinizi değiştirebilir veya derin teşhisi yenileyebilirsiniz." 
+                          : "Bulguları listelemek için lütfen bir proje dizini açın."
+                    color: AppTheme.textSecondary
+                    font.family: AppTheme.fontFamily
+                    font.pixelSize: AppTheme.fontSizeSmall
+                    Layout.alignment: Qt.AlignHCenter
+                    renderType: Text.NativeRendering
+                }
+            }
+
+            // Liste
+            ListView {
+                id: findingsList
+                anchors.fill: parent
+                clip: true
+                spacing: 10
+                model: findingsVM.model
+                visible: findingsList.count > 0
+
+                delegate: FindingCard {
+                    width: findingsList.width
+                    title: model.title
+                    description: model.description
+                    severity: model.severity
+                    categoryName: model.categoryName
+                    fileName: model.fileName
+                    filePath: model.filePath
+                    line: model.line
+                    suggestion: model.suggestion
+                    rule: model.rule
+                    effort: model.effort
+                    isSecret: model.isSecret
+                    approximate: model.approximate
+                }
+
+                ScrollBar.vertical: ScrollBar {
+                    active: true
+                    policy: ScrollBar.AsNeeded
+                }
+            }
         }
     }
 }
