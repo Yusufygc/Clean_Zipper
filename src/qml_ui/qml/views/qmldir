@@ -1,0 +1,5 @@
+DashboardView 1.0 DashboardView.qml
+FindingsView 1.0 FindingsView.qml
+ArchiveView 1.0 ArchiveView.qml
+CleanupView 1.0 CleanupView.qml
+SettingsView 1.0 SettingsView.qml

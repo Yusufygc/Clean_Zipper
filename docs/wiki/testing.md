@@ -1,0 +1,61 @@
+# Test ve Doğrulama
+
+Çalışma düzeni için [[rules]], analizör ayrıntıları için [[analyzers]], alınan kararlar için [[decisions]].
+
+## Komutlar
+```bash
+./venv/Scripts/python.exe -m pytest                       # 635 test (1 atlanır), yaklaşık 60-90 sn
+./venv/Scripts/python.exe -m pytest tests/unit/test_x.py  # tek dosya
+./venv/Scripts/python.exe -m py_compile <dosya>
+```
+Bağımlılıklar `requirements-dev.txt` ile kurulur. Ayarlar `pytest.ini` (`testpaths = tests`, `pythonpath = .`). Git gerektiren testler `git` yoksa atlanır (`skipif`). GUI testi yoktur ve bilinçli olarak kapsam dışıdır.
+
+## Test dosyaları (`tests/unit/`)
+| Konu | Dosyalar |
+|---|---|
+| Çekirdek | `test_project_index`, `test_exclusions`, `test_gitignore_matcher`, `test_git_info`, `test_registry`, `test_logging_config`, `test_skipped_and_hygiene` |
+| Dil motoru | `test_languages`, `test_language_registry`, `test_brace_lexer`, `test_metrics` (karmaşıklık, derinlik, parametre) |
+| Kalite | `test_python_usage`, `test_brace_usage`, `test_clones`, `test_quality_analyzers`, `test_analyzers`, `test_reliability` |
+| Mimari | `test_import_graph`, `test_architecture_analyzer` |
+| Güvenlik / bağımlılık | `test_security_rules`, `test_ecosystems`, `test_build_hygiene` |
+| Proje sağlığı | `test_testing_and_hygiene`, `test_git_history`, `test_health_checker`, `test_project_doctor` |
+| Servisler / raporlar | `test_archive_service`, `test_archive_profiles`, `test_cleanup_service`, `test_backup_service`, `test_report_service`, `test_audit_report` |
+| Wiki | `test_wiki` (kırık link, öksüz sayfa, indeks, `CLAUDE.md` giriş noktaları) |
+
+## Test kuralları
+- Her kuralın en az bir olumlu ve bir olumsuz fixture testi vardır (örn. SAST kurallarının 39'u için ikişer).
+- Kayıt sayıları `test_registry.py` ve `test_project_doctor.py` içinde sabittir: yeni analizör eklenince güncellenir.
+- Git senaryoları geçici gerçek depoda kurulur (silinmiş `.env`, sıcak dosya, birlikte değişim); sahte çıktı kullanılmaz.
+- Güvenlik testleri sızıntıyı doğrudan sınar: sır değeri raporda geçmemelidir (`test_audit_report`).
+- Kendi test fixture'ları kendi taramamıza takılabilir (örn. test dosyasındaki sahte anahtar); bu kasıtlı olarak testlerde DÜŞÜK öncelikli raporlanır ([[decisions]]).
+
+## Bağımsız doğrulama (oracle) yöntemi
+Birim testleri tek başına yetmez: her aşamada sonuçlar, **farklı bir araçla ya da farklı bir kod yoluyla** gerçek veri üzerinde karşılaştırıldı. Araçlar yalnızca geçici sanal ortamda kuruldu; projenin `venv`'i ve `requirements.txt` dosyası değişmedi.
+
+| Alan | Oracle | Sonuç |
+|---|---|---|
+| Siklomatik / bilişsel karmaşıklık | `radon`, `cognitive_complexity` | fark yok / belgelenmiş farklar |
+| Kullanılmayan import / değişken, klon | `pyflakes`, bağımsız klon karşılaştırması | 525 ortak import, bizde fazla 0; 46/46 değişken; 59/59 klon çifti |
+| Döngü / bağımlılık grafiği | `grimp` (Python), `madge` (JS) | 134/135 ve 95/96 kenar, hayalet kenar 0; JS değer kenarları 111/111 |
+| Güvenilirlik | `ruff` (çıplak except, print, datetime), `tokenize` (TODO) | birebir / eşleşti |
+| Test sayımı | `grep '^\s*def test'`, `find` | 373 / 27 ve 105 / 26 birebir |
+| Git geçmişi | `git log --name-only` + `awk`, `grep` | sıcak nokta sayıları ve birlikte değişim güveni birebir |
+| Üretilmiş içerik, araçlar | `git ls-files` + ayrı regex, `grep requirements.txt` | 29/30 (fark bilinçli istisna), 7/7 |
+| Yedek içeriği | ayrı kod yolu `ProjectIndex(respect_gitignore=False)`, `git ls-files --ignored` | 8/8 |
+| Rapor sayıları | analiz bulgularının `Counter`'ı, 44 sır bulgusunun kaynak satırı | birebir; 0 sızıntı |
+
+## Davranış korunumu (refactor oracle)
+Refactor öncesi commit `git worktree` ile ayrı bir klasöre alınır; aynı betik iki kod tabanında 8 gerçek projede çalıştırılır ve tam teşhis çıktısı (her bulgunun kategori, öncelik, başlık, dosya, açıklama, tüm metadata'sı, skorlar, dil istatistikleri, atlananlar) anahtarları sıralanmış JSON olarak `cmp` ile karşılaştırılır. Her adımdan sonra tekrarlanır; sonuç 8/8 birebir olmalıdır. `build_exe.py` gibi dış araca bağlı betikler sahte modülle (örn. sahte `PyInstaller`) eski ve yeni sürümde çalıştırılıp argüman ve çıktı karşılaştırılır.
+
+## Dogfooding (kendi kendini tarama)
+Her aşamanın yeni kodu, aracın kendi `CodeComplexityAnalyzer` eşiklerinden (V2) geçmelidir: yeni dosyalarda bulgu kalmayana dek fonksiyonlar bölünür. Bu repo skoru: 83,1 → 88,3 → 89,1; kalan bulgular UI dosyaları (yeniden yazılacak) ve `BaseAnalyzer._create_result` (7 parametreli genel API).
+
+## Performans bütçesi
+Tüm `C:\2UYGULAMALAR` (yaklaşık 5.900 dosya, 30 depo): hedef < 60 sn, ölçülen 30-35 sn. Tek bir analizör pahalıysa (örn. sağlayıcı sırları regex'i bir ara 70 sn'ye çıkmıştı) `analizör başına süre` ölçülür ve anchor + alt dizgi ipucuyla hızlandırılır (2,6 sn). Git tabanlı analizörler 29 depoda toplam 14,6 sn.
+
+## Araç tuzakları (oturumlardan öğrenilenler)
+- Bash heredoc içindeki kaçış dizileri bozulur: `\n` gerçek satır sonuna, `\b` 0x08 karakterine, `'\\'` `'\'`ya dönüşebilir. Kod yazarken `Write`/`Edit` aracı ya da betik dosyası kullanılır; sonra kontrol karakteri taraması (`[\x00-\x08\x0b\x0c\x0e-\x1f]`) yapılır.
+- Windows Python, Git Bash'in `/tmp` ve `/c/...` yollarını göremez: betik dosyaları oturum scratchpad klasörüne `C:/...` yoluyla yazılır.
+- Konsol cp1254 olduğu için betiklerde `PYTHONIOENCODING=utf-8` kullanılır (örn. `↔` yazdırmak).
+- `.gitattributes` eklenince `git status` satır sonu önbelleği yüzünden dosyaları "değişmiş" gösterebilir; gerçek farkı `git diff` ve `git add -A --dry-run` verir.
+- `test_` ile başlayan analizör dosyası test sayılır ve kurallardan muaf kalır; bu yüzden `testing_analyzer.py` / `testing_patterns.py`.

@@ -171,7 +171,9 @@ gitclean-archiver-pro/
 │   └── utils/                    # 🛠️ Yardımcı araçlar
 │       └── gitignore_parser.py   #    .gitignore parser
 │
-├── tests/                        # 🧪 Testler
+├── docs/wiki/                    # 📚 Proje wiki'si (kurallar, kararlar, analizör kataloğu, backend arayüzü)
+│
+├── tests/                        # 🧪 Testler (635)
 │   ├── unit/                     #    Birim testleri
 │   ├── integration/              #    Entegrasyon testleri
 │   └── fixtures/                 #    Test verileri
@@ -714,17 +716,28 @@ Her profilde ayrıca analizle aynı klasör dışlaması geçerlidir: `venv`, `.
 - Analize girmeyen dosyalar sessiz kalmaz: `quick_scan` çıktısındaki `skipped_files` neden başına sayı verir (`too_large`: 2 MB üstü, `unreadable`, `parse_error`, `minified`, `unreadable_dir`). Çöken analizör `failed_analyzers` listesine yazılır ve skordan çıkarılır.
 - Proje seçilmeden işlem istenirse `ProjectNotSelectedError` (`ValueError` alt sınıfı) fırlatılır.
 
+### Dokümantasyon (wiki)
+
+Projenin kararları, analizör kataloğu, backend arayüzü ve çalışma kuralları `docs/wiki/` altındadır. Başlangıç noktası `docs/wiki/index.md`; yeni arayüzü yazacak olan için `docs/wiki/backend-api.md`.
+
 ### Test Çalıştırma
 
 ```bash
-# Tüm testler
+# Önce test bağımlılığı: pip install -r requirements-dev.txt
+
+# Tüm testler (635, yaklaşık 60-90 sn)
 python -m pytest tests/ -v
 
-# Belirli bir test
-python -m pytest tests/unit/test_phase3.py -v
+# Belirli bir test dosyası
+python -m pytest tests/unit/test_audit_report.py -v
 
-# Coverage raporu
+# Wiki bütünlüğü (kırık link, öksüz sayfa)
+python -m pytest tests/unit/test_wiki.py -v
+
+# Coverage raporu için ayrıca: pip install pytest-cov
 python -m pytest tests/ --cov=src --cov-report=html
+
+Doğrulama yöntemi (bağımsız araçlarla karşılaştırma, refactor öncesi/sonrası karşılaştırma, kendi kendini tarama) `docs/wiki/testing.md` içinde anlatılır.
 ```
 
 ---
@@ -734,11 +747,8 @@ python -m pytest tests/ --cov=src --cov-report=html
 ### Exe Oluşturma
 
 ```bash
-# Windows
+# Önce: pip install -r requirements-build.txt
 python build_exe.py
-
-# veya hazır script ile
-build_exe.bat
 ```
 
 **Çıktı:** `dist/GitCleanArchiverPro.exe`

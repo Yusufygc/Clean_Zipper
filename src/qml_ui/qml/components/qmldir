@@ -1,0 +1,5 @@
+SvgIcon 1.0 SvgIcon.qml
+CustomButton 1.0 CustomButton.qml
+IconButton 1.0 IconButton.qml
+CardFrame 1.0 CardFrame.qml
+Badge 1.0 Badge.qml

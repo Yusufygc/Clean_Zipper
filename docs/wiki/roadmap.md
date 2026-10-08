@@ -1,6 +1,6 @@
 # Yol Haritası
 
-Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çalışma düzeni için [[rules]].
+Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çalışma düzeni için [[rules]], alınan kararlar için [[decisions]].
 
 | # | Bulgu | Öncelik | Durum |
 |---|-------|---------|-------|
@@ -11,27 +11,44 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | 5 | Analizör kaydı UI içinde, arayüzler yarım uygulanmış | 🟠 | Tamamlandı (2026-10-08) |
 | 6 | Sadece Python ve `requirements.txt` destekleniyor | 🟠 | Tamamlandı (2026-10-08) |
 | 7 | Hatalar sessizce yutuluyor, logger yok | 🟠 | Tamamlandı (2026-10-08) |
-| 8 | Test yok | 🟠 | Başladı (585 test) |
+| 8 | Test yok | 🟠 | Backend için tamamlandı (635 test, bkz. [[testing]]); GUI testi bilinçli kapsam dışı |
 | 9 | Çift dosya bulucu tüm dosyayı belleğe okuyor | 🟠 | Tamamlandı (2026-10-08, parçalı hash) |
-| 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Kısmen (`exclusions.py`: analiz, temizlik ve arşiv ortak; `BackupService` bilerek yalnızca `.git` dışlıyor, karar bekliyor) |
+| 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Tamamlandı (2026-10-09): analiz, temizlik, arşiv ve yedek `exclusions.py` kullanır; yedek `.gitignore` uygulamaz ([[decisions]]) |
 | 11 | Arşiv profil regex'leri iç içe klasörleri kaçırıyor | 🟡 | Tamamlandı (2026-10-08) |
-| 12 | Karmaşıklık analizörü eksikleri | 🟡 | Tamam (2026-10-08): Aşama 0-7: V2 eşikleri, ölü kod, sihirli sayı, klon, döngü, SAST-lite, pinleme, güvenilirlik, test/hijyen, git geçmişi, V2 denetim raporu |
+| 12 | Karmaşıklık analizörü eksikleri | 🟡 | Tamamlandı (2026-10-08): Aşama 0-7, bkz. aşağıdaki plan ve [[analyzers]] |
 | 13 | Build ve bağımlılık hijyeni | 🟡 | Tamamlandı (2026-10-09) |
 
+## Derin analiz planı (Bulgu 12, tamamlandı)
+| Aşama | Konu | Commit |
+|---|---|---|
+| 0 | V2 eşikleri, bilişsel karmaşıklık, derinlik, parametre | `be5be5c` |
+| 1 | Ölü kod, sihirli sayı, kod klonu | `2e155db` |
+| 2 | Mimari: döngüsel bağımlılık | `86993af` |
+| 3 | SAST-lite kural motoru, sağlayıcı sırları, sürüm sabitleme | `6db5aef` |
+| 4 | Hata yönetimi ve üretim hijyeni | `4c2fc65` |
+| 5 | Test sağlığı ve proje hijyeni | `0961ca0` |
+| 6 | Git geçmişi | `a69c10c` |
+| 7 | V2 formatında denetim raporu | `bf22155` |
+| - | Self-audit refactor'u | `a4ffb2b` |
+| - | Bulgu 13 build / bağımlılık hijyeni | `df3b0ff` |
+| - | BackupService dışlama kararı | `fdf8271` |
+
 ## Kararlar
-- UI (`src/ui`) kullanıcı tarafından sonradan sıfırdan yazılacak. Önce backend; doğrulama pytest ve konsol ile, GUI testi yok.
-- Kapsam: çok dilli analiz hedefi, CLI şart değil.
-- Sıra: önce 1 ve 2, sonra adım adım.
-- Silme güvenliği: kalıcı silme yerine Geri Dönüşüm Kutusu (`send2trash`).
-- Kapsam dışı bu turda: `ArchiveService`/`BackupService` dışlama birleştirme, `FileIndex`, registry.
+Tam liste ve gerekçeler: [[decisions]]. Özet: önce backend (UI sonradan sıfırdan), çok dilli analiz, CLI yok, silme kalıcı değil (Geri Dönüşüm Kutusu), kendi kodumuz kendi taramamızdan geçer.
 
 ## Açık notlar
 - Analiz iptal edilemiyor (UI'da iptal düğmesi yok).
-- `read_text` 2 MB üstü dosyaları atlıyor: büyük kaynak dosyalar karmaşıklık ve sızıntı taramasına girmez.
-- Java/Go yalnızca örnek kodla doğrulandı (diskte gerçek kod yoktu). Kotlin/PHP/Swift: yalnızca yeni bir `LanguageSpec` gerekir.
+- `read_text` 2 MB üstü dosyaları atlıyor: büyük kaynak dosyalar karmaşıklık ve sızıntı taramasına girmez (`skipped_files` ile görünür).
+- Java/Go yalnızca örnek kodla doğrulandı (diskte gerçek kod yoktu); C#, JS/TS ve Rust gerçek projelerde doğrulandı. Kotlin/PHP/Swift: yalnızca yeni bir `LanguageSpec` gerekir.
 - Donmuş exe içinde analiz çalıştırılamadı (Windows Uygulama Denetimi imzasız exe'yi engelliyor); paket içeriği doğrulandı.
-- UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı.
-- Karar bekliyor (kullanıcı "sonra konuşalım" dedi): `BackupService` yedeği "olduğu gibi" mi kalsın, ortak dışlama mı uygulansın. Bulgu 12 unutulmayacak.
-- **Derin analiz planı (onaylı, aşama aşama):** 1 kod kalitesi (ölü kod, klon, sihirli sayı), 2 mimari (döngüsel bağımlılık), 3 SAST-lite + pinleme, 4 hata yönetimi/üretim hijyeni, 5 test + proje hijyeni, 6 git geçmişi, 7 V2 formatında denetim raporu. Aşama 0-7 bitti. Bulgu 13 de bitti.
-- Refactor adayları (kendi kodumuz, V2 eşiklerine göre): `brace.py:_scan_structure`, `_count_params`, `project_index.py:_scan_directory`, `build_exe.py:build_executable`.
-- Fikir: git'e commit edilmiş derleme çıktısı / bağımlılık klasörü tespiti (P005'te 381 `bin/obj` dosyası izleniyor), `.gitignore` önerisi üretme.
+- UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı ([[backend-api]]).
+- Kendi taramamızın bilinçli bırakılan bulguları: 4 UI işlevi (yeniden yazılacak) ve `BaseAnalyzer._create_result` (7 parametreli genel API).
+- Geçişli bağımlılıklar için kilit dosyası (`pip freeze` türevi) üretilmedi; yalnızca doğrudan bağımlılıklar tam sabit.
+- README'deki "son N yedeği saklama" ifadesinin kodda karşılığı yok.
+
+## Sonraki adaylar (onay bekliyor, öncelik sırasız)
+- `.gitignore` önerisi üretme (`tracked-artifacts` bulgusundan türetilmiş kural listesi).
+- Analiz iptali (`ProjectDoctor` döngüsünde iptal belirteci).
+- Yeni diller (Kotlin, PHP, Swift) için `LanguageSpec`.
+- Yedekte eski yedekleri temizleme (son N saklama) ya da README'den kaldırma.
+- Kayıtlı kullanıcı kural paketleri için örnek `~/.gitclean/rules` dosyası ve belge.

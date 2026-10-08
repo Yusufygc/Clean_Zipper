@@ -1,5 +1,22 @@
 # Değişiklik Günlüğü
 
+## [2026-10-09] [FEAT] | QML arayüzü Aşama 1: Temel altyapı, tema, singletonlar ve pencere kabuğu
+- Karar (kullanıcı): Yeni arayüz sıfırdan QML (Qt Quick) ile `src/qml_ui` altında bağımsız inşa edilecek; eski arayüz (`src/ui`) korunacak; arayüzde emoji kullanılmayacak; merkezi tema (koyu/açık), merkezi ikon ve string mekanizması olacak.
+- Uygulama:
+  - `src/qml_ui/` iskeleti: `app.py` (QML Engine, `QApplication`), `main_qml.py` bağımsız giriş noktası.
+  - Vektörel SVG ikon seti: 19 temiz vektörel ikon (`folder`, `dashboard`, `archive`, `trash`, `shield`, `settings`, `sun`, `moon`, `refresh`, `check`, `alert` vb.; emoji yok).
+  - Singleton'lar: `AppTheme.qml` (canlı koyu/açık tema değişimi, dinamik renk paletleri), `AppIcons.qml` (merkezi SVG ikon çözümleyici), `AppStrings.qml` (merkezi metin sözlüğü).
+  - QML atom bileşenleri: `SvgIcon` (`QtQuick.Effects` `MultiEffect` ile dinamik renk tonlama), `CustomButton` (varyantlar: primary, secondary, ghost, danger, accent), `IconButton`, `CardFrame`, `Badge`.
+  - `AppViewModel` (`QObject`): Proje seçimi, yol doğrulaması, durum yayını, AST kurallarına uygun hata loglama.
+  - `MainView.qml`: Üst başlık, 5 sekme gezinme çubuğu (`Dashboard`, `Findings`, `Archive`, `Cleanup`, `Settings`), tema geçiş butonu, proje açma diyaloğu (`FolderDialog`), durum çubuğu ve 5 sayfa iskeleti.
+- Testler: `tests/unit/test_qml_smoke.py` (QML yükleme, sekme geçişi ve proje yolu duman testi); toplam test sayısı 636'ya yükseldi, tümü geçiyor.
+
+## [2026-10-09] [WIKI] | Wiki yeniden düzenlendi
+- Yeni sayfalar: [[analyzers]] (18 analizör, kural kimlikleri, öncelikler, eşik tablosu, skor ağırlıkları, yeni analizör kontrol listesi), [[backend-api]] (yeni arayüzün tüketeceği `ProjectService` yüzeyi, `analyze_project` sözlüğü ve `all_issues` sınırı, "analiz tam mı" göstergeleri, arşiv / yedek / temizlik sonuç sözleşmeleri), [[testing]] (test haritası, bağımsız oracle tablosu, davranış korunumu oracle'ı, dogfooding, performans bütçesi, araç tuzakları), [[decisions]] (kapsam, ölçüm, güvenlik, dosya seçimi, depo / build ve kalite güvencesi kararları gerekçeleriyle).
+- Güncellenen sayfalar: [[rules]] (doğrulama kuralları, kod kuralları, aşamalı iş akışı, sayfa haritası, "wiki'yi lint et" komutu), [[roadmap]] (bayat durumlar kapatıldı: Bulgu 8, 10, 12, 13; aşama / commit tablosu; kapanan "karar bekliyor" ve refactor adayı notları silindi; sonraki adaylar), [[architecture]] (11 kategori, backend tamam, yeni sayfa bağlantıları), [[index]], `CLAUDE.md` (yeni sayfalar, kurulum komutları, önemli kuralların özeti), `README.md` (var olmayan `build_exe.bat` ve `test_phase3.py` referansları temizlendi, kurulum / test / wiki bölümü).
+- Yeni `tests/unit/test_wiki.py` (5 test): kırık `[[link]]`, öksüz sayfa, indekste listelenmeyen sayfa ve `CLAUDE.md` giriş noktaları otomatik denetlenir; kod aralığı içindeki örnek sözdizimi sayılmaz. Toplam 635 test.
+- Wiki lint sonucu: kırık link 0, öksüz sayfa 0; doğrulanan sayılar koddan alındı (18 analizör, 11 kategori ağırlığı, eşik değerleri, skor ceza tablosu, `HealthStatus` sınırları, analizör öncelikleri ve kural kimlikleri, arşiv / yedek / temizlik imzaları).
+
 ## [2026-10-09] [REVIEW] | BackupService dışlama kararı (seçenek C)
 - Karar (kullanıcı): yedek **yalnızca yeniden üretilebilir klasörleri** dışlar (`is_excluded_dir`: `EXCLUDED_DIRS`, koşullu `target`/`bin`/`obj`, `pyvenv.cfg` işaretçisi), **`.gitignore` uygulanmaz**. Önceki davranış yalnızca `.git`'i dışlıyordu.
 - Ölçüm (30 gerçek depo, sıkıştırmasız): önceki 459.824 dosya / **36,1 GB**; seçilen kural **3,77 GB**; `.gitignore` da uygulansaydı 4.287 dosya / **69 MB**. `.gitignore` uygulanırsa kaybolacaktı: 11 `.env*`, 27 `.db` + 3 `.sqlite` (~0,9 GB), 30 `.tflite` (130 MB), 70 `.sql` (129 MB), 679 `.jpg`; en çok `P022-ATC` (757 MB) ve `PortfoySimulasyonu` (486 MB). Gerekçe: `.gitignore` "git'e girmesin" demektir, "değersiz" değil; yedeğin işi git'ten geri getirilemeyeni korumaktır.
