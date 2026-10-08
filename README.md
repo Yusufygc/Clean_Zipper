@@ -95,6 +95,7 @@
 | `ReliabilityAnalyzer` | reliability | Yutulan hatalar, kodlamasız dosya açma, saat dilimsiz tarih, DEBUG, konsol çıktısı, TODO envanteri |
 | `TestingAnalyzer` | testing | Test yok, düşük test/kaynak oranı, testi olmayan modüller, kararsız test işaretleri |
 | `ProjectHygieneAnalyzer` | hygiene | README, LICENSE, .gitignore, CI, kilit dosyası, .env.example kontrol listesi |
+| `GitHistoryAnalyzer` | git (+ security) | Geçmişte commit edilmiş sır dosyaları, sık değişen karmaşık dosyalar, birlikte değişen dosyalar |
 
 ---
 
@@ -305,7 +306,7 @@ Skor, analizörlerin ürettiği bulgulardan hesaplanır. Sabit değer yoktur.
 | **Test** | %6 | Test yok, düşük test oranı, kararsız test işaretleri |
 | **Hijyen** | %4 | README, LICENSE, .gitignore, CI, kilit dosyası, .env.example |
 
-Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz.
+Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı ve `git` kategorisi (sıcak nokta, birlikte değişim) bilgi amaçlıdır, puanlanmaz.
 
 **Hesaplama:** her bulgunun şiddeti ceza puanı getirir (KRİTİK 40, YÜKSEK 15, ORTA 5, DÜŞÜK 1, BİLGİ 0). Kategori skoru `100 × e^(−ceza/60)` formülüyle bulunur. Genel skor, kategori skorlarının ağırlıklı ortalamasıdır. Hiçbir analizör çalışmazsa skor 0 olur.
 
@@ -620,6 +621,21 @@ Eşleşme ada bakar (`foo_bar.py` ↔ `test_foo_bar.py`, `FooBarTests.cs`); fark
 - README/LICENSE yalnızca ≥ 100 kaynak satırı olan projelerde, `.gitignore` yalnızca git deposunda, CI yalnızca testi olan projelerde beklenir (`.github/workflows`, `.gitlab-ci.yml`, `Jenkinsfile`, `azure-pipelines.yml`, `.circleci`, `bitbucket-pipelines.yml`, `.travis.yml` ...).
 - **Kilit dosyası:** bağımlılığı olan her manifest için aynı veya üst klasörde aranır (monorepo kökündeki kilit dosyası sayılır): `package.json` -> `package-lock.json`/`yarn.lock`/`pnpm-lock.yaml`/`bun.lock*`, `go.mod` -> `go.sum`, `Cargo.toml` (yalnızca `src/main.rs` olan uygulama crate'i) -> `Cargo.lock`, `Pipfile` -> `Pipfile.lock`, `pyproject.toml` (yalnızca poetry/uv/pdm kullanıyorsa) -> `poetry.lock`/`uv.lock`/`pdm.lock`.
 - **`.env.example`:** `.env` varsa (kök dizinde, `.gitignore`'da olsa bile) `.env.example`/`.env.sample`/`.env.template` aranır.
+
+### Git Geçmişi
+
+**`GitHistoryAnalyzer`** yalnızca git deposunda çalışır (git yoksa, depo değilse ya da zaman aşımında sessizce bulgu üretmez). Çağrıların hepsi salt-okunurdur (`GIT_OPTIONAL_LOCKS=0`, `core.fsmonitor=false`, etkileşimli soru yok, 30 sn zaman aşımı); `--all` yerine `--branches --tags --remotes` kullanılır, stash taranmaz.
+
+| Kural | Koşul | Öncelik |
+|-------|-------|---------|
+| `secret-in-history` | Hassas bir dosya (`.env`, `.env.*` (örnek/şablon hariç), `credentials.json`, `secrets.{yaml,yml,json}`, `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`) geçmişte eklenmiş ama **artık izlenmiyor** | YÜKSEK; test klasöründeyse ORTA |
+| `hotspot` | Son 500 commit'te ≥ 5 kez değişen kaynak dosya; sıralama = değişim sayısı × işlev siklomatik toplamı, ilk 10 | BİLGİ; ≥ 20 değişim ve siklomatik eşiği aşan işlev varsa DÜŞÜK |
+| `co-change` | İki kaynak dosya ≥ 5 ortak commit'te değişmiş, güven ≥ 0.6, ilk 10 | BİLGİ |
+
+- `secret-in-history` bulgusu **`security`** kategorisinde puanlanır ("sır geçmişte duruyor, anahtarı döndürün"); hâlâ izlenen sır dosyalarını `SecurityLeakAnalyzer` bildirir. `.pem`/`.key` içeriği doğrulanmadığı için (ortak sertifika olabilir) `approximate=True` işaretlenir.
+- `hotspot` ve `co-change` bilgi amaçlı **`git`** kategorisindedir ve puana girmez (`HealthChecker.WEIGHTS` içinde yoktur).
+- Güven = ortak commit sayısı / iki dosyadan çok değişenin commit sayısı. Bir dosya ile kendi testi (`foo.py` / `test_foo.py`) birlikte değişir; bu beklenen durum olduğu için çift sayılmaz.
+- 30'dan fazla dosya içeren commit'ler (toplu biçimlendirme, taşıma) ve merge commit'leri her iki analizde de atlanır; geçmişi 20 commit'ten kısa depolarda sıcak nokta / birlikte değişim üretilmez.
 
 ### `.gitignore` ve Git Duyarlılığı
 
