@@ -1,5 +1,12 @@
 # Değişiklik Günlüğü
 
+## [2026-10-08] [REVIEW] | Bulgu 3: HTML raporda kaçış (escape) eklendi
+- `ReportService`: bulgu başlığı/açıklaması/önerisi, dosya adı, proje yolu ve not metni `html.escape` ile kaçırılıyor (`_esc`). Rapora `Content-Security-Policy` meta etiketi (`default-src 'none'`) eklendi; kaçış gözden kaçsa bile betik çalışmaz.
+- `export_report` hata durumunda artık `logging.exception` ile nedeni kaydediyor (eskiden sessizce `False` dönüyordu).
+- Gerçek vektör: `requirements.txt` içeriği bulgu başlığına giriyordu (`x"onmouseover="...`); uçtan uca doğrulandı. Linux/macOS dosya adlarında `<` da mümkün.
+- Testler: `tests/unit/test_report_service.py` (5 test, toplam 81). Önce kırmızı, sonra yeşil.
+- Kapsam dışı: `src/ui/dashboard/dashboard_panel.py` içindeki HTML etiketleri (UI sıfırdan yazılacak, bkz. [[roadmap]] Kararlar). Bkz. [[roadmap]].
+
 ## [2026-10-08] [REVIEW] | Bulgu 4+5+9: tek geçişli ProjectIndex ve analizör registry
 - `src/core/project_index.py`: dosya sistemi `os.scandir` ile bir kez taranır (`FileEntry`, `DirEntry`, toplamlar, `read_text` önbelleği, `hash_file`). Dışlanan klasörlere girilmez; okunamayan yollar `errors` listesine yazılır.
 - `src/core/registry.py`: `@register_analyzer` + `load_builtin_analyzers()` (pkgutil). `ProjectService` analizörleri registry'den kurar; `main_window.py` artık hiçbir analizör bilmez.

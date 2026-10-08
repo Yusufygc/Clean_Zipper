@@ -1,8 +1,17 @@
+import html
+import logging
 import os
 from pathlib import Path
 from datetime import datetime
 from src.core.interfaces import IReporter
 from src.models.analysis_models import ProjectAnalysis, Severity, HealthStatus
+
+logger = logging.getLogger(__name__)
+
+
+def _esc(value) -> str:
+    """Raporlara giren her dış kaynaklı metin (dosya adı, yol, bulgu metni) buradan geçer."""
+    return html.escape(str(value), quote=True)
 
 class ReportService(IReporter):
     """Proje analiz sonuçlarını ve kritik sorunları kurumsal HTML raporu olarak dışa aktaran servis."""
@@ -21,7 +30,8 @@ class ReportService(IReporter):
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>GitClean Proje Sağlık Raporu - {analysis.project_path.name}</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+    <title>GitClean Proje Sağlık Raporu - {_esc(analysis.project_path.name)}</title>
     {self._get_css()}
 </head>
 <body>
@@ -44,6 +54,7 @@ class ReportService(IReporter):
                 f.write(content)
             return True
         except Exception:
+            logger.exception("Rapor dışa aktarılamadı: %s", output_path)
             return False
 
     def _get_css(self) -> str:
@@ -122,7 +133,7 @@ class ReportService(IReporter):
         date_str = analysis.analysis_time.strftime('%d.%m.%Y - %H:%M:%S')
         return f"""<header>
             <h1>Proje Sağlık ve Uyumluluk Analizi</h1>
-            <p>Proje Dizi Konumu: {analysis.project_path}</p>
+            <p>Proje Dizi Konumu: {_esc(analysis.project_path)}</p>
             <p>Raporlama Tarihi: {date_str}</p>
         </header>"""
 
@@ -143,7 +154,7 @@ class ReportService(IReporter):
         return f"""<div class="score-section">
             <div class="score-circle" style="background-color: {score_color};">{analysis.health_score:.0f}</div>
             <div class="score-details">
-                <h2>Sağlık Notu: {analysis.health_status.value}</h2>
+                <h2>Sağlık Notu: {_esc(analysis.health_status.value)}</h2>
                 <p>Projenizin kurumsal standartlara, kod kalitesine ve temizlik kurallarına uyumluluk derecesidir.</p>
             </div>
         </div>"""
@@ -174,16 +185,16 @@ class ReportService(IReporter):
         """Tek bir sorunun HTML kartını oluşturur."""
         sev = getattr(issue, 'severity', Severity.INFO)
         badge = self.SEVERITY_BADGES.get(sev, '')
-        file_info = f'<span class="path">{issue.file_path.name}</span>' if getattr(issue, 'file_path', None) else ''
-        rec_info = f'<div class="issue-rec"><b>💡 Öneri:</b> {issue.recommendation}</div>' if getattr(issue, 'recommendation', None) else ''
+        file_info = f'<span class="path">{_esc(issue.file_path.name)}</span>' if getattr(issue, 'file_path', None) else ''
+        rec_info = f'<div class="issue-rec"><b>💡 Öneri:</b> {_esc(issue.recommendation)}</div>' if getattr(issue, 'recommendation', None) else ''
         
         return f"""
         <div class="issue-card severity-{sev.name.lower()}">
             <div class="issue-header">
-                <span class="issue-title">{issue.title} {file_info}</span>
+                <span class="issue-title">{_esc(issue.title)} {file_info}</span>
                 {badge}
             </div>
-            <div class="issue-desc">{issue.description}</div>
+            <div class="issue-desc">{_esc(issue.description)}</div>
             {rec_info}
         </div>
         """
