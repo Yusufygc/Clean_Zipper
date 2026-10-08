@@ -33,6 +33,7 @@ Bu dosya projedeki AI destekli çalışma düzenini tanımlar. Kaynak metodoloji
 
 ## Kod kuralları
 - Yeni analizör: tek dosya, `@register_analyzer`, kural kimliği, `approximate` işareti; adım adım liste [[analyzers]] sonunda.
+- Yeni kural eklenince ajan görevi eşlemesi (`agent_guidance.py`) ve `audit_catalog.py` etiketleri güncellenir ([[analyzers]]).
 - Sessiz hata yutma yok: geniş `except` loglar ve yeniden fırlatır ya da sonucu `failed_*` alanına yazar (AST testiyle zorunlu).
 - Kaynak dosyalar UTF-8, BOM'suz, LF satır sonlu (`.gitattributes`, `.editorconfig`; BOM testle zorunlu).
 - Bağımlılık: çalışma zamanı `requirements.txt`, test `requirements-dev.txt`, derleme `requirements-build.txt`; hepsi tam sabit sürüm.

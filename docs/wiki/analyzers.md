@@ -7,6 +7,7 @@ Her analizör `src/analyzers/` altında tek dosyadır, `@register_analyzer` ile 
 ## Bulgu sözleşmesi
 - `AnalysisResult`: `analyzer_name`, `category`, `severity` (`INFO` < `LOW` < `MEDIUM` < `HIGH` < `CRITICAL`), `title`, `description`, `file_path`, `size_impact`, `recommendation`, `metadata`.
 - `metadata['rule']`: kural kimliği (kapatmak için `disabled_rules`). `approximate`: sonuç sözcük tabanlıysa `True`. `language`, satır bilgisi (`line`, `start_line` ya da `lines`) ve kurala özgü alanlar.
+- Ajan görevleri için ayırt edici alanlar: `function` (işlev), `class_name` (sınıf), `dependency`, `root` (`tracked-artifacts`), `imports` / `variables` (kalem listeleri), `locations` (klon), `files` (döngü). Yeni kural eklenirken bu alanlar parmak izinin kararlı kalmasını sağlar (bkz. [[backend-api]]).
 - Aynı kuraldan çok sayıda bulgu üretilen yerde bulgu dosya başına / fonksiyon başına birleştirilir (gürültü azaltma).
 - Python dışındaki 8 dil (JS, TS, Java, C#, C, C++, Go, Rust) `brace.py` sözcük tabanlı motoruyla çözümlenir: sonuçlar yaklaşıktır ve bulguda `approximate=True` olur.
 
@@ -72,3 +73,4 @@ Varsayılanlar `V2-GenelSablon.md` "Ölçüm Eşikleri" tablosudur; eşik AŞILI
 4. `tests/unit/test_registry.py` ve `test_project_doctor.py` içindeki analizör sayılarını güncelle.
 5. Yeni kategori puanlanacaksa `HealthChecker.WEIGHTS`, `audit_catalog.CATEGORY_NAMES` ve `DIMENSIONS` güncellenir.
 6. Kendi kodunu kendi taramanla çalıştır (dogfooding), bulgusuz olmalı; bkz. [[rules]].
+7. Ajan görevi olacaksa `src/services/agent_guidance.py` içinde `RULE_WAVE` (dalga) ve `GUIDANCE` (ne yapılacak / neleri yapma / risk) girdisini ekle; yoksa kategoriye göre varsayılan dalga ve genel talimat kullanılır.

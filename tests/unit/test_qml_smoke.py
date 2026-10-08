@@ -10,6 +10,7 @@ from src.qml_ui.viewmodels.app_viewmodel import AppViewModel
 from src.qml_ui.viewmodels.scan_viewmodel import ScanViewModel
 from src.qml_ui.viewmodels.findings_viewmodel import FindingsViewModel
 from src.qml_ui.viewmodels.archive_viewmodel import ArchiveViewModel
+from src.qml_ui.viewmodels.cleanup_viewmodel import CleanupViewModel
 
 
 @pytest.fixture(scope="session")
@@ -35,10 +36,12 @@ def test_qml_shell_loads_cleanly(qapp):
     scan_vm = ScanViewModel(app_vm.service)
     findings_vm = FindingsViewModel(app_vm.service)
     archive_vm = ArchiveViewModel(app_vm.service)
+    cleanup_vm = CleanupViewModel(app_vm.service)
     engine.rootContext().setContextProperty("appVM", app_vm)
     engine.rootContext().setContextProperty("scanVM", scan_vm)
     engine.rootContext().setContextProperty("findingsVM", findings_vm)
     engine.rootContext().setContextProperty("archiveVM", archive_vm)
+    engine.rootContext().setContextProperty("cleanupVM", cleanup_vm)
 
     main_qml = qml_dir / "MainView.qml"
     engine.load(QUrl.fromLocalFile(str(main_qml)))

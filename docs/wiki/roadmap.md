@@ -11,12 +11,13 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | 5 | Analizör kaydı UI içinde, arayüzler yarım uygulanmış | 🟠 | Tamamlandı (2026-10-08) |
 | 6 | Sadece Python ve `requirements.txt` destekleniyor | 🟠 | Tamamlandı (2026-10-08) |
 | 7 | Hatalar sessizce yutuluyor, logger yok | 🟠 | Tamamlandı (2026-10-08) |
-| 8 | Test yok | 🟠 | Backend için tamamlandı (635 test, bkz. [[testing]]); GUI testi bilinçli kapsam dışı |
+| 8 | Test yok | 🟠 | Backend için tamamlandı (680+ test, bkz. [[testing]]); GUI testi bilinçli kapsam dışı |
 | 9 | Çift dosya bulucu tüm dosyayı belleğe okuyor | 🟠 | Tamamlandı (2026-10-08, parçalı hash) |
 | 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Tamamlandı (2026-10-09): analiz, temizlik, arşiv ve yedek `exclusions.py` kullanır; yedek `.gitignore` uygulamaz ([[decisions]]) |
 | 11 | Arşiv profil regex'leri iç içe klasörleri kaçırıyor | 🟡 | Tamamlandı (2026-10-08) |
 | 12 | Karmaşıklık analizörü eksikleri | 🟡 | Tamamlandı (2026-10-08): Aşama 0-7, bkz. aşağıdaki plan ve [[analyzers]] |
 | 13 | Build ve bağımlılık hijyeni | 🟡 | Tamamlandı (2026-10-09) |
+| 14 | Bulguları ajana çözdürme (görev dosyası dışa aktarımı) | 🟡 | Tamamlandı (2026-10-09), bkz. [[backend-api]] |
 
 ## Derin analiz planı (Bulgu 12, tamamlandı)
 | Aşama | Konu | Commit |

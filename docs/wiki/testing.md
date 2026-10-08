@@ -4,7 +4,7 @@
 
 ## Komutlar
 ```bash
-./venv/Scripts/python.exe -m pytest                       # 635 test (1 atlanır), yaklaşık 60-90 sn
+./venv/Scripts/python.exe -m pytest                       # 680+ test (1 atlanır), yaklaşık 60-90 sn
 ./venv/Scripts/python.exe -m pytest tests/unit/test_x.py  # tek dosya
 ./venv/Scripts/python.exe -m py_compile <dosya>
 ```
@@ -20,6 +20,7 @@ Bağımlılıklar `requirements-dev.txt` ile kurulur. Ayarlar `pytest.ini` (`tes
 | Güvenlik / bağımlılık | `test_security_rules`, `test_ecosystems`, `test_build_hygiene` |
 | Proje sağlığı | `test_testing_and_hygiene`, `test_git_history`, `test_health_checker`, `test_project_doctor` |
 | Servisler / raporlar | `test_archive_service`, `test_archive_profiles`, `test_cleanup_service`, `test_backup_service`, `test_report_service`, `test_audit_report` |
+| Ajan görevleri | `test_agent_tasks` (dalga / parmak izi / parti / dışa aktarma / sır sızıntısı / verify / `verify.py` uçtan uca) |
 | Wiki | `test_wiki` (kırık link, öksüz sayfa, indeks, `CLAUDE.md` giriş noktaları) |
 
 ## Test kuralları
@@ -42,6 +43,7 @@ Birim testleri tek başına yetmez: her aşamada sonuçlar, **farklı bir araçl
 | Git geçmişi | `git log --name-only` + `awk`, `grep` | sıcak nokta sayıları ve birlikte değişim güveni birebir |
 | Üretilmiş içerik, araçlar | `git ls-files` + ayrı regex, `grep requirements.txt` | 29/30 (fark bilinçli istisna), 7/7 |
 | Yedek içeriği | ayrı kod yolu `ProjectIndex(respect_gitignore=False)`, `git ls-files --ignored` | 8/8 |
+| Ajan görevleri | öğe sayısı = bulgu kalemleri toplamı (30 depo, 379 görev, 1911 öğe); kopya projede 29 basit import elle silinip `verify` ile kapanış; sır değeri sızıntısı taraması | 0 uyuşmazlık, 29/29 kapandı, yeni bulgu 0, gerçek sızıntı 0 |
 | Rapor sayıları | analiz bulgularının `Counter`'ı, 44 sır bulgusunun kaynak satırı | birebir; 0 sızıntı |
 
 ## Davranış korunumu (refactor oracle)

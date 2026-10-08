@@ -57,6 +57,33 @@ class ProjectService:
         reporter = ReportService()
         return reporter.export_report(analysis, output_path)
 
+    def export_agent_tasks(self, output_dir: Path, batch_size: int = 15) -> Dict:
+        """Bulguları yapay zeka ajanının çalışabileceği görev dosyalarına yazar (`tasks.json`, `tasks/*.md`, `README.md`,
+        `verify.py`); dalga sırası: sırlar (insan) -> güvenlik -> güvenilirlik -> temizlik -> hijyen -> test -> refactor."""
+        if not self._current_project:
+            raise ProjectNotSelectedError()
+        from src.services.agent_task_export import write_agent_tasks
+        return write_agent_tasks(self.doctor.diagnose(self._current_project), Path(output_dir), batch_size)
+
+    def verify_agent_tasks(self, tasks_dir: Path, only: Optional[Iterable[str]] = None) -> Dict:
+        """Projeyi yeniden tarar; `tasks.json` içindeki her görevin öğelerinin kapanıp kapanmadığını ve yeni çıkan bulguları döner."""
+        if not self._current_project:
+            raise ProjectNotSelectedError()
+        import json
+        from src.core.errors import GitCleanError
+        from src.services.agent_tasks import SCHEMA_VERSION, verify
+        path = Path(tasks_dir) / 'tasks.json'
+        try:
+            recorded = json.loads(path.read_text(encoding='utf-8'))
+        except (OSError, ValueError) as e:
+            raise GitCleanError(f"Görev dosyası okunamadı: {path} ({e})") from e
+        if recorded.get('version') != SCHEMA_VERSION:
+            raise GitCleanError(f"Desteklenmeyen görev dosyası sürümü: {recorded.get('version')}")
+        result = verify(self.doctor.diagnose(self._current_project), recorded, only)
+        if Path(recorded.get('project', '')).resolve() != self._current_project:
+            result['warning'] = f"Görevler başka bir proje için üretilmiş: {recorded.get('project')}"
+        return result
+
     def export_audit_report(self, output_path: Path) -> bool:
         """V2 denetim şablonunda (A-F bölümleri) Markdown raporu yazar."""
         if not self._current_project:

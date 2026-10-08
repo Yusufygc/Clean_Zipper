@@ -97,7 +97,7 @@ class CodeComplexityAnalyzer(BaseAnalyzer):
                          f"{cls.lines} satır koda (Limit: {t.class_lines}) sahip. Bu sınıf sistemde çok fazla sorumluluk üstleniyor."),
             severity=Severity.HIGH, file_path=file_path,
             recommendation="Sınıfı SOLID prensiplerine uygun olarak parçalayın. Sınıfın sadece tek bir aktöre veya amaca hizmet etmesini sağlayın.",
-            rule='class-size', **extra)]
+            rule='class-size', class_name=cls.name, start_line=cls.start_line, **extra)]
 
     # ---- fonksiyon ------------------------------------------------------------------
 

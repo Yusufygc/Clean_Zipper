@@ -173,7 +173,7 @@ gitclean-archiver-pro/
 │
 ├── docs/wiki/                    # 📚 Proje wiki'si (kurallar, kararlar, analizör kataloğu, backend arayüzü)
 │
-├── tests/                        # 🧪 Testler (635)
+├── tests/                        # 🧪 Testler (680+)
 │   ├── unit/                     #    Birim testleri
 │   ├── integration/              #    Entegrasyon testleri
 │   └── fixtures/                 #    Test verileri
@@ -674,6 +674,36 @@ Eşleşme ada bakar (`foo_bar.py` ↔ `test_foo_bar.py`, `FooBarTests.cs`); fark
 - Tablo hücreleri ve satır içi metinler Markdown'ı bozmayacak biçimde kaçışlanır (`|`, satır sonu, ters tırnak); kanıt bloğunun çiti içindeki en uzun ``` dizisinden uzundur.
 - HTML rapor (`export_project_report`) artık kategori puanlarını (güvenlik, mimari, test, hijyen ...) en düşükten başlayarak kartlar olarak gösterir.
 
+### Ajan Görevleri (bulguları yapay zeka ajanına çözdürmek)
+
+`ProjectService.export_agent_tasks(klasör, batch_size=15)` tüm bulguları bir yapay zeka ajanının (Claude Code ya da herhangi biri) sırayla çözebileceği görevlere yazar. `verify_agent_tasks(klasör)` ajanın çalışmasından sonra hangi bulguların kapandığını ve yeni bulgu çıkıp çıkmadığını söyler.
+
+```
+agent-tasks/
+  README.md      # ajana giriş talimatı, dalga tablosu, ilk görevler, insan aksiyonu bekleyenler
+  tasks.json     # tüm öğeler, makine okunur (kararlı parmak izi, dalga, kural, risk)
+  verify.py      # kapanış doğrulaması: python verify.py [görev kimliği ...]
+  tasks/
+    W3-004-unused-import.md   # her biri en fazla 15 öğelik bir parti
+```
+
+| Dalga | İçerik | Yapan |
+|---|---|---|
+| 0 | Sırlar (`hardcoded-secret`, `provider-secret`, `secret-in-history`), `.env`, `tracked-artifacts`, LICENSE | **İnsan**: görev dosyasında kaynak satırı ve sır yok |
+| 1 | Güvenlik (SAST kuralları) | Ajan, dikkatli |
+| 2 | Güvenilirlik (`bare-except`, `swallowed-exception`, kodlamasız `open` ...) | Ajan |
+| 3 | Mekanik temizlik (kullanılmayan import / değişken, ulaşılamaz kod, sihirli sayı, `print`, saat dilimsiz tarih) | Ajan, düşük risk |
+| 4 | Bağımlılık ve hijyen (sürüm sabitleme, eksik README / CI / kilit dosyası ...) | Ajan |
+| 5 | Test (`no-tests`, `low-test-ratio`, `test-sleep` ...) | Ajan, refactor'dan önce |
+| 6 | Refactor (`function-metrics`, `class-size`, `file-length`, `code-clone`, `import-cycle`) | Ajan, testler geçmeli |
+
+- **Görev dosyası:** kural bazlı "ne yapılacak / neleri yapma", genel kısıtlar (davranışı değiştirme, testler geçmeli, emin olmadığını atla), `dosya:satır` + parmak izi + kanıt satırları (aynı satır bir kez), doğrulama komutu, commit önerisi. Yaklaşık (sözcük tabanlı) bulgularda "önce doğrula, yanlış pozitifse atla ve nedenini yaz" uyarısı.
+- **Parti:** aynı dosyanın öğeleri aynı görevde kalır; tek dosya sınırı aşarsa bölünür. Görev kimliği `W<dalga>-<sıra>`.
+- **Parmak izi:** `kural + yol + ayırt edici ad (işlev, sınıf, import adı, bağımlılık ...) + sıra`; satır numarasına bağlı değildir, bu yüzden ajanın düzeltmeleri satırları kaydırsa da aynı bulgu aynı kimliği taşır.
+- **Sır güvenliği:** sır değeri ve sır dosyalarının kaynak satırı hiçbir çıktıya yazılmaz; Dalga 0 görevleri kaynak satırı içermez ve ajana "yapma" der.
+- **Yeniden çalıştırma** yalnızca önceki `W*-*.md` görev dosyalarını ve üç sabit dosyayı (`tasks.json`, `README.md`, `verify.py`) değiştirir; klasördeki diğer dosyalara dokunmaz.
+- **`verify`:** projeyi yeniden tarar; görev başına `closed` (kapanan), `reduced` (aynı satırda tekrar sayısı azalan), `open`, ayrıca ajanın yeni çıkardığı bulgular (`new_findings`).
+
 ### `.gitignore` ve Git Duyarlılığı
 
 Analiz ve arşivleme projenin `.gitignore` kurallarını **git ile aynı öncelikle** uygular: kökteki ve alt klasörlerdeki tüm `.gitignore` dosyaları, `.git/info/exclude`, `!` ile geri alma, ignore'lu klasörün içine girilmeyişi. Git deposunda `git ls-files` ile **izlenen** dosyalar (kendi adını içeren `.gitignore`, `git add -f` ile eklenenler) kurala uysa bile dahil edilir.
@@ -725,7 +755,7 @@ Projenin kararları, analizör kataloğu, backend arayüzü ve çalışma kurall
 ```bash
 # Önce test bağımlılığı: pip install -r requirements-dev.txt
 
-# Tüm testler (635, yaklaşık 60-90 sn)
+# Tüm testler (680'den fazla, yaklaşık 60-90 sn)
 python -m pytest tests/ -v
 
 # Belirli bir test dosyası

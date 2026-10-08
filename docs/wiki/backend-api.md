@@ -16,6 +16,8 @@ service.set_project(path)
 | `create_backup(name=None)` | Zip yedeği | sonuç sözlüğü |
 | `export_project_report(path)` | HTML rapor | `bool` |
 | `export_audit_report(path)` | V2 formatında Markdown denetim raporu | `bool` |
+| `export_agent_tasks(klasör, batch_size=15)` | Bulguları yapay zeka ajanı için görev dosyalarına yazar | özet sözlüğü (aşağıda) |
+| `verify_agent_tasks(klasör, only=None)` | Görevlerin kapanışını doğrular | sözlük (aşağıda) |
 | `service.doctor.diagnose(path, progress)` | Tüm bulgularla `ProjectAnalysis` | `ProjectAnalysis` |
 | `service.cleanup_service.preview_cleanup / cleanup` | Temizlik önizleme / Geri Dönüşüm Kutusu'na taşıma | `dict` |
 
@@ -53,6 +55,15 @@ UI bunları kullanıcıya göstermelidir (sessiz kısmi sonuç yok):
 - "Şu sorun yok" iddiası yalnızca ilgili analizör çalışmışsa yapılır.
 - Efor (S/M/L/XL) kural tablosundan gelen bir tahmindir (`audit_catalog.py`).
 HTML `ReportService` kategori puanı kartlarını ve tüm bulguları gösterir; çıktı `html.escape` ile kaçışlıdır ve CSP başlığı taşır.
+
+## Ajan görevleri
+`export_agent_tasks(klasör)` dönüşü: `{'output_dir', 'tasks', 'items', 'waves': {dalga: {'tasks', 'items'}}, 'readme', 'tasks_json'}`. Klasör içeriği: `README.md` (ajan talimatı), `tasks.json`, `verify.py`, `tasks/W<dalga>-<sıra>-<kural>.md`. Dalga sırası: 0 insan (sırlar, LICENSE, git izleme) -> 1 güvenlik -> 2 güvenilirlik -> 3 mekanik temizlik -> 4 bağımlılık / hijyen -> 5 test -> 6 refactor. Kural -> dalga ve kural başına talimat metinleri `src/services/agent_guidance.py` içindedir.
+
+`tasks.json` (`version: 1`): `{version, generated, project, tool_root, batch_size, health_score, tasks: [{id, wave, rule, label, risk, file, items: [{fingerprint, rule, severity, category, path, line, lines, title, message, recommendation, approximate, count}]}]}`. Kaynak satırları JSON'a yazılmaz (yalnızca `.md` dosyalarında; sır dosyalarında hiç yok).
+
+`verify_agent_tasks` dönüşü: `{'tasks': [{id, wave, rule, total, closed, reduced, open, open_fingerprints}], 'totals': {total, closed, reduced, open}, 'new_count', 'new_findings': [{fingerprint, rule, severity, path, line, title}] (en çok 50), 'warning'?}`. `warning` görevler başka bir proje için üretildiyse gelir. Geçersiz / eksik / desteklenmeyen sürümlü `tasks.json` için `GitCleanError`.
+
+Arayüz: bir "ajan görevleri olarak dışa aktar" düğmesi yalnızca `export_agent_tasks`'ı çağırır; ilerleme için `ProjectService` içinde ayrı bir `progress` yoktur (tarama `doctor.diagnose` ile yapılır, uzun sürebilir: bir `QThread` worker kullanın). "Doğrula" düğmesi `verify_agent_tasks`'ı çağırır.
 
 ## Yapılandırma
 - `thresholds=QualityThresholds(...)`: eşikler ([[analyzers]]).

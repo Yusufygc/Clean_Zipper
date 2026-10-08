@@ -67,7 +67,7 @@ class DeadWeightAnalyzer(BaseAnalyzer):
                 severity=Severity.MEDIUM,
                 file_path=manifest_entry.path,
                 recommendation=f"Eğer bu kütüphaneyi kullanmıyorsanız {manifest_entry.path.name} dosyasından silerek bağımlılıkları temizleyin.",
-                ecosystem=ecosystem.id, rule='unused-dependency',
+                ecosystem=ecosystem.id, rule='unused-dependency', dependency=dep.name,
             ))
         results.extend(self._unpinned(ecosystem, manifest, manifest_entry))
         results.extend(self._dev_in_runtime(ecosystem, manifest, manifest_entry))

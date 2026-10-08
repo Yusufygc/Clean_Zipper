@@ -30,6 +30,15 @@ Her karar: ne seçildi, neden, nasıl uygulanır. Bulgu durumları için [[roadm
 - **Yedek `.gitignore` uygulamaz** (2026-10-09): yedek felaket kurtarma içindir, `.env`, yerel veritabanı, model gibi git'ten geri getirilemeyen dosyalar çoğunlukla ignore'dadır. Yalnızca yeniden üretilebilir klasörler (`EXCLUDED_DIRS`, koşullu `target`/`bin`/`obj`, `pyvenv.cfg` içeren klasör) dışlanır. Ölçüm (30 depo): eski davranış 36,1 GB, seçilen 3,8 GB, `.gitignore` de uygulansaydı 69 MB ve ~0,9 GB veritabanı kaybolurdu. Dışlananlar sonuçta bildirilir (sessiz dışlama yok).
 - **Tek dışlama kaynağı:** `src/core/exclusions.py` (`is_excluded_dir`); analiz, temizlik, arşiv ve yedek ortak kullanır.
 
+## Ajan görevleri (2026-10-09)
+- **Bulgular ajana görev olarak verilir; sırlar verilmez.** Dalga 0 (sır yenileme, LICENSE kararı, git izleme) insan aksiyonudur: görev dosyasında kaynak satırı ve değer yoktur, ajana "yapma" denir.
+- **Dalga sırası bilinçli:** güvenlik -> güvenilirlik -> mekanik temizlik -> hijyen -> **test -> refactor**. Testsiz refactor davranışı bozar, bu yüzden test dalgası refactor'dan önce gelir.
+- **Parti: görev başına en fazla 15 öğe** (ayarlanabilir), aynı dosyanın öğeleri bir arada. Neden: ajanın bağlamını doldurmadan tek turda bitirebileceği, tek commit'lik iş.
+- **Tüm bulgular göreve girer, BİLGİ düzeyindekiler girmez** (`hotspot`, `co-change`, özetler ve `todo-inventory` yalnızca bilgi). Önceliklendirme dalga ve öncelikle yapılır, kapsam daraltılmaz.
+- **Kararlı parmak izi:** `kural + yol + ayırt edici ad + sıra`, satır numarası yok. Neden: ajan düzeltme yaparken satırlar kayar; kapanışı satıra bağlamak yanlış "açık" ya da "kapandı" üretir.
+- **Doğrulama dahil:** ajan kendi işini `verify.py` ile doğrular; ajanın yeni çıkardığı bulgular (`new_findings`) ayrıca raporlanır.
+- **Genel (ajan bağımsız) çıktı:** Claude Code için optimize edilmiş ama araç adı geçen ya da araca özgü bir biçim yok; Markdown + JSON.
+
 ## Depo ve build
 - **Satır sonu LF:** `.gitattributes` (`* text=auto eol=lf`; `.bat/.cmd/.ps1` CRLF) ve `.editorconfig`; kaynak dosyalarda UTF-8 BOM yok (testle zorunlu).
 - **Bağımlılıklar ayrık ve tam sabit:** `requirements.txt` yalnızca çalışma zamanı; `requirements-dev.txt` (pytest), `requirements-build.txt` (pyinstaller). Sürümler venv'de test edilen sürümlerdir. Kullanılmayan `pillow` kaldırıldı. Geçişli bağımlılıklar için kilit dosyası üretilmedi.

@@ -22,7 +22,7 @@ Tam liste ve öncelik için [[roadmap]]. Özet: analiz sınırları (2 MB üstü
 Backend tamam: çok dilli analiz (9 dil), V2 eşikleri, 18 analizör, `.gitignore` duyarlılığı, V2 formatında denetim raporu, güvenli arşiv / yedek / temizlik. Sıradaki büyük iş: kullanıcı tarafından sıfırdan yazılacak arayüz ([[backend-api]]). CLI bilinçli olarak kapsam dışı: GUI çekirdeği tek tüketici olarak kalır. Sonraki adaylar [[roadmap]] içindedir.
 
 ## Ortam
-`venv/` Python 3.10.11 ile yeniden kuruldu (2026-10-08). Çalışma zamanı bağımlılıkları `requirements.txt` (tam sabit sürüm), test `requirements-dev.txt`, EXE derleme `requirements-build.txt`. Testler `pytest` ile (635 test), ayarlar `pytest.ini` içinde; yöntem [[testing]]. Satır sonu politikası `.gitattributes` (depo ve çalışma kopyası LF) ve `.editorconfig`.
+`venv/` Python 3.10.11 ile yeniden kuruldu (2026-10-08). Çalışma zamanı bağımlılıkları `requirements.txt` (tam sabit sürüm), test `requirements-dev.txt`, EXE derleme `requirements-build.txt`. Testler `pytest` ile (680+ test), ayarlar `pytest.ini` içinde; yöntem [[testing]]. Satır sonu politikası `.gitattributes` (depo ve çalışma kopyası LF) ve `.editorconfig`.
 
 ## Hata yönetimi
 Sessiz yutma yok: geniş `except` yalnızca loglayıp yeniden fırlatarak ya da sonucu `failed_*` alanlarına yazarak kullanılır (AST testiyle zorunlu). Kullanıcıya görünen işaretler: `failed_analyzers`, `skipped_files`, arşiv/yedek `failed_files` + `complete`. Loglar `~/.gitclean/logs/`.

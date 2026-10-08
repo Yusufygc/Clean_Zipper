@@ -10,7 +10,7 @@ PySide6 tabanlı proje analiz, temizlik ve arşivleme aracı. Python 3.10, `venv
 
 ## Komutlar
 ```bash
-./venv/Scripts/python.exe -m pytest          # testler (635; requirements-dev.txt gerekir)
+./venv/Scripts/python.exe -m pytest          # testler (680+; requirements-dev.txt gerekir)
 ./venv/Scripts/python.exe -m py_compile <dosya>
 ./venv/Scripts/python.exe main.py            # uygulama (GUI)
 pip install -r requirements.txt              # yalnızca çalıştırmak için (dev: requirements-dev.txt, derleme: requirements-build.txt)

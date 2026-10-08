@@ -1,5 +1,20 @@
 # Değişiklik Günlüğü
 
+## [2026-10-09] [FEATURE] | Bulguları ajana çözdürme: görev dosyası dışa aktarımı
+- Yeni `ProjectService.export_agent_tasks(klasör, batch_size=15)` ve `verify_agent_tasks(klasör, only=None)`. Modüller: `agent_guidance.py` (dalgalar, kural -> dalga, kural başına "ne yapılacak / neleri yapma / risk / commit tipi"), `agent_tasks.py` (öğe çıkarma, kararlı parmak izi, dalga ve parti planı, `verify`), `agent_task_export.py` (`tasks.json`, `tasks/*.md`, `README.md`, `verify.py`). Kararlar [[decisions]] içinde.
+- Dalgalar: 0 insan (sırlar, `.env`, `tracked-artifacts`, LICENSE) -> 1 güvenlik -> 2 güvenilirlik -> 3 mekanik temizlik -> 4 bağımlılık / hijyen -> 5 test -> 6 refactor. Parti en fazla 15 öğe; aynı dosya bir arada. Birden çok kalemli bulgular (`unused-import`, `unused-variable`) kalem başına öğe olur. Parmak izi satırdan bağımsız. Sır değeri ve sır dosyası kaynak satırı hiçbir çıktıya yazılmaz.
+- Küçük analizör değişikliği: parmak izi ayırt edicisi için `class-size` bulgusuna `class_name` / `start_line`, `unused-dependency` bulgusuna `dependency` metadata'sı eklendi.
+- **Doğrulama (bağımsız):** (1) 30 gerçek depoda dışa aktarım: 379 görev, 1911 öğe; öğe sayısı, bulguların kalem sayısını ayrı bir kodla toplayan sayımla ve `tasks.json` ile birebir; tekrar eden parmak izi 0; tüm dışa aktarım 75 sn (tarama dahil). (2) Sır taraması: sır bulgularının kaynak satırlarındaki tırnaklı değerler tüm çıktı dosyalarında arandı; tek eşleşme gerçek sızıntı değil, `password` sözcüğünün başka bir dosyadaki `verify_password` içinde geçmesi (elle incelendi). (3) Gerçek düzeltme döngüsü: `P022-ATC` kopyasında 29 tek satırlık `import` elle silindi, `verify_agent_tasks` 29 kapanış ve 0 yeni bulgu bildirdi. (4) Üretilen `verify.py` ayrı bir süreçte uçtan uca çalıştırıldı. (5) Satır kayması altında parmak izleri sabit (birim test).
+- Dogfooding: `verify` ve `render_readme` eşiği aşıyordu, bölündü; `_base_item` parametre sayısı düşürüldü. Bulunan hatalar: klon bulgusunda `metadata['lines']` liste değil sayı (kırılma), bir testte bash heredoc'un `\n`'i bozması.
+- Testler: `test_agent_tasks.py` (27); `pytest` toplamı 677 (kullanıcının eklediği QML testleri dahil). Bkz. [[roadmap]].
+
+## [2026-10-09] [FEAT] | QML arayüzü Aşama 5: Güvenli temizlik modülü (Storage Optimizer)
+- Uygulama:
+  - `CleanupViewModel` (`QObject`): `CleanupService` köprüsü; `CleanupWorker` (`QThread`) ile asenkron önizleme (`preview_cleanup`) ve temizlik (`cleanup(dry_run=False)`); 4 kategori (Python önbelleği, geçici dosyalar, loglar, yedekler) seçimi; dosya listesi, kazanılabilir alan ve temizlik özeti.
+  - Güvenlik: Dosyaların kalıcı silinmeyip sistemin Geri Dönüşüm Kutusu'na (`Send2Trash`) taşınması garantisi; dışlanan klasörlere (`venv`, `node_modules`) dokunulmaması kuralı.
+  - `CleanupView.qml`: Kategori onay kutuları, "Önizleme (Tara)" ve "Temizliği Başlat" butonları, canlı ilerleme çubuğu, tespit edilen dosyalar için kaydırılabilir liste ve temizlik sonuç paneli. Sıfır emoji, saf SVG ikonlar.
+- Testler: `tests/unit/test_cleanup_viewmodel.py` (4 test: kategori başlangıç durumu, kategori aç/kapa, geçici dosyalar önizleme ve sahte send2trash ile temizlik yürütme); tüm duman ve AST testleri yeşil. Toplam 650 test.
+
 ## [2026-10-09] [FEAT] | QML arayüzü Aşama 4: Arşivleme, temiz kopya ve yedekleme modülü
 - Uygulama:
   - `ArchiveViewModel` (`QObject`): `ArchiveService` ve `BackupService` köprüsü; `ArchiveWorker` (`QThread`) ile asenkron arşiv (.zip), temiz kopya ve yedek üretimi; `archive_profiles` JSON profillerinin dinamik listelenmesi ve seçimi; dosya bazlı canlı ilerleme takibi.
