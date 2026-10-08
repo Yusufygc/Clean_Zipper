@@ -1,5 +1,13 @@
 # Değişiklik Günlüğü
 
+## [2026-10-09] [FEAT] | QML arayüzü Aşama 2: Dashboard ve sağlık analizi modülü
+- Uygulama:
+  - `ScanViewModel` (`QObject`): `ProjectService.analyze_project` köprüsü; `ScanWorker` (`QThread`) ile UI'ı dondurmayan asenkron analiz; `health_score`, `health_status`, `category_scores` (11 kategori), dosya/boyut metrikleri, `failed_analyzers`, `skipped_files`, `gitignore_applied` ve `top_recommendations` reaktif özellikleri.
+  - Rapor dışa aktarma slotları: `exportHtmlReport` ve `exportAuditReport` (FileDialog bağlandı).
+  - QML Gösterge Paneli bileşenleri: `HealthGauge` (animasyonlu dairesel canvas skoru + harf notu rozeti), `MetricCard` (toplam dosya, proje boyutu, klasör sayısı, tespit edilen sorunlar), `CategoryBar` (11 kategorinin 0-100 puanı ve renk kodlu çubukları), `DistributionBar` (en çok kullanılan dosya türleri), `IntegrityCard` (analiz bütünlüğü, atlanan dosyalar, gitignore filtresi ve hata veren analizörler), `RecommendationList` (öncelikli sistem tavsiyeleri).
+  - `DashboardView.qml`: Eylemler (Yeniden Analiz Et, HTML Rapor, Markdown Denetim Raporu), analiz sırasında canlı ilerleme çubuğu, duyarlı grid ve kaydırılabilir içerik. Sıfır emoji, saf SVG ikonlar ve kurumsal tipografi.
+- Testler: `tests/unit/test_scan_viewmodel.py` (3 test: ilk durum, geçici projede hızlı analiz çalıştırma ve tamamlama, HTML & Markdown rapor üretimi); duman testleri ve AST testleri yeşil. Toplam 639 test.
+
 ## [2026-10-09] [FEAT] | QML arayüzü Aşama 1: Temel altyapı, tema, singletonlar ve pencere kabuğu
 - Karar (kullanıcı): Yeni arayüz sıfırdan QML (Qt Quick) ile `src/qml_ui` altında bağımsız inşa edilecek; eski arayüz (`src/ui`) korunacak; arayüzde emoji kullanılmayacak; merkezi tema (koyu/açık), merkezi ikon ve string mekanizması olacak.
 - Uygulama:

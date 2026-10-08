@@ -10,6 +10,7 @@ from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtCore import QUrl
 
 from src.qml_ui.viewmodels.app_viewmodel import AppViewModel
+from src.qml_ui.viewmodels.scan_viewmodel import ScanViewModel
 from src.utils.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,12 @@ def create_qml_app():
 
     # 4. ViewModel & Bridge Kaydı
     app_vm = AppViewModel()
+    scan_vm = ScanViewModel(app_vm.service)
+    # Proje açıldığında otomatik hızlı tarama tetikle
+    app_vm.projectChanged.connect(lambda: scan_vm.startQuickScan() if app_vm.hasProject else None)
+
     engine.rootContext().setContextProperty("appVM", app_vm)
+    engine.rootContext().setContextProperty("scanVM", scan_vm)
 
     # 5. QML Ana Penceresini Yükleme
     main_qml_path = qml_dir / "MainView.qml"

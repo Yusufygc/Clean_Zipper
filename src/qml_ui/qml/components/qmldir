@@ -3,3 +3,9 @@ CustomButton 1.0 CustomButton.qml
 IconButton 1.0 IconButton.qml
 CardFrame 1.0 CardFrame.qml
 Badge 1.0 Badge.qml
+HealthGauge 1.0 HealthGauge.qml
+MetricCard 1.0 MetricCard.qml
+CategoryBar 1.0 CategoryBar.qml
+DistributionBar 1.0 DistributionBar.qml
+IntegrityCard 1.0 IntegrityCard.qml
+RecommendationList 1.0 RecommendationList.qml
