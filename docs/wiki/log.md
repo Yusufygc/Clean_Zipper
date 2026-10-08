@@ -1,12 +1,24 @@
 # Değişiklik Günlüğü
 
+## [2026-10-08] [REVIEW] | Bulgu 6 tamamlandı: ekosistemler, dil istatistikleri, bağlamsal dışlama
+- `src/languages/ecosystems.py`: Python (`requirements.txt`), npm (`package.json` `dependencies`, `scripts` içindeki CLI kullanımı sayılır), Go (`go.mod`, `// indirect` atlanır), Rust (`Cargo.toml`, `use` ve `crate::` tam yol kullanımı). Manifestin klasör alt ağacı kapsamdır. `DeadWeightAnalyzer` buna bağlandı; "requirements.txt eksik" bildirimi artık yalnızca Python kaynağı olup hiçbir Python manifesti (`requirements.txt`, `pyproject.toml`, `Pipfile`, `setup.py`, `setup.cfg`) olmayan projelerde.
+- Davranış değişikliği: Python araç paketleri (pytest, pyinstaller, black, ...) artık "kullanılmayan" diye raporlanmıyor.
+- `LanguageStatsAnalyzer` (kategori `type`, puanlanmaz) ve `ProjectAnalysis.language_stats`; `quick_scan` çıktısında `language_stats`. Kayıtlı analizör sayısı 8 → 9.
+- Bağlamsal dışlama (`ProjectIndex`): yanında `Cargo.toml`/`pom.xml`/`build.gradle` olan `target`, yanında `.csproj` olan `bin`/`obj`, `pyvenv.cfg` içeren her klasör (örn. `myenv`) taranmıyor. Tauri projesinde 5672 → 80 dosya, 10.6 sn → 0.14 sn.
+- Gerçek proje denemeleri: Tauri (TS+Rust) projesinde `clsx`, `tailwind-merge` (package.json) ve `serde_json` (Cargo.toml) gerçekten kullanılmıyordu (grep ile doğrulandı); C# projesi (26 dosya) ve bu repo hatasız analiz edildi, `failed_analyzers` boş.
+- Testler: `test_ecosystems.py` (14), `test_project_index.py` ve `test_analyzers.py` genişletildi (toplam 151 test).
+- Paketleme: prob exe derlendi, PYZ içeriğinde `src.languages.*` ve 9 analizör modülünün tamamı var. **Exe çalıştırılamadı:** Windows "Uygulama Denetimi" ilkesi imzasız prob exe'yi engelledi (aşılmadı). Donmuş uygulamada uçtan uca analiz doğrulanmadı; yalnızca daha önceki prob ile analizör keşfi doğrulanmıştı.
+- Java ve Go için diskte gerçek kod olmadığından yalnızca örnek kodla doğrulandı. Bkz. [[roadmap]].
+
 ## [2026-10-08] [INGEST] | Bulgu 6 (çok dilli analiz) yarım: adım 1-3 bitti, 4-6 sırada
 - Yeni `src/languages/` katmanı: `base.py` (FunctionInfo/ClassInfo/SourceMetrics), `registry.py` (`parse_file`, indekste önbellekli, üretilmiş dosyaları atlar), `python_lang.py` (ast; `async` artık sayılıyor, içe aktarmalar ast'ten), `brace.py` (sözcük tabanlı motor), `catalog.py` (C, C++, C#, Java, JS, TS, Go, Rust tanımları).
 - `ProjectIndex.memo(...)` eklendi. `CodeComplexityAnalyzer` dil bağımsız hale geldi (eşikler aynı; bulgulara `language`, `approximate` metadata).
 - Testler: `test_language_registry.py`, `test_brace_lexer.py`, `test_languages.py` (toplam 131 test yeşil). Beklenen değerler örnek kodda elle sayıldı.
 - Commit edilmedi (çalışma ağacında).
 - **Kalan adımlar:** (4) `src/languages/ecosystems.py` + `DeadWeightAnalyzer` (requirements.txt, package.json, go.mod, Cargo.toml; "requirements eksik" uyarısı yalnızca Python projesinde), (5) `LanguageStatsAnalyzer` + `ProjectAnalysis.language_stats` + kayıt sayısı testleri 8 → 9, (6) gerçek kod doğrulaması ve belgeler (README, architecture, roadmap).
-- **Gerçek kod doğrulaması başlatıldı ama sonucu okunmadı:** `scratchpad/realworld.py` betiği `C:\2UYGULAMALAR` üzerinde dil başına dosya/fonksiyon/dengesiz parantez/süre ölçer. Devam ederken yeniden çalıştırılacak. Java ve Go için diskte gerçek kod yok; yalnızca örneklerle doğrulandı.
+- **Gerçek kod doğrulaması (C:\2UYGULAMALAR, 34 bin dosya):** çökme yok, dengesiz parantez 0. İlk koşuda `.next` derleme çıktıları ve küçültülmüş paketler 52 sn sürdü ve 4584 gibi anlamsız karmaşıklıklar üretti. Düzeltmeler: `EXCLUDED_DIRS`'e `.next`, `.nuxt`, `.svelte-kit`, `.turbo`, `.parcel-cache`, `.gradle`, `.tox`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache`, `coverage`, `htmlcov` eklendi; `looks_minified` (satır uzunluğu) ile paketlenmiş dosyalar atlanıyor. Sonuç: 17 sn (çoğu 5489 Python dosyası), JS 1289 → 117 dosya.
+- **Elle örnekleme (bağımsız grep sayımı):** TS `drawComposition` 51 ✓, Rust `run_ffmpeg_export` 11 ✓, C# `Edit` 21 (grep 22 saydı; fark satır sonu yorumundaki "for" kelimesi, motor doğru). Java ve Go için diskte gerçek kod yok; yalnızca örneklerle doğrulandı.
+- Yeni bulgu: `myenv` gibi `venv` adı taşımayan sanal ortamlar Python sayılarını şişiriyor. `pyvenv.cfg` içeren klasörleri otomatik dışlamak sonraki iyileştirme (bkz. [[roadmap]]).
 - Bilinen sınırlar: makro benzeri `FOREACH(x) {`, template literal içi iç içe `${ }`, Rust iç içe blok yorum, ifade gövdeli üyeler.
 
 ## [2026-10-08] [REVIEW] | Bulgu 3: HTML raporda kaçış (escape) eklendi

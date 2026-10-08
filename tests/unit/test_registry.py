@@ -5,7 +5,7 @@ from src.core.registry import AnalyzerRegistry, default_registry, load_builtin_a
 
 EXPECTED_BUILTINS = {
     'CodeComplexityAnalyzer', 'DeadWeightAnalyzer', 'DuplicateFinder', 'EmptyFolderFinder',
-    'SecurityLeakAnalyzer', 'SizeAnalyzer', 'StructureAnalyzer', 'TypeAnalyzer',
+    'LanguageStatsAnalyzer', 'SecurityLeakAnalyzer', 'SizeAnalyzer', 'StructureAnalyzer', 'TypeAnalyzer',
 }
 
 
@@ -51,8 +51,8 @@ def test_registries_are_isolated():
     assert two.ids() == []
 
 
-def test_builtin_discovery_finds_all_eight_and_is_idempotent():
+def test_builtin_discovery_finds_all_nine_and_is_idempotent():
     load_builtin_analyzers()
     load_builtin_analyzers()
     assert set(default_registry.ids()) == EXPECTED_BUILTINS
-    assert len(default_registry.create_all()) == 8
+    assert len(default_registry.create_all()) == 9

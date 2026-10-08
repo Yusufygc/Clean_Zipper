@@ -98,6 +98,7 @@ class ProjectDoctor:
             'issues_count': actual_issues_count, # Karttaki sayı artık listedeki eleman sayısıyla tam uyumlu
             'potential_savings_mb': analysis.potential_savings_mb,
             'file_type_distribution': analysis.file_type_distribution,
+            'language_stats': analysis.language_stats,
             'top_recommendations': self._recommendation_engine.get_top_recommendations(analysis),
             'project_path': str(project_path),
             'all_issues': analysis.issues + analysis.warnings # Sadece gerçek hatalar ve uyarılar listeleniyor
@@ -111,6 +112,10 @@ class ProjectDoctor:
                 analysis.empty_dirs.append(finding.file_path)
             elif kind == 'duplicate_group':
                 analysis.duplicate_files.append(list(finding.metadata.get('paths', [])))
+            elif kind == 'language_stats':
+                analysis.language_stats[finding.metadata['language']] = {
+                    key: finding.metadata[key]
+                    for key in ('files', 'total_lines', 'code_lines', 'comment_lines', 'blank_lines')}
             elif kind == 'large_file' and finding.file_path:
                 try:
                     modified = datetime.fromtimestamp(finding.file_path.stat().st_mtime)

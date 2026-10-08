@@ -8,3 +8,13 @@ EXCLUDED_DIRS = frozenset({
     '.next', '.nuxt', '.svelte-kit', '.turbo', '.parcel-cache', '.gradle',
     '.tox', '.mypy_cache', '.pytest_cache', '.ruff_cache', 'coverage', 'htmlcov',
 })
+
+# Yalnızca yanındaki dosyalar derleme sistemini gösteriyorsa dışlanan klasörler (aksi halde kaynak olabilir).
+CONDITIONAL_EXCLUDED_DIRS = {
+    'target': ('Cargo.toml', 'pom.xml', 'build.gradle', 'build.gradle.kts'),
+    'bin': ('*.csproj', '*.fsproj', '*.vbproj'),
+    'obj': ('*.csproj', '*.fsproj', '*.vbproj'),
+}
+
+# İçinde bu dosya olan klasör, adı ne olursa olsun Python sanal ortamıdır (ör. `myenv`).
+VIRTUALENV_MARKER = 'pyvenv.cfg'

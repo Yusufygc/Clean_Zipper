@@ -3,13 +3,14 @@
 Analizörler kendi dizin taramasını yapmaz; bu indeks üzerinden çalışır.
 Yalnızca standart kütüphane kullanır.
 """
+import fnmatch
 import hashlib
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, FrozenSet, Iterator, List, Optional, Tuple
 
-from src.core.constants import EXCLUDED_DIRS
+from src.core.constants import CONDITIONAL_EXCLUDED_DIRS, EXCLUDED_DIRS, VIRTUALENV_MARKER
 
 BINARY_SNIFF_BYTES = 8192
 PARTIAL_HASH_BYTES = 64 * 1024
@@ -80,6 +81,7 @@ class ProjectIndex:
         except OSError as e:
             self.errors.append((directory, str(e)))
             return
+        sibling_names = [e.name for e in entries]
 
         for entry in entries:
             try:
@@ -91,7 +93,7 @@ class ProjectIndex:
 
             if is_dir:
                 dir_count += 1
-                if entry.name not in excluded:
+                if entry.name not in excluded and not self._is_generated_dir(entry, sibling_names):
                     child_rel = f"{rel}/{entry.name}" if rel else entry.name
                     stack.append((Path(entry.path), child_rel, depth + 1))
                 continue
@@ -116,6 +118,14 @@ class ProjectIndex:
 
         if depth > 0:
             self.dirs.append(DirEntry(directory, rel, depth, file_count, dir_count))
+
+    @staticmethod
+    def _is_generated_dir(entry: 'os.DirEntry', sibling_names: List[str]) -> bool:
+        """Bağlama bağlı dışlama: Cargo/Maven `target`, .NET `bin`/`obj` ve adı ne olursa olsun sanal ortamlar."""
+        patterns = CONDITIONAL_EXCLUDED_DIRS.get(entry.name)
+        if patterns and any(fnmatch.fnmatch(name, pattern) for name in sibling_names for pattern in patterns):
+            return True
+        return os.path.isfile(os.path.join(entry.path, VIRTUALENV_MARKER))
 
     # ------------------------------------------------------------------ #
     #  Sorgular                                                          #

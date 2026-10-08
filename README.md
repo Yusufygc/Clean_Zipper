@@ -117,7 +117,16 @@ gitclean-archiver-pro/
 │   │   ├── structure_analyzer.py #    Yapı analizi
 │   │   ├── security_analyzer.py  #    Güvenlik sızıntısı analizi
 │   │   ├── dead_weight_analyzer.py#   Kullanılmayan bağımlılıklar
-│   │   └── code_complexity_analyzer.py # Karmaşıklık / God Object
+│   │   ├── code_complexity_analyzer.py # Karmaşıklık / God Object (tüm diller)
+│   │   └── language_stats_analyzer.py  # Dil başına dosya / satır dağılımı
+│   │
+│   ├── languages/                # 🌐 Çok dilli kaynak kod çözümleme
+│   │   ├── base.py               #    FunctionInfo / ClassInfo / SourceMetrics
+│   │   ├── python_lang.py        #    Python (ast, kesin sonuç)
+│   │   ├── brace.py              #    C ailesi, Java, C#, JS/TS, Go, Rust (sözcük tabanlı, yaklaşık)
+│   │   ├── catalog.py            #    Dil tanımları (yeni dil = bir LanguageSpec)
+│   │   ├── registry.py           #    parse_file: önbellekli, üretilmiş/küçültülmüş dosyaları atlar
+│   │   └── ecosystems.py         #    requirements.txt, package.json, go.mod, Cargo.toml
 │   │
 │   ├── doctors/                  # 🏥 Proje doktoru (FAZ 3)
 │   │   ├── project_doctor.py     #    Ana doktor koordinatörü
@@ -324,6 +333,28 @@ Proje klasörü bir kez taranır; tüm analizörler `analyze(index)` ile bu inde
 
 #### `base_analyzer.py`
 Analizörler için temel sınıf: standart sonuç oluşturma (`_create_result`), `name`, `category`, öncelik.
+
+### Dil Desteği
+
+| Dil | Uzantılar | Çözümleme | Bağımlılık manifesti |
+|-----|-----------|-----------|----------------------|
+| Python | `.py` | `ast` (kesin) | `requirements.txt` |
+| JavaScript | `.js .jsx .mjs .cjs` | sözcük tabanlı (yaklaşık) | `package.json` |
+| TypeScript | `.ts .tsx .mts .cts` | sözcük tabanlı (yaklaşık) | `package.json` |
+| Java | `.java` | sözcük tabanlı (yaklaşık) | yok |
+| C# | `.cs` | sözcük tabanlı (yaklaşık) | yok |
+| C | `.c .h` | sözcük tabanlı (yaklaşık) | yok |
+| C++ | `.cpp .cc .cxx .hpp .hh .hxx` (`.h` içinde C++ işareti varsa) | sözcük tabanlı (yaklaşık) | yok |
+| Go | `.go` | sözcük tabanlı (yaklaşık) | `go.mod` |
+| Rust | `.rs` | sözcük tabanlı (yaklaşık) | `Cargo.toml` |
+
+Her dosya için satır dağılımı (kod/yorum/boş), fonksiyon ve sınıf listesi, siklomatik karmaşıklık ve içe aktarmalar çıkarılır.
+Python dışındaki diller gerçek ayrıştırıcıyla değil, yorum/string temizleme + süslü parantez eşleme ile çözümlenir; sonuçlar **yaklaşıktır** ve bulgularda `approximate=True` işaretlenir.
+Bilinen sınırlar: fonksiyon benzeri makrolar (`FOREACH(x) {`), template literal içinde iç içe `${ }`, Rust iç içe blok yorumları, ifade gövdeli (süslü parantezsiz) üyeler.
+Küçültülmüş / paketlenmiş (`.min.js`, webpack parçaları) ve üretilmiş dosyalar (`*.g.cs`, `*.pb.go`, `*_pb2.py`) ölçüme girmez.
+Derleme çıktıları ve sanal ortamlar taranmaz: `node_modules`, `dist`, `build`, `.next`, `coverage`, `venv` ve `pyvenv.cfg` içeren her klasör; ayrıca yanında `Cargo.toml`/`pom.xml` varsa `target`, yanında `.csproj` varsa `bin`/`obj`.
+
+Kullanılmayan bağımlılık tespiti manifestin klasörü ve alt klasörlerindeki kaynaklara bakar (monorepo uyumlu). `devDependencies`, `@types/*`, Go `// indirect` ve Python araç paketleri (pytest, pyinstaller, black ...) raporlanmaz. Maven/NuGet desteklenmez: paket adı ile namespace arasında güvenilir eşleme olmadığından yanlış pozitif üretirdi.
 
 ### Analizörler
 

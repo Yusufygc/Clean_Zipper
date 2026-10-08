@@ -148,3 +148,30 @@ def test_progress_callback_reports_file_counts(tmp_path, monkeypatch):
     seen = []
     ProjectIndex.build(tmp_path, progress=seen.append)
     assert seen and seen[-1] <= 7 and seen == sorted(seen)
+
+
+def test_target_is_excluded_only_next_to_a_build_manifest(tmp_path):
+    write(tmp_path / "rust" / "Cargo.toml", "[package]")
+    write(tmp_path / "rust" / "target" / "debug" / "a.rlib")
+    write(tmp_path / "rust" / "src" / "main.rs")
+    write(tmp_path / "plain" / "target" / "notes.txt")               # manifest yok: kaynak olabilir
+    write(tmp_path / "maven" / "pom.xml", "<project/>")
+    write(tmp_path / "maven" / "target" / "x.class")
+    assert rels(ProjectIndex.build(tmp_path)) == [
+        "maven/pom.xml", "plain/target/notes.txt", "rust/Cargo.toml", "rust/src/main.rs"]
+
+
+def test_dotnet_bin_and_obj_are_excluded_only_with_a_project_file(tmp_path):
+    write(tmp_path / "app" / "App.csproj", "<Project/>")
+    write(tmp_path / "app" / "bin" / "Debug" / "app.dll")
+    write(tmp_path / "app" / "obj" / "x.cache")
+    write(tmp_path / "app" / "Program.cs")
+    write(tmp_path / "scripts" / "bin" / "run.sh")                   # .csproj yok: gerçek betik klasörü
+    assert rels(ProjectIndex.build(tmp_path)) == ["app/App.csproj", "app/Program.cs", "scripts/bin/run.sh"]
+
+
+def test_virtualenv_is_detected_by_pyvenv_cfg_whatever_its_name(tmp_path):
+    write(tmp_path / "myenv" / "pyvenv.cfg", "home = x")
+    write(tmp_path / "myenv" / "Lib" / "site-packages" / "dep.py")
+    write(tmp_path / "app.py")
+    assert rels(ProjectIndex.build(tmp_path)) == ["app.py"]

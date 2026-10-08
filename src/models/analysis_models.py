@@ -82,6 +82,8 @@ class ProjectAnalysis:
     health_score: float = 0.0
     health_status: HealthStatus = HealthStatus.FAILING
     category_scores: Dict[str, float] = field(default_factory=dict)
+    # dil kimliği -> {files, total_lines, code_lines, comment_lines, blank_lines}
+    language_stats: Dict[str, Dict[str, int]] = field(default_factory=dict)
     failed_analyzers: List[str] = field(default_factory=list)
     
     @property

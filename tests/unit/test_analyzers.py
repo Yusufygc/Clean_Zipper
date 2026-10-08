@@ -187,3 +187,23 @@ def test_complexity_reads_utf8_bom_files(tmp_path):
     write(tmp_path / "bom.py", b"\xef\xbb\xbf" + branchy(10).encode())
     results = CodeComplexityAnalyzer().analyze(ProjectIndex.build(tmp_path))
     assert len(results) == 1
+
+
+# ---- Dil istatistikleri -------------------------------------------------------------------
+
+def test_language_stats_aggregates_per_language_sorted_by_code_lines(tmp_path):
+    from src.analyzers.language_stats_analyzer import LanguageStatsAnalyzer
+    write(tmp_path / "a.py", "# yorum\nx = 1\n\ny = 2\n")
+    write(tmp_path / "b.py", "z = 3\n")
+    write(tmp_path / "Main.java", "class A {\n  // c\n  void m() {}\n  int x;\n}\n")
+    write(tmp_path / "notes.txt", "yok sayılır\n")
+    write(tmp_path / "app.min.js", "var a=1;")
+    results = LanguageStatsAnalyzer().analyze(ProjectIndex.build(tmp_path))
+    assert [(r.title, r.severity) for r in results] == [("Dil: Java", Severity.INFO), ("Dil: Python", Severity.INFO)]
+    by_lang = {r.metadata["language"]: r.metadata for r in results}
+    assert set(by_lang) == {"python", "java"}                       # .txt ve .min.js sayılmaz
+    py = by_lang["python"]
+    assert (py["files"], py["total_lines"], py["code_lines"], py["comment_lines"], py["blank_lines"]) == (2, 5, 3, 1, 1)
+    assert by_lang["java"]["approximate"] is True and by_lang["python"]["approximate"] is False
+    codes = [r.metadata["code_lines"] for r in results]
+    assert codes == sorted(codes, reverse=True)
