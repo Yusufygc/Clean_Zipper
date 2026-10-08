@@ -90,6 +90,7 @@
 | `DeadCodeAnalyzer` | deadcode | Kullanılmayan import, ulaşılamaz kod, kullanılmayan yerel değişken |
 | `MagicNumberAnalyzer` | deadcode | Fonksiyon gövdelerindeki adsız sayısal sabitler |
 | `CloneAnalyzer` | duplicate | Kopyala-yapıştır kod blokları (dosyalar arası ve dosya içi) |
+| `ArchitectureAnalyzer` | architecture | Dosya bağımlılık grafiği: döngüsel bağımlılık, en çok kullanılan dosyalar |
 
 ---
 
@@ -295,8 +296,9 @@ Skor, analizörlerin ürettiği bulgulardan hesaplanır. Sabit değer yoktur.
 | **Yapı** | %8 | Boş klasörler, klasör derinliği |
 | **Bağımlılık** | %8 | Kullanılmayan kütüphaneler, eksik `requirements.txt` |
 | **Ölü Kod** | %6 | Kullanılmayan import / değişken, ulaşılamaz kod, sihirli sayı |
+| **Mimari** | %6 | Döngüsel bağımlılıklar |
 
-Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz. Yeni kategoriler (`architecture`, `reliability`, `testing`, `hygiene`) ilgili analizörler eklendikçe devreye girer.
+Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz. Yeni kategoriler (`reliability`, `testing`, `hygiene`) ilgili analizörler eklendikçe devreye girer.
 
 **Hesaplama:** her bulgunun şiddeti ceza puanı getirir (KRİTİK 40, YÜKSEK 15, ORTA 5, DÜŞÜK 1, BİLGİ 0). Kategori skoru `100 × e^(−ceza/60)` formülüyle bulunur. Genel skor, kategori skorlarının ağırlıklı ortalamasıdır. Hiçbir analizör çalışmazsa skor 0 olur.
 
@@ -537,6 +539,19 @@ Bir fonksiyon birden çok eşiği aşarsa **tek** bulgu üretilir (aşılan metr
 - **Ulaşılamaz kod:** `return/raise/break/continue` sonrası aynı blokta kalan ifade. Brace dillerinde süslü parantezsiz `if (x) return;`, `#if/#else` dalları, JS `function` bildirimleri ve JSX metni yanlış pozitif üretmez.
 - **Sihirli sayı:** `{0, 1, 2, -1, 0.5}`, adlandırılmış atamalar (`retries = 3`, `const`), adlı argümanlar, indeksler ve sabit veri tabloları sayılmaz. Test dosyaları atlanır. Eşik `QualityThresholds.magic_numbers`.
 - **Kod klonu:** En az `clone_lines` (varsayılan 8) ardışık anlamlı satır; yorum ve boşluk farkı yok sayılır, string ve sayı değerleri birebir aynı olmalıdır. Tamamen aynı dosyalar `DuplicateFinder`'a bırakılır. En büyük 50 grup ayrı bulgu, ayrıca tek bir özet bulgusu (tekrarlanan satır oranı) üretilir.
+
+### Mimari: Döngüsel Bağımlılık
+
+`ArchitectureAnalyzer` her dil ailesi (Python, JS/TS) için dosya düzeyinde bir içe aktarma grafiği kurar ve Tarjan algoritmasıyla (yinelemeli, derin zincirlerde güvenli) döngüleri bulur.
+
+| Kural | Açıklama | Öncelik |
+|-------|----------|---------|
+| `import-cycle` | Birbirini doğrudan/dolaylı içe aktaran ≥ 2 dosya; en kısa döngü yolu gösterilir | ORTA; ≥ 4 dosyalık döngü YÜKSEK |
+| `dependency-graph` | Dosya/kenar/döngü sayısı, en çok kullanılan ve en çok bağımlılığı olan 5 dosya | BİLGİ |
+
+- **Python:** mutlak ve göreli importlar proje dosyalarına çözülür (`from . import x` alt modülü, `from p import Name` paketi bağlar). Kaynak kökü, içe aktaranın klasörü veya atası olmalıdır (`sys.path[0]` anlambilimi). Standart kütüphane adlarını gölgeleyen iç içe dosyalar çözülmez. Yalnızca modül yüklenirken çalışan importlar sayılır: **fonksiyon içi importlar ve `if TYPE_CHECKING:` blokları döngü değildir** (çalışma zamanında hata vermezler).
+- **JS/TS (yaklaşık):** göreli yollar (`./x`, uzantısız, `index`, TS'te `.js` -> `.ts`) ile `@/` ve `~/` takma adları (kök ve `src/` denenir). `import type` ve harici paketler grafiğe girmez. `tsconfig` `paths` ayarı okunmaz.
+- Java, C#, Go, Rust ve C/C++ için döngü tespiti yoktur: namespace/paket ile dosya eşlemesi güvenilir değil.
 
 ### `.gitignore` ve Git Duyarlılığı
 

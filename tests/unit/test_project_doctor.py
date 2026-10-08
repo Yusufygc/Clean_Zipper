@@ -128,8 +128,8 @@ def test_progress_is_reported_in_order_and_stays_within_bounds(tmp_path):
 def test_project_service_registers_all_builtin_analyzers_without_ui(tmp_path):
     from src.services.project_service import ProjectService
     service = ProjectService()
-    assert len(service.doctor.get_registered_analyzers()) == 12
-    assert len(ProjectService(disabled_analyzers=["SizeAnalyzer"]).doctor.get_registered_analyzers()) == 11
+    assert len(service.doctor.get_registered_analyzers()) == 13
+    assert len(ProjectService(disabled_analyzers=["SizeAnalyzer"]).doctor.get_registered_analyzers()) == 12
     make_project(tmp_path)
     service.set_project(tmp_path)
     seen = []

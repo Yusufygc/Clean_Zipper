@@ -1,5 +1,15 @@
 # Değişiklik Günlüğü
 
+## [2026-10-08] [REVIEW] | Bulgu 12 (Aşama 2): mimari, döngüsel bağımlılık
+- Yeni `ArchitectureAnalyzer` (kategori `architecture`, toplam 13 analizör): Python ve JS/TS için dosya grafiği, Tarjan SCC ile döngüler (ORTA, ≥4 dosya YÜKSEK), en kısa döngü yolu, `dependency-graph` BİLGİ bulgusu (düğüm/kenar/döngü, en çok kullanılan 5 dosya).
+- `SourceMetrics.import_refs` (`ImportRef`: modül, seviye, adlar, satır): yalnızca modül yüklenirken çalışan Python importları; fonksiyon gövdeleri ve `if TYPE_CHECKING:` hariç (çalışma zamanı döngüsü olmaz). Ek ast geçişi yok, `PythonLanguage.analyze` içinde üretilir.
+- `src/languages/import_graph.py`: `PythonResolver` (mutlak + göreli; `from p import ad` alt modül varsa onu, yoksa paketi bağlar; kaynak kökü içe aktaranın klasörü/atası; stdlib adlarını gölgeleyen iç içe dosya çözülmez), `resolve_js` (göreli, uzantısız, `index`, `.js`->`.ts`, `@/` `~/`), yinelemeli Tarjan, BFS ile en kısa döngü.
+- **Bağımsız doğrulama:** `grimp` (geçici venv) ile: bu repoda 134/135 kenar ortak, hayalet kenar 0 (kalan 1 fonksiyon içi import, kasıtlı dışlanan); P022-ATC 95/96, hayalet 0. PortfoySim'de grimp bizim 398 gerçek kenarı bulamadı (kaynakta `from src.infrastructure...` satırları ve dosyalar var, grimp kapsamaması), grimp'in bulduğu 36 kenarın örnekleri fonksiyon içi tembel importlar. `madge` ile JS/TS: iki projede madge'in çözebildiği değer kenarlarının tamamı bizde (111/111, 10/10); bizdeki fazlalık `@/` takma adı (madge çözmedi), madge'deki fazlalık `import type` ve CSS (kasıtlı dışlanır).
+- Gerçek veri: tüm `C:\2UYGULAMALAR` Python 2443 düğüm/5541 kenar, JS/TS 524 düğüm/367 kenar, **0 döngü** (modül düzeyi döngü Python'da zaten ImportError verir; grimp'in tek döngüsü tembel importlarla). Tüm korpus analizi 42.8 sn (<60). Döngü bulma mantığı sentetik projelerle test edildi (2 dosya, 4 dosya, 5001 düğümlük zincir).
+- Dogfooding: yeni Tarjan, `shortest_cycle`, `_base`, `runtime_imports` V2 eşiklerini aşıyordu; `_Tarjan` sınıfı ve küçük yardımcılara bölündü, yeni dosyalarda bulgu yok.
+- Sınırlar: Java/C#/Go/Rust/C++ yok; JS `tsconfig paths` okunmuyor; dinamik `import()` ifadeleri kenar sayılır, `require` içeren koşullu yükleme ayrımı yapılmaz.
+- Testler: `test_import_graph.py`, `test_architecture_analyzer.py`; toplam 400. Bkz. [[roadmap]].
+
 ## [2026-10-08] [REVIEW] | Bulgu 12 (Aşama 1): ölü kod, sihirli sayı, kod klonu
 - Yeni analizörler: `DeadCodeAnalyzer` (kategori `deadcode`), `MagicNumberAnalyzer` (`deadcode`), `CloneAnalyzer` (`duplicate`). Toplam 12 analizör. `QualityThresholds`: `magic_numbers=10`, `clone_lines=8`, `clone_severe_lines=20`. `src/core/path_rules.py` `is_test_path` (Aşama 5 de kullanacak).
 - Katman: saf analiz kodu `src/languages/python_usage.py` (`ast`: kullanılmayan import, ulaşılamaz kod, kullanılmayan yerel değişken, sihirli sayı), `brace_usage.py` (JS/TS/Java import, brace ulaşılamaz kod, sihirli sayı), `clones.py` (`CloneFinder`: normalleştirilmiş satırlar, 8 satırlık kayan pencere özeti, maksimal blok uzatma, tüketilen pencere işareti). Analizörler yalnızca bulgu üretir.

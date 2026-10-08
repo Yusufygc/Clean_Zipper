@@ -31,6 +31,15 @@ class ClassInfo:
         return self.end_line - self.start_line + 1
 
 
+@dataclass(frozen=True)
+class ImportRef:
+    """Python içe aktarması: `import a.b` -> ('a.b', 0, ()); `from ..x import y, z` -> ('x', 2, ('y', 'z'))."""
+    module: str
+    level: int            # 0 mutlak, 1 = `.`, 2 = `..` ...
+    names: Tuple[str, ...]
+    line: int
+
+
 @dataclass
 class SourceMetrics:
     language: str
@@ -41,6 +50,8 @@ class SourceMetrics:
     functions: List[FunctionInfo] = field(default_factory=list)
     classes: List[ClassInfo] = field(default_factory=list)
     imports: List[str] = field(default_factory=list)   # ham belirteçler (ör. 'os.path', 'react', 'java.util.List')
+    # Yalnızca Python: modül yüklenirken çalışan (fonksiyon dışı, TYPE_CHECKING dışı) içe aktarmalar; döngü tespiti için
+    import_refs: List[ImportRef] = field(default_factory=list)
     approximate: bool = False                          # sözcük tabanlı çözümlemede True
     parse_ok: bool = True                              # yapı çıkarılabildi mi (Python'da sözdizimi hatası -> False)
 

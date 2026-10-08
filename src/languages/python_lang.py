@@ -2,9 +2,9 @@ import ast
 import io
 import re
 import tokenize
-from typing import List, Optional, Union
+from typing import Iterator, List, Optional, Union
 
-from src.languages.base import ClassInfo, FunctionInfo, LanguageSupport, SourceMetrics, StrippedSource
+from src.languages.base import ClassInfo, FunctionInfo, ImportRef, LanguageSupport, SourceMetrics, StrippedSource
 
 FunctionNode = Union[ast.FunctionDef, ast.AsyncFunctionDef]
 _FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef)
@@ -191,6 +191,42 @@ def count_parameters(function: FunctionNode) -> int:
     return len(names)
 
 
+def _is_type_checking(test: ast.expr) -> bool:
+    return (isinstance(test, ast.Name) and test.id == 'TYPE_CHECKING')         or (isinstance(test, ast.Attribute) and test.attr == 'TYPE_CHECKING')
+
+
+def _import_refs(node: ast.stmt) -> Iterator[ImportRef]:
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            yield ImportRef(alias.name, 0, (), node.lineno)
+    elif isinstance(node, ast.ImportFrom):
+        names = tuple(alias.name for alias in node.names if alias.name != '*')
+        yield ImportRef(node.module or '', node.level, names, node.lineno)
+
+
+def _nested_blocks(node: ast.stmt) -> Iterator[List[ast.stmt]]:
+    """Modül yüklenirken çalışabilecek iç ifade blokları (`if`/`try`/`with`/`for`/sınıf gövdeleri)."""
+    if isinstance(node, ast.If) and _is_type_checking(node.test):
+        yield node.orelse
+        return
+    for field_name in ('body', 'orelse', 'finalbody'):
+        block = getattr(node, field_name, None)
+        if isinstance(block, list):
+            yield block
+    for handler in getattr(node, 'handlers', ()):
+        yield handler.body
+
+
+def runtime_imports(statements: List[ast.stmt]) -> Iterator[ImportRef]:
+    """Modül yüklenirken çalışan içe aktarmalar: fonksiyon gövdeleri ve `if TYPE_CHECKING:` blokları hariç."""
+    for node in statements:
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            yield from _import_refs(node)
+        elif not isinstance(node, _FUNCTION_NODES):
+            for block in _nested_blocks(node):
+                yield from runtime_imports(block)
+
+
 class PythonLanguage(LanguageSupport):
     id = 'python'
     display_name = 'Python'
@@ -212,6 +248,7 @@ class PythonLanguage(LanguageSupport):
             metrics.imports = self._imports_from_lines(lines)
             return metrics
 
+        metrics.import_refs = list(runtime_imports(tree.body))
         for node in ast.walk(tree):
             if isinstance(node, _FUNCTION_NODES):
                 metrics.functions.append(self._function_info(node))
