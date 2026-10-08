@@ -1,5 +1,6 @@
 ﻿from pathlib import Path
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
+from src.core.registry import default_registry, load_builtin_analyzers
 from src.doctors.project_doctor import ProjectDoctor
 from src.services.archive_service import ArchiveService
 from src.services.cleanup_service import CleanupService
@@ -7,8 +8,9 @@ from src.services.backup_service import BackupService
 from src.utils.gitignore_parser import GitignoreParser
 
 class ProjectService:
-    def __init__(self):
-        self.doctor = ProjectDoctor()
+    def __init__(self, disabled_analyzers=()):
+        load_builtin_analyzers()
+        self.doctor = ProjectDoctor(default_registry.create_all(disabled=disabled_analyzers))
         self.archive_service = ArchiveService()
         self.cleanup_service = CleanupService()
         self.backup_service = BackupService()
@@ -19,10 +21,10 @@ class ProjectService:
         parser = GitignoreParser(str(self._current_project))
         self.archive_service.parser = parser
     
-    def analyze_project(self) -> Dict:
+    def analyze_project(self, progress: Optional[Callable[[int, str], None]] = None) -> Dict:
         if not self._current_project:
             raise ValueError("Once bir proje secin!")
-        return self.doctor.quick_scan(self._current_project)
+        return self.doctor.quick_scan(self._current_project, progress)
     
     def create_archive(self, output_path: Path, archive_type: str = 'zip') -> Dict:
         if not self._current_project:

@@ -4,6 +4,7 @@ Temel interface'ler - SOLID prensipleri icin abstract base class'lar
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Any, Tuple
 from pathlib import Path
+from src.core.project_index import ProjectIndex
 from src.models.analysis_models import AnalysisResult, ProjectAnalysis, HealthStatus
 
 
@@ -19,14 +20,14 @@ class IAnalyzer(ABC):
         pass
     
     @abstractmethod
-    def analyze(self, project_path: Path) -> List[AnalysisResult]:
+    def analyze(self, index: ProjectIndex) -> List[AnalysisResult]:
         pass
     
     @abstractmethod
     def get_priority(self) -> int:
         pass
     
-    def can_analyze(self, project_path: Path) -> bool:
+    def can_analyze(self, index: ProjectIndex) -> bool:
         return True
 
 

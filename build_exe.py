@@ -85,7 +85,8 @@ def build_executable():
         "--windowed",          # Konsol penceresini gizle
         "--clean",             # Önbelleği temizle
         "--noconfirm",         # Onay sorma
-        "--noupx"              # UPX sıkıştırmasını kapat (Virüs uyarısı riskini ciddi oranda düşürür)
+        "--noupx",             # UPX sıkıştırmasını kapat (Virüs uyarısı riskini ciddi oranda düşürür)
+        "--collect-submodules=src.analyzers",  # Analizörler pkgutil ile dinamik yüklenir
     ]
     
     if version_info_path.exists():

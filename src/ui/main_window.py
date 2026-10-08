@@ -10,14 +10,6 @@ from src.ui.dashboard.dashboard_panel import DashboardPanel
 from src.ui.tabs.archive_tab import ArchiveTab
 from src.ui.tabs.cleanup_tab import CleanupTab
 from src.services.project_service import ProjectService
-from src.analyzers.size_analyzer import SizeAnalyzer
-from src.analyzers.type_analyzer import TypeAnalyzer
-from src.analyzers.duplicate_finder import DuplicateFinder
-from src.analyzers.empty_folder_finder import EmptyFolderFinder
-from src.analyzers.structure_analyzer import StructureAnalyzer
-from src.analyzers.security_analyzer import SecurityLeakAnalyzer
-from src.analyzers.dead_weight_analyzer import DeadWeightAnalyzer
-from src.analyzers.code_complexity_analyzer import CodeComplexityAnalyzer
 
 
 # ================================================================== #
@@ -27,6 +19,7 @@ from src.analyzers.code_complexity_analyzer import CodeComplexityAnalyzer
 class AnalyzeWorker(QThread):
     finished = Signal(dict)
     error = Signal(str)
+    progress = Signal(int, str)
 
     def __init__(self, service: ProjectService):
         super().__init__()
@@ -34,7 +27,7 @@ class AnalyzeWorker(QThread):
 
     def run(self):
         try:
-            result = self.service.analyze_project()
+            result = self.service.analyze_project(progress=self.progress.emit)
             self.finished.emit(result)
         except Exception as e:
             self.error.emit(str(e))
@@ -57,21 +50,6 @@ class GitCleanArchiverPro(QMainWindow):
         # Servis kurulumu
         self.project_service = ProjectService()
         
-        # Tüm aktif analizörlerin sisteme kaydedilmesi
-        active_analyzers = [
-            SizeAnalyzer(), 
-            TypeAnalyzer(),
-            DuplicateFinder(), 
-            EmptyFolderFinder(), 
-            StructureAnalyzer(),
-            SecurityLeakAnalyzer(),
-            DeadWeightAnalyzer(),
-            CodeComplexityAnalyzer()
-        ]
-        
-        for analyzer in active_analyzers:
-            self.project_service.doctor.register_analyzer(analyzer)
-
         self.current_project_path = None
         self.analyze_worker = None
 
@@ -294,9 +272,14 @@ class GitCleanArchiverPro(QMainWindow):
         self.dashboard.progress_card.update_progress(5, "Başlatılıyor…")
 
         self.analyze_worker = AnalyzeWorker(self.project_service)
+        self.analyze_worker.progress.connect(self._handle_analyze_progress)
         self.analyze_worker.finished.connect(self._handle_analyze_finished)
         self.analyze_worker.error.connect(self._handle_analyze_error)
         self.analyze_worker.start()
+
+    def _handle_analyze_progress(self, percent: int, text: str):
+        self.dashboard.progress_card.update_progress(percent, text)
+        self._set_status(text)
 
     def _handle_analyze_finished(self, result: dict):
         self.dashboard.update_dashboard(result)

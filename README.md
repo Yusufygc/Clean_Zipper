@@ -101,7 +101,10 @@ gitclean-archiver-pro/
 ├── src/                          # Kaynak kod
 │   ├── core/                     # 🏗️ Temel mimari (FAZ 1)
 │   │   ├── interfaces.py         #    Abstract base class'lar
-│   │   └── base_analyzer.py      #    Temel analizör sınıfı
+│   │   ├── base_analyzer.py      #    Temel analizör sınıfı
+│   │   ├── project_index.py      #    Tek geçişli dosya indeksi (tüm analizörler bunu kullanır)
+│   │   ├── registry.py           #    Analizör kayıt defteri ve otomatik keşif
+│   │   └── constants.py          #    Ortak sabitler (EXCLUDED_DIRS)
 │   │
 │   ├── models/                   # 📊 Veri modelleri (FAZ 1)
 │   │   └── analysis_models.py    #    Dataclass'lar ve Enum'lar
@@ -111,7 +114,10 @@ gitclean-archiver-pro/
 │   │   ├── type_analyzer.py      #    Dosya türü analizi
 │   │   ├── duplicate_finder.py   #    Çift dosya bulucu
 │   │   ├── empty_folder_finder.py#    Boş klasör bulucu
-│   │   └── structure_analyzer.py #    Yapı analizi
+│   │   ├── structure_analyzer.py #    Yapı analizi
+│   │   ├── security_analyzer.py  #    Güvenlik sızıntısı analizi
+│   │   ├── dead_weight_analyzer.py#   Kullanılmayan bağımlılıklar
+│   │   └── code_complexity_analyzer.py # Karmaşıklık / God Object
 │   │
 │   ├── doctors/                  # 🏥 Proje doktoru (FAZ 3)
 │   │   ├── project_doctor.py     #    Ana doktor koordinatörü
@@ -306,11 +312,18 @@ Tüm sistemin temelini oluşturan abstract base class'lar:
 - `IRecommendationEngine`: Öneri motoru arayüzü
 - `IReporter`: Raporlama arayüzü
 
+#### `project_index.py`
+Proje klasörü bir kez taranır; tüm analizörler `analyze(index)` ile bu indeksi kullanır:
+- Dosya ve klasör listesi (`index.files`, `index.dirs`), toplam boyut, uzantı dağılımı, en büyük derinlik
+- Dışlanan klasörler (`EXCLUDED_DIRS`: `.git`, `venv`, `node_modules`, `dist`, `build` ...) hiç taranmaz
+- `read_text(entry)`: UTF-8 (BOM'lu), cp1254 ve latin-1 dener; ikilik veya 2 MB'tan büyük dosyada `None` döner; içerik önbelleğe alınır
+- `hash_file(entry, partial=False)`: parçalı okuma ile özet
+
+#### `registry.py`
+`@register_analyzer` dekoratörü ile işaretlenen analizörler `src/analyzers/` altından otomatik bulunur (`load_builtin_analyzers()`).
+
 #### `base_analyzer.py`
-Analizörler için temel sınıf. Ortak işlevleri sağlar:
-- Dosya sistemi gezinme (`_walk_project`)
-- Binary dosya tespiti (`_is_binary`)
-- Standart sonuç oluşturma (`_create_result`)
+Analizörler için temel sınıf: standart sonuç oluşturma (`_create_result`), `name`, `category`, öncelik.
 
 ### Analizörler
 
@@ -406,7 +419,7 @@ from src.analyzers.size_analyzer import SizeAnalyzer
 doctor = ProjectDoctor()
 doctor.register_analyzer(SizeAnalyzer(large_file_threshold_mb=5))
 
-# Tam analiz
+# Tam analiz (isteğe bağlı ilerleme: progress(yüzde, metin))
 analysis = doctor.diagnose(Path("/proje"))
 
 # Hızlı tarama
@@ -422,28 +435,40 @@ analyzers = doctor.get_registered_analyzers()
 
 ### Yeni Analizör Ekleme
 
+`src/analyzers/` altına tek bir dosya eklemek yeterlidir; UI veya başka bir dosyada değişiklik gerekmez.
+
 ```python
-# 1. Yeni analizör sınıfı oluşturun
+# src/analyzers/my_custom_analyzer.py
+from typing import List
 from src.core.base_analyzer import BaseAnalyzer
+from src.core.project_index import ProjectIndex
+from src.core.registry import register_analyzer
 from src.models.analysis_models import AnalysisResult, Severity
 
+@register_analyzer
 class MyCustomAnalyzer(BaseAnalyzer):
+    def __init__(self, priority: int = 25):
+        super().__init__(priority)
+
     @property
     def name(self) -> str:
         return "Özel Analizör"
-    
+
     @property
     def category(self) -> str:
+        # Puanlanan kategoriler: security, complexity, duplicate, size, structure, dependency
         return "custom"
-    
-    def analyze(self, project_path: Path) -> List[AnalysisResult]:
-        results = []
-        # Analiz mantığınızı buraya yazın
-        return results
 
-# 2. Doktor'a kaydedin
-doctor.register_analyzer(MyCustomAnalyzer(priority=25))
+    def analyze(self, index: ProjectIndex) -> List[AnalysisResult]:
+        results = []
+        for entry in index.files_with_ext('.py'):
+            text = index.read_text(entry)   # None: ikilik veya çok büyük
+            # Analiz mantığınızı buraya yazın
+        return results
 ```
+
+Başka bir sınıf adıyla çakışma `ValueError` verir. Bir analizörü kapatmak için `ProjectService(disabled_analyzers=["MyCustomAnalyzer"])`.
+Not: yeni bir kategori puanlanmaz; puanlanması için `HealthChecker.WEIGHTS` güncellenmelidir.
 
 ### Test Çalıştırma
 

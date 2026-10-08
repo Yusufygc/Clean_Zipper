@@ -2,8 +2,11 @@ import re
 from pathlib import Path
 from typing import List, Set, Dict
 from src.core.base_analyzer import BaseAnalyzer
+from src.core.project_index import ProjectIndex
+from src.core.registry import register_analyzer
 from src.models.analysis_models import AnalysisResult, Severity
 
+@register_analyzer
 class DeadWeightAnalyzer(BaseAnalyzer):
     """Projedeki gereksiz/kullanılmayan kütüphaneleri (bağımlılıkları) tespit eden analizör."""
 
@@ -36,11 +39,11 @@ class DeadWeightAnalyzer(BaseAnalyzer):
     def category(self) -> str:
         return "dependency"
 
-    def analyze(self, project_path: Path) -> List[AnalysisResult]:
+    def analyze(self, index: ProjectIndex) -> List[AnalysisResult]:
         results = []
         
         # 1. Projedeki requirements.txt dosyasını bul ve bağımlılıkları oku
-        req_file = project_path / "requirements.txt"
+        req_file = index.root / "requirements.txt"
         if not req_file.exists():
             # Eğer requirements.txt yoksa bir bilgi uyarısı verelim
             results.append(self._create_result(
@@ -56,7 +59,7 @@ class DeadWeightAnalyzer(BaseAnalyzer):
             return results
 
         # 2. Tüm Python dosyalarındaki import ifadelerini tara
-        imported_modules = self._collect_all_imports(project_path)
+        imported_modules = self._collect_all_imports(index)
 
         # 3. Bağımlılıkları karşılaştır ve kullanılmayanları bul
         unused_deps = []
@@ -110,7 +113,7 @@ class DeadWeightAnalyzer(BaseAnalyzer):
             pass
         return deps
 
-    def _collect_all_imports(self, project_path: Path) -> Set[str]:
+    def _collect_all_imports(self, index: ProjectIndex) -> Set[str]:
         """Projedeki tüm .py dosyalarını tarayarak import edilen ana modül isimlerini toplar."""
         imports = set()
         
@@ -118,32 +121,25 @@ class DeadWeightAnalyzer(BaseAnalyzer):
         import_pattern = re.compile(r'^\s*import\s+([a-zA-Z0-9_.,\s]+)')
         from_pattern = re.compile(r'^\s*from\s+([a-zA-Z0-9_]+)')
 
-        for root_path, _, filenames in self._walk_project(project_path):
-            for filename in filenames:
-                file_path = Path(root_path) / filename
-                if file_path.suffix.lower() != '.py':
-                    continue
+        for entry in index.files_with_ext('.py'):
+            text = index.read_text(entry)
+            if text is None:
+                continue
+            for line in text.splitlines():
+                # 1. 'import x, y' yapısı
+                imp_match = import_pattern.match(line)
+                if imp_match:
+                    # Virgülle ayrılmış çoklu importları ayır
+                    for mod in imp_match.group(1).split(','):
+                        # Alt paketleri temizle (örn: os.path -> os)
+                        main_mod = mod.strip().split('.')[0]
+                        if main_mod:
+                            imports.add(main_mod.lower())
 
-                try:
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                        for line in f:
-                            # 1. 'import x, y' yapısı
-                            imp_match = import_pattern.match(line)
-                            if imp_match:
-                                # Virgülle ayrılmış çoklu importları ayır
-                                modules = imp_match.group(1).split(',')
-                                for mod in modules:
-                                    # Alt paketleri temizle (örn: os.path -> os)
-                                    main_mod = mod.strip().split('.')[0]
-                                    if main_mod:
-                                        imports.add(main_mod.lower())
-                            
-                            # 2. 'from x import y' yapısı
-                            from_match = from_pattern.match(line)
-                            if from_match:
-                                main_mod = from_match.group(1).strip().split('.')[0]
-                                if main_mod:
-                                    imports.add(main_mod.lower())
-                except Exception:
-                    pass
+                # 2. 'from x import y' yapısı
+                from_match = from_pattern.match(line)
+                if from_match:
+                    main_mod = from_match.group(1).strip().split('.')[0]
+                    if main_mod:
+                        imports.add(main_mod.lower())
         return imports

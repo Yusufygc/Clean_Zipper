@@ -1,41 +1,52 @@
 import logging
 from pathlib import Path
-from typing import List, Dict
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 from datetime import datetime
-from collections import defaultdict
+from src.core.interfaces import IAnalyzer
+from src.core.project_index import ProjectIndex
 from src.doctors.health_checker import HealthChecker
 from src.doctors.recommendation_engine import RecommendationEngine
 from src.models.analysis_models import ProjectAnalysis, AnalysisResult, Severity, FileInfo
 
 logger = logging.getLogger(__name__)
 
+# (yüzde 0-100, kullanıcıya gösterilecek metin)
+ProgressCallback = Callable[[int, str], None]
+
+INDEX_PROGRESS_SHARE = 10   # yüzdenin ilk %10'u dosya taramasına ayrılır
+ANALYZER_PROGRESS_SHARE = 85
+
+
 class ProjectDoctor:
-    def __init__(self):
-        self._analyzers = []
+    def __init__(self, analyzers: Optional[Iterable[IAnalyzer]] = None):
+        self._analyzers: List[IAnalyzer] = []
         self._health_checker = HealthChecker()
         self._recommendation_engine = RecommendationEngine()
-    
-    def register_analyzer(self, analyzer):
+        for analyzer in analyzers or ():
+            self.register_analyzer(analyzer)
+
+    def register_analyzer(self, analyzer: IAnalyzer):
         self._analyzers.append(analyzer)
         self._analyzers.sort(key=lambda a: a.get_priority())
-    
+
     def get_registered_analyzers(self) -> List[str]:
         return [a.name for a in self._analyzers]
-    
-    def diagnose(self, project_path: Path) -> ProjectAnalysis:
+
+    def diagnose(self, project_path: Path, progress: Optional[ProgressCallback] = None) -> ProjectAnalysis:
         project_path = Path(project_path).resolve()
         analysis = ProjectAnalysis(project_path=project_path, analysis_time=datetime.now())
-        all_results = []
-        ran_categories = set()
-        for analyzer in self._analyzers:
-            try:
-                results = analyzer.analyze(project_path)
-                all_results.extend(results)
-                ran_categories.add(analyzer.category)
-            except Exception:
-                logger.exception("Analizor hatasi (%s)", analyzer.name)
-                analysis.failed_analyzers.append(analyzer.name)
-        
+        report = progress or (lambda pct, text: None)
+
+        report(0, "Dosyalar taranıyor…")
+        index = ProjectIndex.build(
+            project_path,
+            progress=lambda n: report(INDEX_PROGRESS_SHARE // 2, f"Dosyalar taranıyor… ({n} dosya)")
+        )
+        for path, error in index.errors:
+            logger.warning("Okunamayan yol atlandı: %s (%s)", path, error)
+
+        all_results, ran_categories = self._run_analyzers(index, analysis, report)
+
         for result in all_results:
             if result.severity in [Severity.CRITICAL, Severity.HIGH]:
                 analysis.issues.append(result)
@@ -43,20 +54,39 @@ class ProjectDoctor:
                 analysis.warnings.append(result)
             else:
                 analysis.suggestions.append(result)
-        
-        self._collect_stats(project_path, analysis)
+
+        report(INDEX_PROGRESS_SHARE + ANALYZER_PROGRESS_SHARE, "Skor hesaplanıyor…")
+        self._collect_stats(index, analysis)
         self._populate_from_findings(analysis)
         analysis.category_scores = self._health_checker.calculate_category_scores(all_results, ran_categories)
         analysis.health_score = self._health_checker.calculate_score(analysis)
         analysis.health_status = self._health_checker.get_health_status(analysis.health_score)
         return analysis
-    
-    def quick_scan(self, project_path: Path) -> Dict:
-        analysis = self.diagnose(project_path)
-        
+
+    def _run_analyzers(self, index: ProjectIndex, analysis: ProjectAnalysis,
+                       report: ProgressCallback) -> Tuple[List[AnalysisResult], Set[str]]:
+        all_results: List[AnalysisResult] = []
+        ran_categories: Set[str] = set()
+        total = len(self._analyzers)
+        for i, analyzer in enumerate(self._analyzers):
+            report(INDEX_PROGRESS_SHARE + ANALYZER_PROGRESS_SHARE * i // max(total, 1),
+                   f"{analyzer.name} çalışıyor…")
+            try:
+                if not analyzer.can_analyze(index):
+                    continue
+                all_results.extend(analyzer.analyze(index))
+                ran_categories.add(analyzer.category)
+            except Exception:
+                logger.exception("Analizor hatasi (%s)", analyzer.name)
+                analysis.failed_analyzers.append(analyzer.name)
+        return all_results, ran_categories
+
+    def quick_scan(self, project_path: Path, progress: Optional[ProgressCallback] = None) -> Dict:
+        analysis = self.diagnose(project_path, progress)
+
         # Sadece gerçek kod kalitesi sorunları ve uyarıları sayılıyor (INFO düzeyindeki loglar hariç)
         actual_issues_count = len(analysis.issues) + len(analysis.warnings)
-        
+
         return {
             'health_score': analysis.health_score,
             'health_status': analysis.health_status.value,
@@ -72,7 +102,7 @@ class ProjectDoctor:
             'project_path': str(project_path),
             'all_issues': analysis.issues + analysis.warnings # Sadece gerçek hatalar ve uyarılar listeleniyor
         }
-    
+
     def _populate_from_findings(self, analysis: ProjectAnalysis):
         """Bulgu metadata'sındaki 'kind' alanından özet listeleri doldurur."""
         for finding in analysis.all_findings:
@@ -92,23 +122,10 @@ class ProjectDoctor:
                 ))
         analysis.largest_files.sort(key=lambda f: f.size_bytes, reverse=True)
 
-    def _collect_stats(self, project_path: Path, analysis: ProjectAnalysis):
-        total_files, total_dirs, total_size = 0, 0, 0
-        ext_dist = defaultdict(int)
-        try:
-            for item in project_path.rglob('*'):
-                if item.is_file():
-                    try:
-                        total_size += item.stat().st_size
-                        ext_dist[item.suffix.lower()] += 1
-                        total_files += 1
-                    except (OSError, PermissionError):
-                        pass
-                elif item.is_dir():
-                    total_dirs += 1
-        except:
-            pass
-        analysis.total_files = total_files
-        analysis.total_dirs = total_dirs
-        analysis.total_size = total_size
-        analysis.file_type_distribution = dict(ext_dist)
+    @staticmethod
+    def _collect_stats(index: ProjectIndex, analysis: ProjectAnalysis):
+        analysis.total_files = index.total_files
+        analysis.total_dirs = index.total_dirs
+        analysis.total_size = index.total_size
+        analysis.file_type_distribution = dict(index.ext_counts)
+        analysis.file_type_sizes = dict(index.ext_sizes)

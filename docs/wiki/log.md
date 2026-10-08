@@ -1,5 +1,17 @@
 # Değişiklik Günlüğü
 
+## [2026-10-08] [REVIEW] | Bulgu 4+5+9: tek geçişli ProjectIndex ve analizör registry
+- `src/core/project_index.py`: dosya sistemi `os.scandir` ile bir kez taranır (`FileEntry`, `DirEntry`, toplamlar, `read_text` önbelleği, `hash_file`). Dışlanan klasörlere girilmez; okunamayan yollar `errors` listesine yazılır.
+- `src/core/registry.py`: `@register_analyzer` + `load_builtin_analyzers()` (pkgutil). `ProjectService` analizörleri registry'den kurar; `main_window.py` artık hiçbir analizör bilmez.
+- `IAnalyzer.analyze(index)`; `can_analyze(index)` artık çağrılıyor. `BaseAnalyzer`'dan `_walk_project`, `_is_binary`, `_get_file_info` kaldırıldı.
+- 8 analizör indeks üzerine taşındı. `DuplicateFinder`: boyut, ilk 64 KB, tam özet (blake2b, parçalı okuma); kopyalar dosya yoluna göre sıralı. `CodeComplexityAnalyzer.analyze` parçalandı.
+- `ProjectDoctor`: istatistikler indeksten (eski `rglob` kalktı); `diagnose(path, progress=None)`; ilerleme `AnalyzeWorker.progress` sinyaliyle dashboard ilerleme kartına ve durum çubuğuna bağlandı.
+- Sayılar değişti: toplam dosya/boyut artık dışlanan klasörler hariç (bu projede 6997 dosya / 333.8 MB, yeni: 79 dosya / 0.6 MB). cp1254 kodlu dosyalar artık güvenlik taramasına giriyor.
+- `build_exe.py`: `--collect-submodules=src.analyzers`. Donmuş (PyInstaller) uygulamada keşif, ayrı bir prob exe ile doğrulandı (8 analizör bulundu). Bayraksız kontrol denemesi çalıştırılamadı (izin hatası), bayrağın gerekliliği kanıtlanmadı.
+- Davranış karşılaştırması (aynı çalışma ağacı): bulgular aynı; yalnızca yeniden yazılan iki fonksiyon (`_collect_all_imports`, `CodeComplexityAnalyzer.analyze`) artık karmaşıklık eşiğini aşmadığı için iki ORTA bulgu kayboldu.
+- Testler: `test_project_index.py`, `test_registry.py`, `test_analyzers.py`, `test_project_doctor.py` genişletildi (76 test).
+- Doğrulanamadı: dashboard ilerleme çubuğunun görsel davranışı; exe içinde analiz çalıştırma (GUI etkileşimi gerekir, yalnızca açılış ve keşif doğrulandı). Bkz. [[roadmap]].
+
 ## [2026-10-08] [REVIEW] | Bulgu 2: Sağlık skoru bulgu tabanlı hale getirildi
 - `HealthChecker` yeniden yazıldı: sabit `types=80` / `organization=85` kalktı. Kategori skoru `100*exp(-ceza/60)`, ceza şiddetten (KRİTİK 40, YÜKSEK 15, ORTA 5, DÜŞÜK 1). Genel skor, çalışmış kategorilerin ağırlığı yeniden normalize edilerek hesaplanıyor. `IHealthChecker` artık miras alınıyor.
 - Analizör kategorileri: `SecurityLeakAnalyzer` → `security`, `CodeComplexityAnalyzer` → `complexity`, `DeadWeightAnalyzer` → `dependency`.

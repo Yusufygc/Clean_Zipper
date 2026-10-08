@@ -76,3 +76,62 @@ def test_quick_scan_exposes_category_scores_and_failures(tmp_path):
     assert scan["failed_analyzers"] == ["Boom"]
     assert "structure" in scan["category_scores"]
     assert scan["issues_count"] == 0  # LOW boş klasör bulgusu sorun sayılmaz
+
+
+class SkippedAnalyzer(BaseAnalyzer):
+    category = "security"
+    calls = 0
+
+    @property
+    def name(self):
+        return "Skipped"
+
+    def can_analyze(self, index):
+        return False
+
+    def analyze(self, index):
+        SkippedAnalyzer.calls += 1
+        return []
+
+
+def test_stats_come_from_index_and_exclude_venv_and_git(tmp_path):
+    make_project(tmp_path)
+    (tmp_path / "venv").mkdir()
+    (tmp_path / "venv" / "big.bin").write_bytes(b"0" * 100_000)
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git" / "HEAD").write_text("ref")
+    analysis = doctor(EmptyFolderFinder()).diagnose(tmp_path)
+    assert analysis.total_files == 2
+    assert analysis.total_size == 4096
+    assert analysis.file_type_distribution == {".txt": 2}
+    assert analysis.file_type_sizes == {".txt": 4096}
+
+
+def test_can_analyze_false_skips_analyzer_without_failing_or_scoring(tmp_path):
+    make_project(tmp_path)
+    SkippedAnalyzer.calls = 0
+    analysis = doctor(SkippedAnalyzer(), EmptyFolderFinder()).diagnose(tmp_path)
+    assert SkippedAnalyzer.calls == 0
+    assert analysis.failed_analyzers == []
+    assert "security" not in analysis.category_scores
+
+
+def test_progress_is_reported_in_order_and_stays_within_bounds(tmp_path):
+    make_project(tmp_path)
+    seen = []
+    doctor(DuplicateFinder(), EmptyFolderFinder()).diagnose(tmp_path, progress=lambda p, t: seen.append((p, t)))
+    percents = [p for p, _ in seen]
+    assert percents == sorted(percents) and 0 <= percents[0] and percents[-1] < 100
+    assert any("Cift Dosya Bulucu" in t for _, t in seen)
+
+
+def test_project_service_registers_all_builtin_analyzers_without_ui(tmp_path):
+    from src.services.project_service import ProjectService
+    service = ProjectService()
+    assert len(service.doctor.get_registered_analyzers()) == 8
+    assert len(ProjectService(disabled_analyzers=["SizeAnalyzer"]).doctor.get_registered_analyzers()) == 7
+    make_project(tmp_path)
+    service.set_project(tmp_path)
+    seen = []
+    result = service.analyze_project(progress=lambda p, t: seen.append(p))
+    assert result["total_files"] == 2 and seen
