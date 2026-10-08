@@ -1,4 +1,4 @@
-﻿"""
+"""
 Temel interface'ler - SOLID prensipleri icin abstract base class'lar
 """
 from abc import ABC, abstractmethod

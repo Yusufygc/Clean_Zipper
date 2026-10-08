@@ -1,4 +1,4 @@
-﻿from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict
 from src.models.analysis_models import ProjectAnalysis
 
 class RecommendationEngine:

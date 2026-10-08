@@ -1,0 +1,16 @@
+# Satır sonları: depoda LF; çalışma kopyası da LF (Windows'ta core.autocrlf bağımsız)
+* text=auto eol=lf
+
+# Windows betikleri CRLF kalır
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# İkili dosyalar
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.zip binary
+*.exe binary

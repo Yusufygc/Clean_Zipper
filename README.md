@@ -181,8 +181,10 @@ gitclean-archiver-pro/
 │
 ├── main.py                       # 🚀 Ana giriş noktası
 ├── build_exe.py                  # 🔨 Build script'i
-├── requirements.txt              # 📋 Bağımlılıklar
-├── setup.py                      # 📦 Pip kurulumu
+├── requirements.txt              # 📋 Çalışma zamanı bağımlılıkları (tam sabit sürümler)
+├── requirements-dev.txt          # 🧪 + test (pytest)
+├── requirements-build.txt        # 🔨 + EXE derleme (pyinstaller)
+├── .gitattributes / .editorconfig # ↩️ Satır sonu (LF) ve kodlama (UTF-8) politikası
 └── README.md                     # 📖 Bu doküman
 ```
 
@@ -231,7 +233,9 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # 4. Bağımlılıkları yükleyin
-pip install -r requirements.txt
+pip install -r requirements.txt          # yalnızca çalıştırmak için
+pip install -r requirements-dev.txt      # + testler (python -m pytest)
+pip install -r requirements-build.txt    # + EXE derleme (python build_exe.py)
 
 # 5. Uygulamayı başlatın
 python main.py
@@ -583,7 +587,11 @@ Bir fonksiyon birden çok eşiği aşarsa **tek** bulgu üretilir (aşılan metr
 - **Kural kapatma:** `ProjectService(disabled_rules=["py-os-system"])`.
 - **SQL kuralları** ORTA öncelikli: tablo adı gibi parametrelenemeyen yerlerde f-string kaçınılmaz olabilir.
 
+**Test dosyaları:** `password = '...'` gibi genel kalıplar test klasörlerinde DÜŞÜK öncelikli raporlanır (çoğu sahte örnek değerdir, `in_tests=True`); sağlayıcı biçimli anahtarlar testte de aynı öncelikle raporlanır.
+
 **`SecurityLeakAnalyzer`** sağlayıcı biçimli sırları da yakalar: AWS erişim anahtarı, PEM özel anahtar, GitHub, Slack, Google API, Stripe canlı anahtar ve JWT. Bulguya **değer yazılmaz** (yalnızca 4 karakterlik maskeli önek ve uzunluk). Satırında `example` geçenler (belge örnekleri) atlanır.
+
+**Çalışma zamanı / geliştirme ayrımı:** Python'da `requirements.txt` içindeki test ve paketleme araçları (`pytest`, `pyinstaller`, `mypy`, `ruff`, `black` ...) manifest başına tek DÜŞÜK bulgu üretir (`dev-dependency-in-runtime`); `requirements-dev.txt`, `requirements-build.txt` gibi adlarda (`dev`, `test`, `build`, `lint`, `doc`) araçlar serbesttir.
 
 **Sürüm sabitleme:** `DeadWeightAnalyzer` manifest başına tek DÜŞÜK bulgu üretir (`unpinned-dependencies`). Python `requirements.txt`: `==` olmayan her satır. npm: `*`, `latest`, boş, `>=` gibi açık uçlu aralıklar ve git/URL bağımlılıkları (`^`/`~` normal sayılır). Go ve Cargo denetlenmez.
 
@@ -625,6 +633,7 @@ Eşleşme ada bakar (`foo_bar.py` ↔ `test_foo_bar.py`, `FooBarTests.cs`); fark
 
 - README/LICENSE yalnızca ≥ 100 kaynak satırı olan projelerde, `.gitignore` yalnızca git deposunda, CI yalnızca testi olan projelerde beklenir (`.github/workflows`, `.gitlab-ci.yml`, `Jenkinsfile`, `azure-pipelines.yml`, `.circleci`, `bitbucket-pipelines.yml`, `.travis.yml` ...).
 - **Kilit dosyası:** bağımlılığı olan her manifest için aynı veya üst klasörde aranır (monorepo kökündeki kilit dosyası sayılır): `package.json` -> `package-lock.json`/`yarn.lock`/`pnpm-lock.yaml`/`bun.lock*`, `go.mod` -> `go.sum`, `Cargo.toml` (yalnızca `src/main.rs` olan uygulama crate'i) -> `Cargo.lock`, `Pipfile` -> `Pipfile.lock`, `pyproject.toml` (yalnızca poetry/uv/pdm kullanıyorsa) -> `poetry.lock`/`uv.lock`/`pdm.lock`.
+- **Sürüm kontrolündeki üretilmiş içerik (`tracked-artifacts`):** git'in izlediği `node_modules`, `venv`/`.venv`, `__pycache__` ve araç önbellekleri, `*.pyc`, `dist`/`build` klasörleri kök başına bir bulgudur (en çok dosyası olan 10 kök). Bağımlılık klasörleri ORTA, önbellek / bytecode / derleme çıktısı DÜŞÜK; `dist`/`build` adı belirsiz olduğundan `approximate=True` (`lib/`, `vendor/`, `third_party/` altındaki üçüncü taraf paketleri sayılmaz). Temiz depo `hygiene-summary.present` içinde `clean-repo` olur. `.gitignore`'a eklenmiş ama hâlâ izlenen dosyalar da yakalanır, çünkü `git ls-files` esas alınır.
 - **`.env.example`:** `.env` varsa (kök dizinde, `.gitignore`'da olsa bile) `.env.example`/`.env.sample`/`.env.template` aranır.
 
 ### Git Geçmişi

@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Bunlardan herhangi biri varsa Python projesi için bağımlılık yönetimi var sayılır.
 MAX_LISTED_UNPINNED = 8
+DEV_MANIFEST_WORDS = ('dev', 'test', 'build', 'lint', 'doc')
 PYTHON_MANIFEST_NAMES =frozenset({'requirements.txt', 'pyproject.toml', 'Pipfile', 'setup.py', 'setup.cfg'})
 
 
@@ -69,7 +70,28 @@ class DeadWeightAnalyzer(BaseAnalyzer):
                 ecosystem=ecosystem.id, rule='unused-dependency',
             ))
         results.extend(self._unpinned(ecosystem, manifest, manifest_entry))
+        results.extend(self._dev_in_runtime(ecosystem, manifest, manifest_entry))
         return results
+
+    @staticmethod
+    def _is_runtime_manifest(name: str) -> bool:
+        """`requirements.txt` çalışma zamanı listesidir; `requirements-dev.txt` gibi adlar geliştirme listesidir."""
+        return not any(word in name.lower() for word in DEV_MANIFEST_WORDS)
+
+    def _dev_in_runtime(self, ecosystem: Ecosystem, manifest, manifest_entry: FileEntry) -> List[AnalysisResult]:
+        """Python: test / paketleme araçları çalışma zamanı bağımlılık listesinde (kurulum gereksiz şişer)."""
+        if ecosystem.id != 'python' or not self._is_runtime_manifest(manifest_entry.path.name):
+            return []
+        tools = [d.name for d in manifest.dependencies if d.dev]
+        if not tools:
+            return []
+        return [self._create_result(
+            title=f"Geliştirme Araçları Çalışma Zamanı Listesinde: {manifest_entry.path.name}",
+            description=(f"{', '.join(tools)} test / paketleme aracıdır ama {manifest_entry.path.name} içinde. "
+                         "Uygulamayı yalnızca çalıştıran herkes bunları da kurar."),
+            severity=Severity.LOW, file_path=manifest_entry.path,
+            recommendation="Araçları requirements-dev.txt (test) ve requirements-build.txt (paketleme) gibi ayrı dosyalara taşıyın.",
+            ecosystem=ecosystem.id, rule='dev-dependency-in-runtime', count=len(tools), dependencies=tools)]
 
     def _unpinned(self, ecosystem: Ecosystem, manifest, manifest_entry: FileEntry) -> List[AnalysisResult]:
         """Sürümü sabitlenmemiş bağımlılıklar: manifest başına tek bulgu (tedarik zinciri / tekrarlanabilirlik)."""

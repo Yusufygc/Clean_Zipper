@@ -1,4 +1,4 @@
-﻿"""
+"""
 Veri modelleri - Tum analiz sonuclari icin dataclass'lar
 """
 from dataclasses import dataclass, field

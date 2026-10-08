@@ -1,10 +1,11 @@
 import json
 import logging
 import posixpath
+from collections import Counter
 from typing import List, Set
 
 from src.core.base_analyzer import BaseAnalyzer
-from src.core.path_rules import is_test_path
+from src.core.path_rules import artifact_root, is_test_path
 from src.core.project_index import FileEntry, ProjectIndex
 from src.core.registry import register_analyzer
 from src.languages import parse_file
@@ -20,6 +21,9 @@ CI_FILES = frozenset({'.gitlab-ci.yml', 'jenkinsfile', 'azure-pipelines.yml', 'b
 ENV_EXAMPLES = frozenset({'.env.example', '.env.sample', '.env.template', '.env.dist', 'example.env', 'env.example',
                           'sample.env'})
 # manifest -> bu klasörde veya üst klasörlerinde aranacak kilit dosyaları
+MAX_ARTIFACTS = 10
+ARTIFACT_KINDS = {'dependencies': 'bağımlılık klasörü', 'cache': 'önbellek', 'build': 'derleme çıktısı (olabilir)',
+                  'bytecode': 'derlenmiş Python'}
 LOCK_FILES = {
     'package.json': ('package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb', 'bun.lock', 'npm-shrinkwrap.json'),
     'Cargo.toml': ('Cargo.lock',),
@@ -56,6 +60,7 @@ class ProjectHygieneAnalyzer(BaseAnalyzer):
         results = self._basic_checks(index, rels, root_names, present)
         results.extend(self._lockfiles(index, rels, present))
         results.extend(self._env_example(index, rels, present))
+        results.extend(self._tracked_artifacts(index, present))
         if any(n == 'dockerfile' or n.startswith('dockerfile.') for n in root_names):
             present.append('dockerfile')
         if present or results:
@@ -188,10 +193,36 @@ class ProjectHygieneAnalyzer(BaseAnalyzer):
         return [self._missing(index, 'env-example', ".env.example Eksik",
                               ".env dosyasının değerleri boş/örnek hâliyle bir .env.example olarak commit edin; yeni geliştirici hangi değişkenlerin gerektiğini bilsin.")]
 
+    # ---- sürüm kontrolüne girmiş üretilmiş içerik ----------------------------------------------------------
+
+    def _tracked_artifacts(self, index: ProjectIndex, present: List[str]) -> List[AnalysisResult]:
+        """Git'in izlediği bağımlılık / önbellek / derleme çıktısı: depoyu şişirir, birleştirmeleri kirletir."""
+        tracked = index.git_tracked
+        if tracked is None:
+            return []
+        groups = Counter(root for root in map(artifact_root, tracked) if root)
+        if not groups:
+            present.append('clean-repo')
+            return []
+        severity_of = {'dependencies': Severity.MEDIUM, 'cache': Severity.LOW, 'bytecode': Severity.LOW, 'build': Severity.LOW}
+        ranked = sorted(groups.items(), key=lambda item: (-item[1], item[0][0]))
+        return [self._artifact_result(index, root, kind, count, severity_of[kind]) for (root, kind), count in ranked[:MAX_ARTIFACTS]]
+
+    def _artifact_result(self, index: ProjectIndex, root: str, kind: str, count: int, severity: Severity) -> AnalysisResult:
+        return self._create_result(
+            title=f"Sürüm Kontrolünde Üretilmiş İçerik: {root}",
+            description=(f"'{root}' altındaki {count} dosya git tarafından izleniyor ({ARTIFACT_KINDS[kind]}). "
+                         "Bu içerik yeniden üretilebilir; depoyu şişirir ve birleştirmelerde çakışma çıkarır."),
+            severity=severity, file_path=index.root / root.replace('*.pyc', ''),
+            recommendation=f"'git rm -r --cached {root}' ile izlemeden çıkarın ve .gitignore'a ekleyin.",
+            rule='tracked-artifacts', kind_of_artifact=kind, tracked_files=count, root=root,
+            approximate=kind == 'build')                       # dist / build adı belirsiz: kaynak olabilir
+
     # ---- özet -------------------------------------------------------------------------------------------------
 
     def _summary(self, present: List[str], missing: List[AnalysisResult]) -> AnalysisResult:
-        missing_keys = [r.metadata['rule'].replace('missing-', '') for r in missing]
+        missing_keys = [r.metadata['rule'].replace('missing-', '') for r in missing
+                        if r.metadata['rule'].startswith('missing-')]
         total = len(present) + len(missing_keys)
         return self._create_result(
             title=f"Proje Hijyeni: {len(present)}/{total} kontrol tamam",

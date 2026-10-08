@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from typing import Callable, Dict, Iterable, Optional
 from src.core.errors import ProjectNotSelectedError
 from src.core.registry import default_registry, load_builtin_analyzers

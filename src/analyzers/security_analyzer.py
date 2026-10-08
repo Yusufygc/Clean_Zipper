@@ -2,6 +2,7 @@ import re
 from bisect import bisect_right
 from typing import List, Optional
 from src.core.base_analyzer import BaseAnalyzer
+from src.core.path_rules import is_test_path
 from src.core.project_index import ProjectIndex
 from src.core.registry import register_analyzer
 from src.models.analysis_models import AnalysisResult, Severity
@@ -84,17 +85,20 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
             # Kod içi tarama mantığı (ikilik ve çok büyük dosyalar atlanır)
             text = index.read_text(entry)
             if text is not None:
-                results.extend(self._scan_text(text, file_path))
+                results.extend(self._scan_text(text, file_path, is_test_path(entry.rel)))
 
         results.extend(self._tracked_but_ignored(index, tracked))
         return results
 
-    def _scan_text(self, text: str, file_path) -> List[AnalysisResult]:
+    def _scan_text(self, text: str, file_path, is_test: bool = False) -> List[AnalysisResult]:
         """Tüm metin üzerinde tek geçiş (satır satır döngüden çok daha hızlı); kalıplar satır sınırını aşmaz."""
         lines = _Lines(text)
-        return self._generic_secrets(text, lines, file_path) + self._provider_secrets(text, lines, file_path)
+        return self._generic_secrets(text, lines, file_path, is_test) + self._provider_secrets(text, lines, file_path)
 
-    def _generic_secrets(self, text: str, lines: '_Lines', file_path) -> List[AnalysisResult]:
+    def _generic_secrets(self, text: str, lines: '_Lines', file_path, is_test: bool = False) -> List[AnalysisResult]:
+        """Test dosyalarındaki `password = '...'` kalıpları çoğunlukla sahte örnek değerdir: DÜŞÜK (gerçek biçimli
+        sağlayıcı anahtarları testte de aynı öncelikle raporlanır)."""
+        severity = Severity.LOW if is_test else Severity.HIGH
         results = []
         for pattern_name, anchor, before, window in GENERIC_SECRETS:
             for match in anchor.finditer(text):
@@ -104,10 +108,10 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
                 results.append(self._create_result(
                     title=f"Açık Şifreleme/Key Sızıntısı ({file_path.name})",
                     description=f"Satır {line_num}: Kod içinde sertifikasız '{pattern_name}' algılandı.",
-                    severity=Severity.HIGH,
+                    severity=severity,
                     file_path=file_path,
                     recommendation="Şifre ve anahtarları doğrudan kod içine yazmak yerine çevre değişkenlerinden (.env) çağırın.",
-                    rule='hardcoded-secret', line=line_num,
+                    rule='hardcoded-secret', line=line_num, in_tests=is_test,
                 ))
         return results
 

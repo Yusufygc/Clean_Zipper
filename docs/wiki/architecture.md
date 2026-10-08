@@ -22,7 +22,7 @@ Tam liste ve öncelik için [[roadmap]]. Özet: analiz sınırları (2 MB üstü
 Çok dilli analiz tamam (9 dil). Sıradaki: eşik genişletme, `.gitignore` duyarlılığı. CLI bilinçli olarak kapsam dışı: GUI çekirdeği tek tüketici olarak kalır.
 
 ## Ortam
-`venv/` Python 3.10.11 ile yeniden kuruldu (2026-10-08). Bağımlılıklar `requirements.txt` içinde. Testler `pytest` ile, ayarlar `pytest.ini` içinde.
+`venv/` Python 3.10.11 ile yeniden kuruldu (2026-10-08). Çalışma zamanı bağımlılıkları `requirements.txt` (tam sabit sürüm), test `requirements-dev.txt`, EXE derleme `requirements-build.txt`. Testler `pytest` ile, ayarlar `pytest.ini` içinde. Satır sonu politikası `.gitattributes` (depo ve çalışma kopyası LF) ve `.editorconfig`.
 
 ## Hata yönetimi
 Sessiz yutma yok: geniş `except` yalnızca loglayıp yeniden fırlatarak ya da sonucu `failed_*` alanlarına yazarak kullanılır (AST testiyle zorunlu). Kullanıcıya görünen işaretler: `failed_analyzers`, `skipped_files`, arşiv/yedek `failed_files` + `complete`. Loglar `~/.gitclean/logs/`.

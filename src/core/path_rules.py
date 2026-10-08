@@ -1,5 +1,6 @@
 """Yol adından çıkarılan kurallar (test dosyası tanıma gibi); I/O yapmaz."""
 import re
+from typing import Optional, Tuple
 
 _TEST_DIRS = frozenset({'test', 'tests', '__tests__', 'spec', 'specs', 'testing', 'e2e', 'integration_tests'})
 _TEST_NAME = re.compile(
@@ -41,3 +42,35 @@ def is_neutral_module(rel: str) -> bool:
     """Kendi başına test beklenmeyen giriş / yapılandırma dosyaları (`__init__`, `conftest`, `index` ...)."""
     name = rel.replace('\\', '/').rsplit('/', 1)[-1].lower().rsplit('.', 1)[0]
     return name in _NEUTRAL_MODULES
+
+
+# Sürüm kontrolüne girmemesi gereken klasörler -> tür
+_ARTIFACT_DIRS = {
+    'node_modules': 'dependencies', 'venv': 'dependencies', '.venv': 'dependencies',
+    '__pycache__': 'cache', '.pytest_cache': 'cache', '.mypy_cache': 'cache', '.ruff_cache': 'cache', '.tox': 'cache',
+    'htmlcov': 'cache', '.next': 'cache', '.nuxt': 'cache', '.svelte-kit': 'cache', '.gradle': 'cache',
+    'dist': 'build', 'build': 'build',
+}
+
+
+# Bu klasörlerin altındaki `dist` / `build` üçüncü taraf paketidir (libman, vendor); bilinçli olarak commit edilir.
+_VENDOR_DIRS = frozenset({'lib', 'libs', 'vendor', 'vendors', 'third_party', 'third-party', 'external'})
+
+
+def artifact_root(rel: str) -> Optional[Tuple[str, str]]:
+    """Üretilmiş içerik yolu için (kök, tür): `web/node_modules/x/y.js` -> ('web/node_modules', 'dependencies').
+
+    Tür: 'dependencies' | 'cache' | 'build' | 'bytecode' (`.pyc`). Normal kaynak yolu için None.
+    `dist` / `build` ad olarak belirsizdir (kaynak da olabilir); çağıran bunu yaklaşık saymalıdır. `lib/`, `vendor/` gibi
+    üçüncü taraf klasörlerinin altındakiler sayılmaz.
+    """
+    parts = rel.replace('\\', '/').split('/')
+    for position, part in enumerate(parts[:-1]):
+        kind = _ARTIFACT_DIRS.get(part)
+        if kind == 'build' and _VENDOR_DIRS.intersection(parts[:position]):
+            continue
+        if kind:
+            return '/'.join(parts[:position + 1]), kind
+    if parts[-1].lower().endswith('.pyc'):
+        return '/'.join(parts[:-1] + ['*.pyc']), 'bytecode'
+    return None

@@ -5,7 +5,13 @@ import subprocess
 from pathlib import Path
 
 
-def ensure_pyinstaller():
+def pyinstaller_requirement(root_dir: Path):
+    """pip argümanları: sürümü sabitlenmiş requirements-build.txt varsa o, yoksa sürümsüz paket adı."""
+    requirements = root_dir / "requirements-build.txt"
+    return ["-r", str(requirements)] if requirements.exists() else ["pyinstaller"]
+
+
+def ensure_pyinstaller(root_dir: Path):
     """PyInstaller yoksa pip ile kurar; kurulamazsa çıkar."""
     try:
         import PyInstaller
@@ -13,7 +19,7 @@ def ensure_pyinstaller():
     except ImportError:
         print("[!] PyInstaller not found. Installing...")
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", *pyinstaller_requirement(root_dir)])
             print("[OK] PyInstaller successfully installed.")
         except Exception as e:
             print(f"[X] PyInstaller installation failed! Error: {e}")
@@ -115,10 +121,9 @@ def build_executable():
     print("      GitClean Archiver Pro - EXE Build Wizard      ")
     print("=" * 60)
 
-    ensure_pyinstaller()
-
     # Project root directory
     root_dir = Path(__file__).parent.resolve()
+    ensure_pyinstaller(root_dir)
     entry_point = root_dir / "main.py"
 
     if not entry_point.exists():
