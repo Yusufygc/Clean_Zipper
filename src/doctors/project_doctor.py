@@ -21,9 +21,10 @@ ANALYZER_PROGRESS_SHARE = 85
 
 class ProjectDoctor:
     def __init__(self, analyzers: Optional[Iterable[IAnalyzer]] = None, respect_gitignore: bool = True,
-                 thresholds: Optional[QualityThresholds] = None):
+                 thresholds: Optional[QualityThresholds] = None, disabled_rules: Iterable[str] = ()):
         self.respect_gitignore = respect_gitignore
         self.thresholds = thresholds
+        self.disabled_rules = frozenset(disabled_rules)
         self._analyzers: List[IAnalyzer] = []
         self._health_checker = HealthChecker()
         self._recommendation_engine = RecommendationEngine()
@@ -33,6 +34,8 @@ class ProjectDoctor:
     def register_analyzer(self, analyzer: IAnalyzer):
         if self.thresholds is not None and hasattr(analyzer, 'thresholds'):
             analyzer.thresholds = self.thresholds
+        if self.disabled_rules and hasattr(analyzer, 'disabled_rules'):
+            analyzer.disabled_rules = self.disabled_rules
         self._analyzers.append(analyzer)
         self._analyzers.sort(key=lambda a: a.get_priority())
 

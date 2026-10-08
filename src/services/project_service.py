@@ -1,5 +1,5 @@
 ﻿from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Iterable, Optional
 from src.core.errors import ProjectNotSelectedError
 from src.core.registry import default_registry, load_builtin_analyzers
 from src.core.thresholds import QualityThresholds
@@ -11,10 +11,11 @@ from src.utils.gitignore_parser import GitignoreParser
 
 class ProjectService:
     def __init__(self, disabled_analyzers=(), respect_gitignore: bool = True,
-                 thresholds: Optional[QualityThresholds] = None):
+                 thresholds: Optional[QualityThresholds] = None, disabled_rules: Iterable[str] = ()):
         load_builtin_analyzers()
         self.doctor = ProjectDoctor(default_registry.create_all(disabled=disabled_analyzers),
-                                    respect_gitignore=respect_gitignore, thresholds=thresholds)
+                                    respect_gitignore=respect_gitignore, thresholds=thresholds,
+                                    disabled_rules=disabled_rules)
         self.archive_service = ArchiveService()
         self.cleanup_service = CleanupService()
         self.backup_service = BackupService()

@@ -12,7 +12,8 @@ from src.models.analysis_models import AnalysisResult, Severity
 logger = logging.getLogger(__name__)
 
 # Bunlardan herhangi biri varsa Python projesi için bağımlılık yönetimi var sayılır.
-PYTHON_MANIFEST_NAMES = frozenset({'requirements.txt', 'pyproject.toml', 'Pipfile', 'setup.py', 'setup.cfg'})
+MAX_LISTED_UNPINNED = 8
+PYTHON_MANIFEST_NAMES =frozenset({'requirements.txt', 'pyproject.toml', 'Pipfile', 'setup.py', 'setup.cfg'})
 
 
 @register_analyzer
@@ -65,9 +66,26 @@ class DeadWeightAnalyzer(BaseAnalyzer):
                 severity=Severity.MEDIUM,
                 file_path=manifest_entry.path,
                 recommendation=f"Eğer bu kütüphaneyi kullanmıyorsanız {manifest_entry.path.name} dosyasından silerek bağımlılıkları temizleyin.",
-                ecosystem=ecosystem.id,
+                ecosystem=ecosystem.id, rule='unused-dependency',
             ))
+        results.extend(self._unpinned(ecosystem, manifest, manifest_entry))
         return results
+
+    def _unpinned(self, ecosystem: Ecosystem, manifest, manifest_entry: FileEntry) -> List[AnalysisResult]:
+        """Sürümü sabitlenmemiş bağımlılıklar: manifest başına tek bulgu (tedarik zinciri / tekrarlanabilirlik)."""
+        unpinned = [d for d in manifest.dependencies if ecosystem.is_unpinned(d)]
+        if not unpinned:
+            return []
+        listed = ", ".join(f"{d.name}{d.spec}" if d.spec else d.name for d in unpinned[:MAX_LISTED_UNPINNED])
+        more = f" ... (+{len(unpinned) - MAX_LISTED_UNPINNED})" if len(unpinned) > MAX_LISTED_UNPINNED else ""
+        return [self._create_result(
+            title=f"Sabitlenmemiş Bağımlılıklar: {manifest_entry.path.name}",
+            description=(f"{len(unpinned)} bağımlılığın sürümü sabit değil: {listed}{more}. "
+                         "Her kurulumda farklı sürüm gelebilir (tekrarlanamayan derleme, tedarik zinciri riski)."),
+            severity=Severity.LOW, file_path=manifest_entry.path,
+            recommendation="Sürümleri tam sürüme sabitleyin (==, ^/~ aralığı) ve kilit dosyası (lock) kullanın.",
+            ecosystem=ecosystem.id, rule='unpinned-dependencies', count=len(unpinned),
+            dependencies=[{'name': d.name, 'spec': d.spec} for d in unpinned])]
 
     @staticmethod
     def _build_scope(index: ProjectIndex, ecosystem: Ecosystem, manifest_entry: FileEntry) -> SourceScope:

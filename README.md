@@ -91,6 +91,7 @@
 | `MagicNumberAnalyzer` | deadcode | Fonksiyon gövdelerindeki adsız sayısal sabitler |
 | `CloneAnalyzer` | duplicate | Kopyala-yapıştır kod blokları (dosyalar arası ve dosya içi) |
 | `ArchitectureAnalyzer` | architecture | Dosya bağımlılık grafiği: döngüsel bağımlılık, en çok kullanılan dosyalar |
+| `CodeSecurityAnalyzer` | security | SAST-lite: 39 kuralla tehlikeli API ve kalıp taraması (CWE etiketli) |
 
 ---
 
@@ -552,6 +553,27 @@ Bir fonksiyon birden çok eşiği aşarsa **tek** bulgu üretilir (aşılan metr
 - **Python:** mutlak ve göreli importlar proje dosyalarına çözülür (`from . import x` alt modülü, `from p import Name` paketi bağlar). Kaynak kökü, içe aktaranın klasörü veya atası olmalıdır (`sys.path[0]` anlambilimi). Standart kütüphane adlarını gölgeleyen iç içe dosyalar çözülmez. Yalnızca modül yüklenirken çalışan importlar sayılır: **fonksiyon içi importlar ve `if TYPE_CHECKING:` blokları döngü değildir** (çalışma zamanında hata vermezler).
 - **JS/TS (yaklaşık):** göreli yollar (`./x`, uzantısız, `index`, TS'te `.js` -> `.ts`) ile `@/` ve `~/` takma adları (kök ve `src/` denenir). `import type` ve harici paketler grafiğe girmez. `tsconfig` `paths` ayarı okunmaz.
 - Java, C#, Go, Rust ve C/C++ için döngü tespiti yoktur: namespace/paket ile dosya eşlemesi güvenilir değil.
+
+### Güvenlik: SAST-lite, Sağlayıcı Sırları, Sürüm Sabitleme
+
+**`CodeSecurityAnalyzer`** `resources/rules/security_rules.json` içindeki kuralları kaynak kodda arar. Kural başına dosya başına tek bulgu; satırlar ve CWE numarası bulguda yer alır. Yorumlar taranmaz, test dosyaları atlanır. Regex tabanlıdır: veri akışı bilinmediği için sonuçlar **ipucudur** (`approximate=True`).
+
+| Dil | Kurallar (örnek) |
+|-----|------------------|
+| Python | `eval`/`exec`, `pickle`/`marshal` yükleme, `yaml.load`, `subprocess(... shell=True)`, `os.system`, `hashlib.md5/sha1`, `verify=False`, `tempfile.mktemp`, SQL'e f-string/`%`/`+`, Flask `debug=True` |
+| JS/TS | `eval`, `new Function`, `setTimeout("...")`, dinamik `innerHTML`, `document.write`, `dangerouslySetInnerHTML`, `child_process.exec`, `rejectUnauthorized: false`, `createHash('md5')`, SQL birleştirme |
+| Java | `Runtime.exec`, `MessageDigest MD5/SHA-1`, `ObjectInputStream`, SQL birleştirme, DES/RC4/ECB |
+| C# | `BinaryFormatter`, `MD5/SHA1.Create`, SQL birleştirme/enterpolasyon, sertifika doğrulamasını kapatma |
+| C/C++ | `gets`, `strcpy/strcat`, `sprintf`, `system`, sınırsız `scanf("%s")` |
+| Go / Rust | `InsecureSkipVerify`, `md5/sha1`, `sh -c`; Rust `unsafe` (bilgi) |
+
+- **Kural biçimi:** `{id, title, severity, languages, scope, pattern, flags, cwe, advice}`. `scope`: `code` (yorum ve string silinmiş) veya `text` (string içeriği durur, ör. `createHash('md5')`). Kullanıcı kuralları `~/.gitclean/rules/*.json` içine konur; aynı `id` paketliyi geçersiz kılar. Bozuk kural atlanır ve loglanır.
+- **Kural kapatma:** `ProjectService(disabled_rules=["py-os-system"])`.
+- **SQL kuralları** ORTA öncelikli: tablo adı gibi parametrelenemeyen yerlerde f-string kaçınılmaz olabilir.
+
+**`SecurityLeakAnalyzer`** sağlayıcı biçimli sırları da yakalar: AWS erişim anahtarı, PEM özel anahtar, GitHub, Slack, Google API, Stripe canlı anahtar ve JWT. Bulguya **değer yazılmaz** (yalnızca 4 karakterlik maskeli önek ve uzunluk). Satırında `example` geçenler (belge örnekleri) atlanır.
+
+**Sürüm sabitleme:** `DeadWeightAnalyzer` manifest başına tek DÜŞÜK bulgu üretir (`unpinned-dependencies`). Python `requirements.txt`: `==` olmayan her satır. npm: `*`, `latest`, boş, `>=` gibi açık uçlu aralıklar ve git/URL bağımlılıkları (`^`/`~` normal sayılır). Go ve Cargo denetlenmez.
 
 ### `.gitignore` ve Git Duyarlılığı
 

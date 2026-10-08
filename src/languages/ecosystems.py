@@ -7,13 +7,14 @@ import json
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Pattern, Set
+from typing import Dict, Iterable, List, Optional, Pattern, Set
 
 
 @dataclass(frozen=True)
 class Dependency:
     name: str
     dev: bool = False            # True ise kullanılmayan bağımlılık raporlanmaz
+    spec: Optional[str] = None   # sürüm kısıtı (ör. '==1.2', '^4.0'); None: ekosistem pinleme denetlemiyor
 
 
 @dataclass
@@ -44,6 +45,10 @@ class Ecosystem(ABC):
     @abstractmethod
     def is_used(self, dep: Dependency, scope: SourceScope, manifest: ParsedManifest) -> bool: ...
 
+    def is_unpinned(self, dep: Dependency) -> bool:
+        """Sürümü belirsiz (derleme tekrarlanamaz / tedarik zinciri riski) bağımlılık; denetlenmiyorsa False."""
+        return False
+
 
 # --------------------------------------------------------------------------- #
 #  Python                                                                      #
@@ -67,17 +72,23 @@ class PythonEcosystem(Ecosystem):
         "coverage", "pre-commit", "wheel", "setuptools", "pip", "twine", "build", "sphinx", "bandit",
     })
     _NAME = re.compile(r'^([A-Za-z0-9][A-Za-z0-9._-]*)')
+    _EXACT = re.compile(r'(?:^|,)\s*===?\s*[\w.+!-]+\s*(?:,|$)')       # `==1.2.3` (joker `==1.*` değil)
 
     def parse(self, text: str) -> ParsedManifest:
-        names = []
+        found: Dict[str, str] = {}
         for raw in text.splitlines():
             line = raw.split('#', 1)[0].strip()
             if not line or line.startswith('-') or '://' in line:
                 continue                                  # -r, -e, --index-url, URL satırları
             match = self._NAME.match(line)
             if match:
-                names.append(match.group(1))
-        return ParsedManifest([Dependency(n, dev=n.lower() in self.TOOLING) for n in dict.fromkeys(names)])
+                spec = line[match.end():].split(';', 1)[0].replace(' ', '')
+                spec = re.sub(r'^\[[^\]]*\]', '', spec)    # ekstralar: requests[security]==2.0
+                found.setdefault(match.group(1), spec)
+        return ParsedManifest([Dependency(n, dev=n.lower() in self.TOOLING, spec=spec) for n, spec in found.items()])
+
+    def is_unpinned(self, dep: Dependency) -> bool:
+        return not dep.dev and dep.spec is not None and not self._EXACT.search(dep.spec)
 
     def is_used(self, dep: Dependency, scope: SourceScope, manifest: ParsedManifest) -> bool:
         key = dep.name.lower()
@@ -105,9 +116,15 @@ class NpmEcosystem(Ecosystem):
         scripts = data.get('scripts') or {}
         return ParsedManifest(
             # devDependencies okunmaz; @types/* derleyici tarafından kullanılır, import edilmez.
-            [Dependency(name, dev=name.startswith('@types/')) for name in deps],
+            [Dependency(name, dev=name.startswith('@types/'), spec=str(spec)) for name, spec in deps.items()],
             usage_text='\n'.join(str(v) for v in scripts.values()),
         )
+
+    _FLOATING = re.compile(r'^\s*(?:|\*|x|latest|next|[<>]=?.*|(?:git\+|https?:|github:|git:|ssh:).*)\s*$', re.IGNORECASE)
+
+    def is_unpinned(self, dep: Dependency) -> bool:
+        """`*`, `latest`, boş, açık uçlu aralık (`>=1`) ve git/URL bağımlılıkları; `^`/`~` normal sayılır."""
+        return not dep.dev and dep.spec is not None and bool(self._FLOATING.match(dep.spec))
 
     def is_used(self, dep: Dependency, scope: SourceScope, manifest: ParsedManifest) -> bool:
         if any(s == dep.name or s.startswith(dep.name + '/') for s in scope.imports):

@@ -1,5 +1,15 @@
 # Değişiklik Günlüğü
 
+## [2026-10-08] [REVIEW] | Bulgu 12 (Aşama 3): SAST-lite, sağlayıcı sırları, sürüm sabitleme
+- Yeni `CodeSecurityAnalyzer` (kategori `security`, toplam 14 analizör) + `src/core/security_rules.py` (yükleyici/doğrulayıcı) + `resources/rules/security_rules.json` (**39 kural**: Python 11, JS/TS 10, Java 5, C# 4, C/C++ 5, Go 3, Rust 1; CWE etiketli; `scope` code/text; `flags: i`). Kullanıcı kuralları `~/.gitclean/rules`, aynı `id` geçersiz kılar, bozuk kural atlanıp loglanır. `disabled_rules` ProjectDoctor/ProjectService üzerinden.
+- `SecurityLeakAnalyzer`: AWS, PEM, GitHub, Slack, Google API, Stripe canlı, JWT; değer bulguya yazılmaz (maskeli önek); `example` içeren satır atlanır. Bulgulara `rule` eklendi (`hardcoded-secret`, `provider-secret`).
+- Sürüm sabitleme: `Dependency.spec`, `Ecosystem.is_unpinned` (Python `==`, npm `*`/latest/boş/`>=`/git-URL), `DeadWeightAnalyzer` manifest başına tek DÜŞÜK `unpinned-dependencies`; mevcut bulguya `rule='unused-dependency'` eklendi.
+- Kural ayarı (gerçek korpus yanlış pozitifleriyle): `innerHTML = 'sabit'` / boş / `${}`'suz şablon sayılmaz (text kapsamı); SQL kuralları SQL anahtar sözcüğü ister ve ORTA (tablo adı f-string'i kaçınılmaz olabilir); `usedforsecurity=False` ve `SafeLoader` istisna.
+- **Performans düzeltmesi:** `SecurityLeakAnalyzer` 284 MB'lık korpusta 41-44 sn sürüyordu (satır satır döngü + `\b` ile başlayan her kalıp ~4 sn). Çapa tabanlı iki adımlı arama (sabit karakterle başlayan çapa + öncesindeki anahtar sözcük denetimi) ve sağlayıcı kalıpları için hızlı alt dize ön süzgeci: **2.6 sn**, bulgu sayıları aynı (42 + 1). Tüm korpus analizi 70 sn -> 30.6 sn.
+- Doğrulama: her kural için olumlu ve olumsuz örnek testi (39 kural, birini atlamak testi kırar); gerçek korpusta bulgular kaynak satırlarıyla elle karşılaştırıldı (pickle.load 7, SQL f-string 8, md5/sha1 5, innerHTML 6, dangerouslySetInnerHTML 2; hepsi gerçek kalıp). Sağlayıcı sırı: korpusta 1 (YouTube InnerTube geri dönüş Google API anahtarı, kaynakta doğrulandı). Bu repo kendi taramasında 0 SAST bulgusu. Not: araç ortamında `\b` kaçışı heredoc'ta kontrol karakterine dönüşüyordu (0x08), bayt düzeyinde onarıldı.
+- Sınırlar: regex tabanlı (veri akışı yok, sanitizasyonu görmez); Maven/NuGet/Go/Cargo sabitleme yok; CVE taraması yok (ağ gerekir).
+- Testler: `test_security_rules.py` (58), `test_ecosystems.py` genişledi; toplam 463. Bkz. [[roadmap]].
+
 ## [2026-10-08] [REVIEW] | Bulgu 12 (Aşama 2): mimari, döngüsel bağımlılık
 - Yeni `ArchitectureAnalyzer` (kategori `architecture`, toplam 13 analizör): Python ve JS/TS için dosya grafiği, Tarjan SCC ile döngüler (ORTA, ≥4 dosya YÜKSEK), en kısa döngü yolu, `dependency-graph` BİLGİ bulgusu (düğüm/kenar/döngü, en çok kullanılan 5 dosya).
 - `SourceMetrics.import_refs` (`ImportRef`: modül, seviye, adlar, satır): yalnızca modül yüklenirken çalışan Python importları; fonksiyon gövdeleri ve `if TYPE_CHECKING:` hariç (çalışma zamanı döngüsü olmaz). Ek ast geçişi yok, `PythonLanguage.analyze` içinde üretilir.

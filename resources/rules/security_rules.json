@@ -1,0 +1,527 @@
+{
+ "version": 1,
+ "rules": [
+  {
+   "id": "py-eval",
+   "title": "eval() kullanımı",
+   "severity": "HIGH",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "(?<![\\w.$])eval\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-95",
+   "advice": "Girdiyi eval ile çalıştırmayın; değişmez değerler için ast.literal_eval, veri için json kullanın."
+  },
+  {
+   "id": "py-exec",
+   "title": "exec() kullanımı",
+   "severity": "HIGH",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "(?<![\\w.$])exec\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-95",
+   "advice": "Dinamik kod çalıştırmayı kaldırın; gerekiyorsa girdiyi izin listesiyle doğrulayın."
+  },
+  {
+   "id": "py-pickle-load",
+   "title": "Güvensiz seri durumdan çıkarma (pickle/marshal)",
+   "severity": "MEDIUM",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "\\b(?:pickle|cPickle|_pickle|dill|marshal)\\.loads?\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-502",
+   "advice": "Güvenilmeyen veriyi pickle ile yüklemeyin; json veya imzalı biçim kullanın."
+  },
+  {
+   "id": "py-yaml-load",
+   "title": "yaml.load güvenli yükleyici olmadan",
+   "severity": "MEDIUM",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "\\byaml\\.(?:load|load_all)\\s*\\((?![^\\n]*Safe)",
+   "flags": "",
+   "cwe": "CWE-502",
+   "advice": "yaml.safe_load kullanın."
+  },
+  {
+   "id": "py-subprocess-shell",
+   "title": "subprocess shell=True",
+   "severity": "HIGH",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "\\bsubprocess\\.\\w+\\s*\\((?:[^()]|\\([^()]*\\)){0,300}?shell\\s*=\\s*True",
+   "flags": "",
+   "cwe": "CWE-78",
+   "advice": "Komutu liste olarak verin ve shell=True kullanmayın; girdiyi shlex.quote ile kaçışlayın."
+  },
+  {
+   "id": "py-os-system",
+   "title": "os.system / os.popen kullanımı",
+   "severity": "MEDIUM",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "\\bos\\.(?:system|popen)\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-78",
+   "advice": "subprocess.run ile argüman listesi kullanın."
+  },
+  {
+   "id": "py-weak-hash",
+   "title": "Zayıf özet algoritması (md5/sha1)",
+   "severity": "LOW",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "\\bhashlib\\.(?:md5|sha1)\\s*\\((?![^\\n]*usedforsecurity\\s*=\\s*False)",
+   "flags": "",
+   "cwe": "CWE-327",
+   "advice": "Güvenlik amaçlıysa sha256 veya üstünü kullanın; yalnızca sağlama toplamıysa usedforsecurity=False ekleyin."
+  },
+  {
+   "id": "py-verify-false",
+   "title": "TLS sertifika doğrulaması kapalı (verify=False)",
+   "severity": "HIGH",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "\\bverify\\s*=\\s*False\\b",
+   "flags": "",
+   "cwe": "CWE-295",
+   "advice": "Sertifika doğrulamasını açık bırakın; özel CA için verify=<ca yolu> verin."
+  },
+  {
+   "id": "py-tempfile-mktemp",
+   "title": "tempfile.mktemp yarış durumu",
+   "severity": "MEDIUM",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "\\btempfile\\.mktemp\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-377",
+   "advice": "tempfile.mkstemp veya NamedTemporaryFile kullanın."
+  },
+  {
+   "id": "py-sql-format",
+   "title": "SQL sorgusuna biçimlendirme/birleştirme",
+   "severity": "MEDIUM",
+   "languages": [
+    "python"
+   ],
+   "scope": "text",
+   "pattern": "\\.execute(?:many|script)?\\s*\\(\\s*(?:[fF][rR]?(?:\\\"\\\"\\\"|'''|\\\"|')\\s*(?:select|insert|update|delete|create|drop|alter)\\b[^\\n]*\\{|[rR]?(?:\\\"|')\\s*(?:select|insert|update|delete|create|drop|alter)\\b[^\\\"'\\n]*(?:\\\"|')\\s*(?:%\\s*[\\w(\\[]|\\.format\\s*\\(|\\+\\s*\\w))",
+   "flags": "i",
+   "cwe": "CWE-89",
+   "advice": "Parametreli sorgu kullanın: cursor.execute(sql, (değer,))."
+  },
+  {
+   "id": "py-flask-debug",
+   "title": "Flask debug=True",
+   "severity": "MEDIUM",
+   "languages": [
+    "python"
+   ],
+   "scope": "code",
+   "pattern": "\\.run\\s*\\([^)\\n]*\\bdebug\\s*=\\s*True",
+   "flags": "",
+   "cwe": "CWE-489",
+   "advice": "Üretimde debug modunu kapatın; ortam değişkeniyle yönetin."
+  },
+  {
+   "id": "js-eval",
+   "title": "eval() kullanımı",
+   "severity": "HIGH",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "code",
+   "pattern": "(?<![\\w$.])eval\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-95",
+   "advice": "eval kullanmayın; JSON.parse veya yapılandırılmış ayrıştırma kullanın."
+  },
+  {
+   "id": "js-new-function",
+   "title": "new Function() ile dinamik kod",
+   "severity": "HIGH",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "code",
+   "pattern": "\\bnew\\s+Function\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-95",
+   "advice": "Dinamik fonksiyon üretmeyin."
+  },
+  {
+   "id": "js-timer-string",
+   "title": "setTimeout/setInterval metin argümanı",
+   "severity": "MEDIUM",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "text",
+   "pattern": "(?<![\\w$.])set(?:Timeout|Interval)\\s*\\(\\s*[\\\"'`]",
+   "flags": "",
+   "cwe": "CWE-95",
+   "advice": "Metin yerine fonksiyon geçirin."
+  },
+  {
+   "id": "js-inner-html",
+   "title": "innerHTML/outerHTML ataması (dinamik içerik)",
+   "severity": "MEDIUM",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "text",
+   "pattern": "\\.(?:inner|outer)HTML\\s*\\+?=(?!=)(?!\\s*(?:'[^'\\n]*'|\\\"[^\\\"\\n]*\\\"|`[^`$]*`)\\s*(?:[;,)}]|\\n|$))",
+   "flags": "",
+   "cwe": "CWE-79",
+   "advice": "textContent kullanın veya girdiyi DOMPurify ile temizleyin."
+  },
+  {
+   "id": "js-document-write",
+   "title": "document.write kullanımı",
+   "severity": "MEDIUM",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "code",
+   "pattern": "\\bdocument\\.write(?:ln)?\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-79",
+   "advice": "DOM API'leriyle (createElement, textContent) ekleyin."
+  },
+  {
+   "id": "js-dangerous-html",
+   "title": "dangerouslySetInnerHTML kullanımı",
+   "severity": "MEDIUM",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "code",
+   "pattern": "\\bdangerouslySetInnerHTML\\b",
+   "flags": "",
+   "cwe": "CWE-79",
+   "advice": "İçeriği güvenilir kaynaktan alın ve temizleyin (sanitize)."
+  },
+  {
+   "id": "js-child-process-exec",
+   "title": "child_process.exec / execSync",
+   "severity": "MEDIUM",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "code",
+   "pattern": "(?<![\\w$.])execSync\\s*\\(|\\bchild_process\\.exec(?:Sync)?\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-78",
+   "advice": "execFile/spawn ile argüman dizisi kullanın."
+  },
+  {
+   "id": "js-tls-reject-unauthorized",
+   "title": "TLS doğrulaması kapalı (rejectUnauthorized: false)",
+   "severity": "HIGH",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "code",
+   "pattern": "\\brejectUnauthorized\\s*:\\s*false\\b",
+   "flags": "",
+   "cwe": "CWE-295",
+   "advice": "Sertifika doğrulamasını açık bırakın."
+  },
+  {
+   "id": "js-weak-hash",
+   "title": "Zayıf özet algoritması (md5/sha1)",
+   "severity": "LOW",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "text",
+   "pattern": "\\bcreateHash\\s*\\(\\s*[\\\"'](?:md5|sha1)[\\\"']",
+   "flags": "i",
+   "cwe": "CWE-327",
+   "advice": "sha256 veya üstünü kullanın."
+  },
+  {
+   "id": "js-sql-concat",
+   "title": "SQL sorgusuna birleştirme/şablon",
+   "severity": "MEDIUM",
+   "languages": [
+    "javascript",
+    "typescript"
+   ],
+   "scope": "text",
+   "pattern": "\\.(?:query|execute|raw|exec)\\s*\\(\\s*(?:`\\s*(?:select|insert|update|delete|create|drop|alter)\\b[^`]*\\$\\{|[\\\"']\\s*(?:select|insert|update|delete|create|drop|alter)\\b[^\\\"'\\n]*[\\\"']\\s*\\+)",
+   "flags": "i",
+   "cwe": "CWE-89",
+   "advice": "Parametreli sorgu kullanın ($1 / ? yer tutucuları)."
+  },
+  {
+   "id": "java-runtime-exec",
+   "title": "Runtime.exec kullanımı",
+   "severity": "HIGH",
+   "languages": [
+    "java"
+   ],
+   "scope": "code",
+   "pattern": "\\bRuntime\\.getRuntime\\s*\\(\\s*\\)\\s*\\.exec\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-78",
+   "advice": "ProcessBuilder ile argüman listesi kullanın ve girdiyi doğrulayın."
+  },
+  {
+   "id": "java-weak-hash",
+   "title": "Zayıf özet algoritması (MD5/SHA-1)",
+   "severity": "LOW",
+   "languages": [
+    "java"
+   ],
+   "scope": "text",
+   "pattern": "\\bMessageDigest\\.getInstance\\s*\\(\\s*\\\"(?:MD5|SHA-?1)\\\"",
+   "flags": "i",
+   "cwe": "CWE-327",
+   "advice": "SHA-256 veya üstünü kullanın."
+  },
+  {
+   "id": "java-object-input-stream",
+   "title": "ObjectInputStream ile seri durumdan çıkarma",
+   "severity": "MEDIUM",
+   "languages": [
+    "java"
+   ],
+   "scope": "code",
+   "pattern": "\\bnew\\s+ObjectInputStream\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-502",
+   "advice": "Güvenilmeyen veriyi serileştirmeyin; ObjectInputFilter veya JSON kullanın."
+  },
+  {
+   "id": "java-sql-concat",
+   "title": "SQL sorgusuna birleştirme",
+   "severity": "MEDIUM",
+   "languages": [
+    "java"
+   ],
+   "scope": "text",
+   "pattern": "\\.(?:executeQuery|executeUpdate|execute|prepareStatement|createQuery|createNativeQuery)\\s*\\(\\s*\\\"\\s*(?:select|insert|update|delete|create|drop|alter)\\b[^\\\"\\n]*\\\"\\s*\\+",
+   "flags": "i",
+   "cwe": "CWE-89",
+   "advice": "PreparedStatement ve ? yer tutucuları kullanın."
+  },
+  {
+   "id": "java-weak-cipher",
+   "title": "Zayıf şifreleme (DES/RC4/ECB)",
+   "severity": "MEDIUM",
+   "languages": [
+    "java"
+   ],
+   "scope": "text",
+   "pattern": "\\bCipher\\.getInstance\\s*\\(\\s*\\\"(?:DES|DESede|RC4|RC2|Blowfish|AES)(?:/ECB[^\\\"]*)?\\\"",
+   "flags": "i",
+   "cwe": "CWE-327",
+   "advice": "AES/GCM/NoPadding kullanın."
+  },
+  {
+   "id": "cs-binary-formatter",
+   "title": "BinaryFormatter kullanımı",
+   "severity": "HIGH",
+   "languages": [
+    "csharp"
+   ],
+   "scope": "code",
+   "pattern": "\\bBinaryFormatter\\b",
+   "flags": "",
+   "cwe": "CWE-502",
+   "advice": "BinaryFormatter güvensizdir; System.Text.Json veya DataContractSerializer kullanın."
+  },
+  {
+   "id": "cs-weak-hash",
+   "title": "Zayıf özet algoritması (MD5/SHA1)",
+   "severity": "LOW",
+   "languages": [
+    "csharp"
+   ],
+   "scope": "code",
+   "pattern": "\\b(?:MD5|SHA1)(?:CryptoServiceProvider|Managed)?\\s*\\.\\s*Create\\s*\\(|\\bnew\\s+(?:MD5|SHA1)(?:CryptoServiceProvider|Managed)\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-327",
+   "advice": "SHA256 veya üstünü kullanın."
+  },
+  {
+   "id": "cs-sql-concat",
+   "title": "SQL sorgusuna birleştirme/enterpolasyon",
+   "severity": "MEDIUM",
+   "languages": [
+    "csharp"
+   ],
+   "scope": "text",
+   "pattern": "\\b(?:SqlCommand|ExecuteSqlRaw|FromSqlRaw|ExecuteSqlCommand)\\s*\\(\\s*(?:\\$@?\\\"\\s*(?:select|insert|update|delete|create|drop|alter)\\b[^\\\"\\n]*\\{|@?\\\"\\s*(?:select|insert|update|delete|create|drop|alter)\\b[^\\\"\\n]*\\\"\\s*\\+)",
+   "flags": "i",
+   "cwe": "CWE-89",
+   "advice": "Parametreli sorgu (SqlParameter) veya FromSqlInterpolated kullanın."
+  },
+  {
+   "id": "cs-certificate-validation",
+   "title": "TLS sertifika doğrulaması devre dışı",
+   "severity": "HIGH",
+   "languages": [
+    "csharp"
+   ],
+   "scope": "code",
+   "pattern": "ServerCertificateValidationCallback\\s*\\+?=[^;]*(?:=>\\s*true|return\\s+true)|DangerousAcceptAnyServerCertificateValidator",
+   "flags": "",
+   "cwe": "CWE-295",
+   "advice": "Sertifika doğrulamasını açık bırakın."
+  },
+  {
+   "id": "c-gets",
+   "title": "gets() kullanımı",
+   "severity": "HIGH",
+   "languages": [
+    "c",
+    "cpp"
+   ],
+   "scope": "code",
+   "pattern": "(?<![\\w.:>])gets\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-242",
+   "advice": "gets sınır denetlemez (kaldırıldı); fgets kullanın."
+  },
+  {
+   "id": "c-strcpy",
+   "title": "strcpy/strcat sınırsız kopyalama",
+   "severity": "MEDIUM",
+   "languages": [
+    "c",
+    "cpp"
+   ],
+   "scope": "code",
+   "pattern": "(?<![\\w.:>])(?:strcpy|strcat|wcscpy|wcscat)\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-120",
+   "advice": "strncpy/strlcpy veya std::string kullanın."
+  },
+  {
+   "id": "c-sprintf",
+   "title": "sprintf/vsprintf sınırsız yazma",
+   "severity": "MEDIUM",
+   "languages": [
+    "c",
+    "cpp"
+   ],
+   "scope": "code",
+   "pattern": "(?<![\\w.:>])(?:sprintf|vsprintf)\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-120",
+   "advice": "snprintf/vsnprintf kullanın."
+  },
+  {
+   "id": "c-system",
+   "title": "system() kullanımı",
+   "severity": "MEDIUM",
+   "languages": [
+    "c",
+    "cpp"
+   ],
+   "scope": "code",
+   "pattern": "(?<![\\w.>])(?:std::)?system\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-78",
+   "advice": "exec ailesini argüman dizisiyle kullanın ve girdiyi doğrulayın."
+  },
+  {
+   "id": "c-scanf-unbounded",
+   "title": "scanf %s genişliksiz",
+   "severity": "MEDIUM",
+   "languages": [
+    "c",
+    "cpp"
+   ],
+   "scope": "text",
+   "pattern": "\\bscanf\\s*\\(\\s*\\\"[^\\\"\\n]*%s",
+   "flags": "",
+   "cwe": "CWE-120",
+   "advice": "%Ns ile genişlik verin veya fgets kullanın."
+  },
+  {
+   "id": "go-insecure-skip-verify",
+   "title": "TLS doğrulaması kapalı (InsecureSkipVerify)",
+   "severity": "HIGH",
+   "languages": [
+    "go"
+   ],
+   "scope": "code",
+   "pattern": "\\bInsecureSkipVerify\\s*:\\s*true\\b",
+   "flags": "",
+   "cwe": "CWE-295",
+   "advice": "Sertifika doğrulamasını açık bırakın."
+  },
+  {
+   "id": "go-weak-hash",
+   "title": "Zayıf özet algoritması (md5/sha1)",
+   "severity": "LOW",
+   "languages": [
+    "go"
+   ],
+   "scope": "code",
+   "pattern": "(?<![\\w.])(?:md5|sha1)\\.(?:New|Sum)\\s*\\(",
+   "flags": "",
+   "cwe": "CWE-327",
+   "advice": "sha256 veya üstünü kullanın."
+  },
+  {
+   "id": "go-shell-command",
+   "title": "Kabuk üzerinden komut (sh -c)",
+   "severity": "MEDIUM",
+   "languages": [
+    "go"
+   ],
+   "scope": "text",
+   "pattern": "\\bexec\\.Command(?:Context)?\\s*\\(\\s*(?:[\\w.]+\\s*,\\s*)?\\\"(?:/bin/)?(?:sh|bash)\\\"\\s*,\\s*\\\"-c\\\"",
+   "flags": "",
+   "cwe": "CWE-78",
+   "advice": "Komutu ve argümanları ayrı verin; kabuk kullanmayın."
+  },
+  {
+   "id": "rust-unsafe",
+   "title": "unsafe blok / fonksiyon",
+   "severity": "INFO",
+   "languages": [
+    "rust"
+   ],
+   "scope": "code",
+   "pattern": "\\bunsafe\\s*(?:\\{|fn\\b|impl\\b|trait\\b)",
+   "flags": "",
+   "cwe": "",
+   "advice": "unsafe kullanımını gözden geçirin ve gerekçesini belge yorumuyla açıklayın."
+  }
+ ]
+}

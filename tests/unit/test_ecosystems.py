@@ -126,3 +126,48 @@ def test_finding_points_to_manifest_and_names_it(tmp_path):
     write(tmp_path / "web" / "a.js", "x = 1;\n")
     result = [r for r in DeadWeightAnalyzer().analyze(ProjectIndex.build(tmp_path)) if r.severity == Severity.MEDIUM][0]
     assert result.file_path.name == "package.json" and "package.json" in result.description
+
+
+# ---- sürüm sabitleme (pinleme) ---------------------------------------------------------
+
+def unpinned_findings(tmp_path):
+    return [r for r in DeadWeightAnalyzer().analyze(ProjectIndex.build(tmp_path))
+            if r.metadata.get("rule") == "unpinned-dependencies"]
+
+
+def test_python_pinning_rules():
+    eco = PythonEcosystem()
+    parsed = eco.parse("a==1.0\nb>=2\nc\nd[extra]==3.1 ; python_version>'3'\ne==1.*\nf>=1,<2\ng===2.0\npytest>=7\n")
+    flags = {d.name: eco.is_unpinned(d) for d in parsed.dependencies}
+    assert flags == {"a": False, "b": True, "c": True, "d": False, "e": True, "f": True, "g": False, "pytest": False}
+
+
+def test_npm_pinning_rules():
+    eco = NpmEcosystem()
+    pkg = {"dependencies": {"a": "1.2.3", "b": "^4.0.0", "c": "~1.1", "d": "*", "e": "latest", "f": "",
+                            "g": "git+https://github.com/x/y.git", "h": ">=2", "i": "workspace:*", "j": "file:../j"}}
+    flags = {d.name: eco.is_unpinned(d) for d in eco.parse(json.dumps(pkg)).dependencies}
+    assert {k for k, v in flags.items() if v} == {"d", "e", "f", "g", "h"}
+
+
+def test_unpinned_requirements_give_one_low_finding_per_manifest(tmp_path):
+    write(tmp_path / "requirements.txt", "pathspec>=0.11\nnumpy==1.0\nPillow\n")
+    write(tmp_path / "app.py", "import pathspec, numpy\nfrom PIL import Image\n")
+    (finding,) = unpinned_findings(tmp_path)
+    assert finding.severity == Severity.LOW and finding.category == "dependency"
+    assert finding.metadata["count"] == 2 and finding.metadata["ecosystem"] == "python"
+    assert [d["name"] for d in finding.metadata["dependencies"]] == ["pathspec", "Pillow"]
+    assert "pathspec>=0.11" in finding.description and "numpy" not in finding.description
+
+
+def test_fully_pinned_manifest_and_go_have_no_pinning_finding(tmp_path):
+    write(tmp_path / "requirements.txt", "numpy==1.0\n")
+    write(tmp_path / "go.mod", "module x\nrequire github.com/a/b v1.0.0\n")
+    assert unpinned_findings(tmp_path) == []
+
+
+def test_unpinned_npm_finding(tmp_path):
+    write(tmp_path / "package.json", json.dumps({"dependencies": {"react": "^18", "left-pad": "*"}}))
+    write(tmp_path / "a.js", "import 'react'; import 'left-pad';\n")
+    (finding,) = unpinned_findings(tmp_path)
+    assert finding.metadata["ecosystem"] == "npm" and "left-pad*" in finding.description

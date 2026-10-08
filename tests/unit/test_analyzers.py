@@ -137,7 +137,8 @@ def test_dead_weight_reports_unused_requirement(tmp_path):
     write(tmp_path / "requirements.txt", "pathspec>=0.11\nnumpy==1.0\nPillow\n")
     write(tmp_path / "app.py", "import pathspec\nfrom PIL import Image\n")
     results = DeadWeightAnalyzer().analyze(ProjectIndex.build(tmp_path))
-    assert titles(results) == ["Kullanılmayan Kütüphane Tespit Edildi: numpy"]
+    unused = [r for r in results if r.metadata["rule"] == "unused-dependency"]
+    assert titles(unused) == ["Kullanılmayan Kütüphane Tespit Edildi: numpy"]
 
 
 def test_dead_weight_without_requirements_gives_info(tmp_path):
@@ -151,7 +152,7 @@ def test_dead_weight_ignores_imports_in_excluded_dirs(tmp_path):
     write(tmp_path / "app.py", "x = 1\n")
     write(tmp_path / "venv" / "lib.py", "import numpy\n")
     results = DeadWeightAnalyzer().analyze(ProjectIndex.build(tmp_path))
-    assert len(results) == 1
+    assert [r.metadata["rule"] for r in results if r.metadata["rule"] == "unused-dependency"] == ["unused-dependency"]
 
 
 # ---- Complexity -----------------------------------------------------------------------
