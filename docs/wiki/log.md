@@ -1,5 +1,13 @@
 # Değişiklik Günlüğü
 
+## [2026-10-08] [REVIEW] | Bulgu 12 (Aşama 5): test sağlığı ve proje hijyeni
+- Yeni `TestingAnalyzer` (`testing`) ve `ProjectHygieneAnalyzer` (`hygiene`); toplam 17 analizör, **tüm 11 sağlık kategorisi artık aktif**. Dosyalar `testing_analyzer.py` / `testing_patterns.py` adlı: `test_*.py` adı `is_test_path` ile test sayılır ve kurallardan muaf kalırdı. `path_rules.module_key` (kaynak <-> test eşleme anahtarı), `is_neutral_module`. `QualityThresholds`: `test_ratio_severe=0.1`, `test_ratio_low=0.3`, `test_min_source_lines=100`.
+- Testing kuralları: `no-tests` (ORTA, >500 satır YÜKSEK), `low-test-ratio` (DÜŞÜK / <0.1 ORTA), `untested-modules` (BİLGİ), `test-sleep` ve `test-real-network` (DÜŞÜK, yalnızca test dosyalarında), `test-summary` (BİLGİ). Rust birim testleri kaynak dosyasında sayılır; `__init__.py`/`conftest.py` test dosyası sayılmaz.
+- Hygiene kuralları: `missing-readme/license/gitignore/ci/lockfile/env-example` (DÜŞÜK) + `hygiene-summary` (BİLGİ, `present`/`missing` listeleri Aşama 7 "iyi pratikler" için). Kilit dosyası manifest klasöründe veya üst klasörlerinde aranır (monorepo); `Cargo.toml` yalnızca `src/main.rs` varsa, `pyproject.toml` yalnızca poetry/uv/pdm kullanıyorsa kilit bekler. `.env` kökte diskte varsa (gitignore'da olsa da) `.env.example` beklenir.
+- **Doğrulama (bağımsız sayım):** bu repoda test işlevi **373 = `grep '^\s*def test'`** ve 27 test dosyası birebir; P022-ATC'de 105 işlev ve 26 dosya `grep`/`find` ile birebir (bir `grep` venv'i kapsadığı için 25592 çıktı, `--exclude-dir=venv` ile düzeltilip doğrulandı); 5 atlama işareti repo'daki 5 `@pytest.mark.skipif` ile aynı. ATC hijyeni elle: README var, LICENSE yok, `.github` yok, `requirements.txt` var. Korpustaki 8 `test-sleep` bulgusu kaynak satırlarıyla (`time.sleep(...)`) doğrulandı.
+- Gerçek veri: tüm `C:\2UYGULAMALAR` 32.3 sn; 629 test dosyası, 4593 test işlevi, test/kaynak satır oranı 0.29 (62730/216072), 59 atlama işareti. Bu repo: 82.9 skor, testing 98, hygiene 97 (LICENSE ve CI yok).
+- Testler: `test_testing_and_hygiene.py` (21); toplam 501. Bkz. [[roadmap]].
+
 ## [2026-10-08] [REVIEW] | Bulgu 12 (Aşama 4): hata yönetimi ve üretim hijyeni
 - Yeni `ReliabilityAnalyzer` (kategori `reliability`, toplam 15 analizör). Saf kod: `python_reliability.py` (ast tek geçiş), `brace_reliability.py`, `todo_markers.py`. `QualityThresholds.print_calls=5`.
 - Kurallar: `bare-except` (YÜKSEK, `raise` içermeyen), `swallowed-exception` (ORTA), `empty-catch` (ORTA, JS/TS/Java/C#/C++), `open-without-encoding` (ORTA), `debug-flag` (ORTA), `debugger-statement` (ORTA), `naive-datetime` (DÜŞÜK), `print-density` (DÜŞÜK), `todo-inventory` (BİLGİ, tek bulgu).

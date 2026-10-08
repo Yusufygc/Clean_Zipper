@@ -17,6 +17,9 @@ class QualityThresholds:
     class_methods: int = 20
     module_imports: int = 25      # dosya başına benzersiz import
     magic_numbers: int = 10       # dosya başına sihirli sayı (V2 dışı)
+    test_ratio_severe: float = 0.1   # test/kaynak satır oranı bunun altında ORTA (V2 dışı)
+    test_ratio_low: float = 0.3      # bunun altında DÜŞÜK
+    test_min_source_lines: int = 100 # bundan küçük projelerde 'test yok' / CI uyarısı verilmez
     print_calls: int = 5          # dosya başına print / console.log vb. (V2 dışı)
     clone_lines: int = 8         # klon sayılması için ardışık anlamlı satır (V2 dışı)
     clone_severe_lines: int = 20  # bu uzunlukta ve üstü klon ORTA öncelikli

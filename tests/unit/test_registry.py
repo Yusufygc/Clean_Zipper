@@ -6,7 +6,7 @@ from src.core.registry import AnalyzerRegistry, default_registry, load_builtin_a
 EXPECTED_BUILTINS = {
     'ArchitectureAnalyzer', 'CloneAnalyzer', 'CodeComplexityAnalyzer', 'CodeSecurityAnalyzer', 'DeadCodeAnalyzer', 'DeadWeightAnalyzer', 'DuplicateFinder',
     'EmptyFolderFinder', 'LanguageStatsAnalyzer', 'MagicNumberAnalyzer', 'ReliabilityAnalyzer', 'SecurityLeakAnalyzer', 'SizeAnalyzer',
-    'StructureAnalyzer', 'TypeAnalyzer',
+    'StructureAnalyzer', 'TestingAnalyzer', 'TypeAnalyzer', 'ProjectHygieneAnalyzer',
 }
 
 
@@ -56,4 +56,4 @@ def test_builtin_discovery_finds_all_nine_and_is_idempotent():
     load_builtin_analyzers()
     load_builtin_analyzers()
     assert set(default_registry.ids()) == EXPECTED_BUILTINS
-    assert len(default_registry.create_all()) == 15
+    assert len(default_registry.create_all()) == 17

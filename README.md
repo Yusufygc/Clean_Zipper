@@ -93,6 +93,8 @@
 | `ArchitectureAnalyzer` | architecture | Dosya bağımlılık grafiği: döngüsel bağımlılık, en çok kullanılan dosyalar |
 | `CodeSecurityAnalyzer` | security | SAST-lite: 39 kuralla tehlikeli API ve kalıp taraması (CWE etiketli) |
 | `ReliabilityAnalyzer` | reliability | Yutulan hatalar, kodlamasız dosya açma, saat dilimsiz tarih, DEBUG, konsol çıktısı, TODO envanteri |
+| `TestingAnalyzer` | testing | Test yok, düşük test/kaynak oranı, testi olmayan modüller, kararsız test işaretleri |
+| `ProjectHygieneAnalyzer` | hygiene | README, LICENSE, .gitignore, CI, kilit dosyası, .env.example kontrol listesi |
 
 ---
 
@@ -300,8 +302,10 @@ Skor, analizörlerin ürettiği bulgulardan hesaplanır. Sabit değer yoktur.
 | **Ölü Kod** | %6 | Kullanılmayan import / değişken, ulaşılamaz kod, sihirli sayı |
 | **Mimari** | %6 | Döngüsel bağımlılıklar |
 | **Güvenilirlik** | %8 | Yutulan hatalar, kodlamasız dosya açma, DEBUG, konsol çıktısı |
+| **Test** | %6 | Test yok, düşük test oranı, kararsız test işaretleri |
+| **Hijyen** | %4 | README, LICENSE, .gitignore, CI, kilit dosyası, .env.example |
 
-Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz. Yeni kategoriler (`testing`, `hygiene`) ilgili analizörler eklendikçe devreye girer.
+Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz.
 
 **Hesaplama:** her bulgunun şiddeti ceza puanı getirir (KRİTİK 40, YÜKSEK 15, ORTA 5, DÜŞÜK 1, BİLGİ 0). Kategori skoru `100 × e^(−ceza/60)` formülüyle bulunur. Genel skor, kategori skorlarının ağırlıklı ortalamasıdır. Hiçbir analizör çalışmazsa skor 0 olur.
 
@@ -596,6 +600,26 @@ Bir fonksiyon birden çok eşiği aşarsa **tek** bulgu üretilir (aşılan metr
 - **Bilinçli yutma sayılmaz:** gövdesinde açıklama yorumu olan `except Exception: pass  # neden` ve `catch { /* neden */ }` raporlanmaz; `return False` / `return 0` gibi değer döndürenler de yutma değil geri dönüş değeri sayılır.
 - **Atlananlar:** `if __name__ == "__main__":` içindeki `print`, `datetime.now().astimezone()` (saat dilimi eklenir), C/C++ konsol çıktısı (konsol programı olduğundan), `encoding=` veya ikilik kip (`'rb'`) verilen `open`.
 - **Sınırlar:** `.read_text()`/`.write_text()` yöntem adına bakılır (nesne türü bilinmez); `datetime` yalnızca `datetime` adıyla tanınır (`import datetime as dt` takma adı atlanır). TODO işaretleri yalnızca yorumlarda aranır (docstring içindeki `TODO` sayılmaz).
+
+### Test Sağlığı ve Proje Hijyeni
+
+**`TestingAnalyzer`** test dosyasını klasör (`tests`, `__tests__`, `spec`, `e2e`, `src/test` ...) veya adlandırma kuralıyla (`test_x.py`, `x_test.go`, `x.test.ts`, `XTests.cs`) tanır. Test işlevleri: Python `def test*` (`ast`), JS/TS `it(`/`test(`, Java `@Test`, C# `[Fact]`/`[Test]`, Go `func Test*`, Rust `#[test]` (birim testler kaynak dosyasında olduğundan her dosyada sayılır), C/C++ `TEST(`.
+
+| Kural | Koşul | Öncelik |
+|-------|-------|---------|
+| `no-tests` | ≥ 100 kaynak satırı var, test yok | ORTA; > 500 satır YÜKSEK |
+| `low-test-ratio` | test/kaynak kod satırı oranı < 0.3 (`test_ratio_low`) | DÜŞÜK; < 0.1 (`test_ratio_severe`) ORTA |
+| `untested-modules` | adına karşılık gelen test dosyası olmayan ≥ 30 satırlık modüller (ilk 50 metadata'da) | BİLGİ |
+| `test-sleep` / `test-real-network` | test dosyasında gerçek `sleep`, yerel olmayan gerçek HTTP çağrısı (kararsız test göstergesi) | DÜŞÜK |
+| `test-summary` | test dosyası / işlevi sayısı, atlanmış-koşullu atlanan işaretler, oran | BİLGİ |
+
+Eşleşme ada bakar (`foo_bar.py` ↔ `test_foo_bar.py`, `FooBarTests.cs`); farklı adla yazılmış test "testsiz" görünür, bu yüzden bulgu bilgi amaçlıdır. `skipif` gibi koşullu atlamalar da işaret olarak sayılır.
+
+**`ProjectHygieneAnalyzer`** kök dizinde kontrol listesi çalıştırır; eksik her madde DÜŞÜK bulgudur (`missing-readme`, `missing-license`, `missing-gitignore`, `missing-ci`, `missing-lockfile`, `missing-env-example`). Ayrıca tek bir BİLGİ özeti (`hygiene-summary`) mevcut iyi pratikleri (`present`) ve eksikleri (`missing`) listeler; denetim raporu bunu "iyi pratikler" bölümünde kullanır.
+
+- README/LICENSE yalnızca ≥ 100 kaynak satırı olan projelerde, `.gitignore` yalnızca git deposunda, CI yalnızca testi olan projelerde beklenir (`.github/workflows`, `.gitlab-ci.yml`, `Jenkinsfile`, `azure-pipelines.yml`, `.circleci`, `bitbucket-pipelines.yml`, `.travis.yml` ...).
+- **Kilit dosyası:** bağımlılığı olan her manifest için aynı veya üst klasörde aranır (monorepo kökündeki kilit dosyası sayılır): `package.json` -> `package-lock.json`/`yarn.lock`/`pnpm-lock.yaml`/`bun.lock*`, `go.mod` -> `go.sum`, `Cargo.toml` (yalnızca `src/main.rs` olan uygulama crate'i) -> `Cargo.lock`, `Pipfile` -> `Pipfile.lock`, `pyproject.toml` (yalnızca poetry/uv/pdm kullanıyorsa) -> `poetry.lock`/`uv.lock`/`pdm.lock`.
+- **`.env.example`:** `.env` varsa (kök dizinde, `.gitignore`'da olsa bile) `.env.example`/`.env.sample`/`.env.template` aranır.
 
 ### `.gitignore` ve Git Duyarlılığı
 
