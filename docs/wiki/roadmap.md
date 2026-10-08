@@ -9,9 +9,9 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | 3 | HTML raporda escape yok | 🟠 | Tamamlandı (2026-10-08) |
 | 4 | Tarama 9 kez tekrarlanıyor, `rglob` dışlamaları yok sayıyor | 🟠 | Tamamlandı (2026-10-08) |
 | 5 | Analizör kaydı UI içinde, arayüzler yarım uygulanmış | 🟠 | Tamamlandı (2026-10-08) |
-| 6 | Sadece Python ve `requirements.txt` destekleniyor | 🟠 | Bekliyor |
+| 6 | Sadece Python ve `requirements.txt` destekleniyor | 🟠 | Sürüyor: motor ve 8 dil hazır, ekosistemler/istatistik sırada |
 | 7 | Hatalar sessizce yutuluyor, logger yok | 🟠 | Kısmen (`ProjectDoctor` loglıyor ve `failed_analyzers` tutuyor; analizörlerin içindeki `except` blokları bekliyor) |
-| 8 | Test yok | 🟠 | Başladı (81 test) |
+| 8 | Test yok | 🟠 | Başladı (131 test) |
 | 9 | Çift dosya bulucu tüm dosyayı belleğe okuyor | 🟠 | Tamamlandı (2026-10-08, parçalı hash) |
 | 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Kısmen (`EXCLUDED_DIRS`: `CleanupService` ve `BaseAnalyzer` bağlı, `ArchiveService`/`BackupService` bekliyor) |
 | 11 | Arşiv profil regex'leri iç içe klasörleri kaçırıyor | 🟡 | Bekliyor |
@@ -30,4 +30,5 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 - Analizör içinde kalan geniş `except` blokları (Bulgu 7) bekliyor.
 - Analiz iptal edilemiyor (UI'da iptal düğmesi yok).
 - `read_text` 2 MB üstü dosyaları atlıyor: büyük kaynak dosyalar karmaşıklık ve sızıntı taramasına girmez.
+- `venv` adı taşımayan sanal ortamlar (ör. `myenv`) taranıyor: `pyvenv.cfg` içeren klasörleri `ProjectIndex` içinde dışlamak gerekir.
 - Bir sonraki adım: Bulgu 6 (çok dilli analiz) bu indeks ve registry üzerine kurulacak.

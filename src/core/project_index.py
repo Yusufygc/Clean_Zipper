@@ -7,7 +7,7 @@ import hashlib
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, FrozenSet, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Dict, FrozenSet, Iterator, List, Optional, Tuple
 
 from src.core.constants import EXCLUDED_DIRS
 
@@ -53,6 +53,7 @@ class ProjectIndex:
         self._binary: Dict[str, bool] = {}
         self._text_cache: Dict[str, str] = {}
         self._text_cache_chars = 0
+        self._memo: Dict[str, Dict[str, Any]] = {}
 
     @classmethod
     def build(cls, root: Path, excluded: FrozenSet[str] = EXCLUDED_DIRS,
@@ -131,6 +132,13 @@ class ProjectIndex:
     def files_with_ext(self, *exts: str) -> Iterator[FileEntry]:
         wanted = {e.lower() for e in exts}
         return (f for f in self.files if f.ext in wanted)
+
+    def memo(self, namespace: str, entry: FileEntry, factory: Callable[[], Any]) -> Any:
+        """Dosya başına türetilmiş veriyi (None dahil) bir kez üretir; analizörler arasında paylaşılır."""
+        bucket = self._memo.setdefault(namespace, {})
+        if entry.rel not in bucket:
+            bucket[entry.rel] = factory()
+        return bucket[entry.rel]
 
     # ------------------------------------------------------------------ #
     #  İçerik erişimi                                                    #

@@ -1,5 +1,14 @@
 # Değişiklik Günlüğü
 
+## [2026-10-08] [INGEST] | Bulgu 6 (çok dilli analiz) yarım: adım 1-3 bitti, 4-6 sırada
+- Yeni `src/languages/` katmanı: `base.py` (FunctionInfo/ClassInfo/SourceMetrics), `registry.py` (`parse_file`, indekste önbellekli, üretilmiş dosyaları atlar), `python_lang.py` (ast; `async` artık sayılıyor, içe aktarmalar ast'ten), `brace.py` (sözcük tabanlı motor), `catalog.py` (C, C++, C#, Java, JS, TS, Go, Rust tanımları).
+- `ProjectIndex.memo(...)` eklendi. `CodeComplexityAnalyzer` dil bağımsız hale geldi (eşikler aynı; bulgulara `language`, `approximate` metadata).
+- Testler: `test_language_registry.py`, `test_brace_lexer.py`, `test_languages.py` (toplam 131 test yeşil). Beklenen değerler örnek kodda elle sayıldı.
+- Commit edilmedi (çalışma ağacında).
+- **Kalan adımlar:** (4) `src/languages/ecosystems.py` + `DeadWeightAnalyzer` (requirements.txt, package.json, go.mod, Cargo.toml; "requirements eksik" uyarısı yalnızca Python projesinde), (5) `LanguageStatsAnalyzer` + `ProjectAnalysis.language_stats` + kayıt sayısı testleri 8 → 9, (6) gerçek kod doğrulaması ve belgeler (README, architecture, roadmap).
+- **Gerçek kod doğrulaması başlatıldı ama sonucu okunmadı:** `scratchpad/realworld.py` betiği `C:\2UYGULAMALAR` üzerinde dil başına dosya/fonksiyon/dengesiz parantez/süre ölçer. Devam ederken yeniden çalıştırılacak. Java ve Go için diskte gerçek kod yok; yalnızca örneklerle doğrulandı.
+- Bilinen sınırlar: makro benzeri `FOREACH(x) {`, template literal içi iç içe `${ }`, Rust iç içe blok yorum, ifade gövdeli üyeler.
+
 ## [2026-10-08] [REVIEW] | Bulgu 3: HTML raporda kaçış (escape) eklendi
 - `ReportService`: bulgu başlığı/açıklaması/önerisi, dosya adı, proje yolu ve not metni `html.escape` ile kaçırılıyor (`_esc`). Rapora `Content-Security-Policy` meta etiketi (`default-src 'none'`) eklendi; kaçış gözden kaçsa bile betik çalışmaz.
 - `export_report` hata durumunda artık `logging.exception` ile nedeni kaydediyor (eskiden sessizce `False` dönüyordu).
