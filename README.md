@@ -86,6 +86,10 @@
 | `DuplicateFinder` | duplicate | Hash-bazlı çift dosya tespiti |
 | `EmptyFolderFinder` | structure | Boş klasör bulma |
 | `StructureAnalyzer` | structure | Proje yapısal analizi, derinlik kontrolü |
+| `CodeComplexityAnalyzer` | complexity | V2 eşikleri: karmaşıklık, uzunluk, derinlik, parametre, God Object |
+| `DeadCodeAnalyzer` | deadcode | Kullanılmayan import, ulaşılamaz kod, kullanılmayan yerel değişken |
+| `MagicNumberAnalyzer` | deadcode | Fonksiyon gövdelerindeki adsız sayısal sabitler |
+| `CloneAnalyzer` | duplicate | Kopyala-yapıştır kod blokları (dosyalar arası ve dosya içi) |
 
 ---
 
@@ -286,12 +290,13 @@ Skor, analizörlerin ürettiği bulgulardan hesaplanır. Sabit değer yoktur.
 |----------|---------|--------|
 | **Güvenlik** | %20 | Sızan anahtar/şifre, `.env`, commit edilmiş hassas dosya |
 | **Karmaşıklık** | %16 | V2 eşikleri: karmaşıklık, uzunluk, derinlik, parametre, God Object, dosya boyutu |
-| **Çiftler** | %10 | Tekrarlayan dosya grupları |
+| **Çiftler** | %10 | Tekrarlayan dosya grupları ve kod klonları |
 | **Boyut** | %8 | Toplam proje boyutu, büyük dosyalar |
 | **Yapı** | %8 | Boş klasörler, klasör derinliği |
 | **Bağımlılık** | %8 | Kullanılmayan kütüphaneler, eksik `requirements.txt` |
+| **Ölü Kod** | %6 | Kullanılmayan import / değişken, ulaşılamaz kod, sihirli sayı |
 
-Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz. Yeni kategoriler (`deadcode`, `architecture`, `reliability`, `testing`, `hygiene`) ilgili analizörler eklendikçe devreye girer.
+Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz. Yeni kategoriler (`architecture`, `reliability`, `testing`, `hygiene`) ilgili analizörler eklendikçe devreye girer.
 
 **Hesaplama:** her bulgunun şiddeti ceza puanı getirir (KRİTİK 40, YÜKSEK 15, ORTA 5, DÜŞÜK 1, BİLGİ 0). Kategori skoru `100 × e^(−ceza/60)` formülüyle bulunur. Genel skor, kategori skorlarının ağırlıklı ortalamasıdır. Hiçbir analizör çalışmazsa skor 0 olur.
 
@@ -517,6 +522,21 @@ Not: yeni bir kategori puanlanmaz; puanlanması için `HealthChecker.WEIGHTS` g�
 | Dosya başına benzersiz import | > 25 | DÜŞÜK |
 
 Bir fonksiyon birden çok eşiği aşarsa **tek** bulgu üretilir (aşılan metrikler birlikte listelenir). Python metrikleri `ast` ile kesindir: siklomatik karmaşıklık `radon` kurallarıyla, bilişsel karmaşıklık SonarSource kurallarıyla hesaplanır (gerçek kodda `radon` ile %100, `cognitive_complexity` paketiyle %99 uyum doğrulandı). Diğer dillerde parametre sayısı, iç içe derinlik ve bilişsel karmaşıklık sözcük tabanlı çözümlemeyle **yaklaşık** hesaplanır; süslü parantezsiz tek satırlık `if` gibi yapılar iç içe sayılamaz.
+
+### Ölü Kod, Sihirli Sayı ve Kod Klonu
+
+| Kural | Kapsam | Doğruluk | Öncelik |
+|-------|--------|----------|---------|
+| `unused-import` | Python (`ast`), JS/TS, Java | Python kesin; JS/TS/Java yaklaşık | DÜŞÜK (dosya başına tek bulgu) |
+| `unreachable-code` | Python; C, C++, Java, C#, JS, TS | Python kesin (ORTA); diğerleri yaklaşık (DÜŞÜK) | ORTA / DÜŞÜK |
+| `unused-variable` | yalnızca Python | kesin | DÜŞÜK (fonksiyon başına tek bulgu) |
+| `magic-numbers` | 9 dil | Python kesin, diğerleri yaklaşık | DÜŞÜK (dosya başına tek bulgu, eşik > 10) |
+| `code-clone` | `CloneAnalyzer`: 9 dil | birebir eşleşme (Tip-1) | DÜŞÜK; ≥ 20 satır ORTA |
+
+- **Kullanılmayan import:** Ad tabanlıdır. Aynı adlı bir yerel değişken/parametre kullanım sayılır; bu yüzden `pyflakes`'tan daha tutucudur. `__init__.py`, `from __future__`, `*`, `import x as x`, `__all__` içindekiler ve `# noqa` / `# noqa: F401` satırları atlanır. Go ve Rust derleyici zaten reddettiği için, C# ve C/C++ içe aktarmaları kullanım ile eşlenemediği için kapsam dışıdır.
+- **Ulaşılamaz kod:** `return/raise/break/continue` sonrası aynı blokta kalan ifade. Brace dillerinde süslü parantezsiz `if (x) return;`, `#if/#else` dalları, JS `function` bildirimleri ve JSX metni yanlış pozitif üretmez.
+- **Sihirli sayı:** `{0, 1, 2, -1, 0.5}`, adlandırılmış atamalar (`retries = 3`, `const`), adlı argümanlar, indeksler ve sabit veri tabloları sayılmaz. Test dosyaları atlanır. Eşik `QualityThresholds.magic_numbers`.
+- **Kod klonu:** En az `clone_lines` (varsayılan 8) ardışık anlamlı satır; yorum ve boşluk farkı yok sayılır, string ve sayı değerleri birebir aynı olmalıdır. Tamamen aynı dosyalar `DuplicateFinder`'a bırakılır. En büyük 50 grup ayrı bulgu, ayrıca tek bir özet bulgusu (tekrarlanan satır oranı) üretilir.
 
 ### `.gitignore` ve Git Duyarlılığı
 

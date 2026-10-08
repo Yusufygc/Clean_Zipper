@@ -16,6 +16,9 @@ class QualityThresholds:
     nesting: int = 4              # iç içe kontrol bloğu derinliği
     class_methods: int = 20
     module_imports: int = 25      # dosya başına benzersiz import
+    magic_numbers: int = 10       # dosya başına sihirli sayı (V2 dışı)
+    clone_lines: int = 8          # klon sayılması için ardışık anlamlı satır (V2 dışı)
+    clone_severe_lines: int = 20  # bu uzunlukta ve üstü klon ORTA öncelikli
     severe_factor: float = 2.0
 
     def is_severe(self, value: float, threshold: float) -> bool:

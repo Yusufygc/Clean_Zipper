@@ -11,11 +11,11 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | 5 | Analizör kaydı UI içinde, arayüzler yarım uygulanmış | 🟠 | Tamamlandı (2026-10-08) |
 | 6 | Sadece Python ve `requirements.txt` destekleniyor | 🟠 | Tamamlandı (2026-10-08) |
 | 7 | Hatalar sessizce yutuluyor, logger yok | 🟠 | Tamamlandı (2026-10-08) |
-| 8 | Test yok | 🟠 | Başladı (317 test) |
+| 8 | Test yok | 🟠 | Başladı (377 test) |
 | 9 | Çift dosya bulucu tüm dosyayı belleğe okuyor | 🟠 | Tamamlandı (2026-10-08, parçalı hash) |
 | 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Kısmen (`exclusions.py`: analiz, temizlik ve arşiv ortak; `BackupService` bilerek yalnızca `.git` dışlıyor, karar bekliyor) |
 | 11 | Arşiv profil regex'leri iç içe klasörleri kaçırıyor | 🟡 | Tamamlandı (2026-10-08) |
-| 12 | Karmaşıklık analizörü eksikleri | 🟡 | Aşama 0 tamam (2026-10-08): V2 eşikleri; derin analizler Aşama 1-7 sürüyor |
+| 12 | Karmaşıklık analizörü eksikleri | 🟡 | Aşama 0-1 tamam (2026-10-08): V2 eşikleri, ölü kod, sihirli sayı, klon; Aşama 2-7 sürüyor |
 | 13 | Build ve bağımlılık hijyeni | 🟡 | Bekliyor |
 
 ## Kararlar
@@ -32,6 +32,6 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 - Donmuş exe içinde analiz çalıştırılamadı (Windows Uygulama Denetimi imzasız exe'yi engelliyor); paket içeriği doğrulandı.
 - UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı.
 - Karar bekliyor (kullanıcı "sonra konuşalım" dedi): `BackupService` yedeği "olduğu gibi" mi kalsın, ortak dışlama mı uygulansın. Bulgu 12 unutulmayacak.
-- **Derin analiz planı (onaylı, aşama aşama):** 1 kod kalitesi (ölü kod, klon, sihirli sayı), 2 mimari (döngüsel bağımlılık), 3 SAST-lite + pinleme, 4 hata yönetimi/üretim hijyeni, 5 test + proje hijyeni, 6 git geçmişi, 7 V2 formatında denetim raporu. Aşama 0 bitti. Sonra Bulgu 13.
+- **Derin analiz planı (onaylı, aşama aşama):** 1 kod kalitesi (ölü kod, klon, sihirli sayı), 2 mimari (döngüsel bağımlılık), 3 SAST-lite + pinleme, 4 hata yönetimi/üretim hijyeni, 5 test + proje hijyeni, 6 git geçmişi, 7 V2 formatında denetim raporu. Aşama 0 ve 1 bitti. Sonra Bulgu 13.
 - Refactor adayları (kendi kodumuz, V2 eşiklerine göre): `brace.py:_scan_structure`, `_count_params`, `project_index.py:_scan_directory`, `build_exe.py:build_executable`.
 - Fikir: git'e commit edilmiş derleme çıktısı / bağımlılık klasörü tespiti (P005'te 381 `bin/obj` dosyası izleniyor), `.gitignore` önerisi üretme.
