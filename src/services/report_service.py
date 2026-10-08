@@ -14,54 +14,7 @@ def _esc(value) -> str:
     """Raporlara giren her dış kaynaklı metin (dosya adı, yol, bulgu metni) buradan geçer."""
     return html.escape(str(value), quote=True)
 
-class ReportService(IReporter):
-    """Proje analiz sonuçlarını ve kritik sorunları kurumsal HTML raporu olarak dışa aktaran servis."""
-
-    SEVERITY_BADGES = {
-        Severity.CRITICAL: '<span class="badge badge-critical">KRİTİK</span>',
-        Severity.HIGH: '<span class="badge badge-high">YÜKSEK</span>',
-        Severity.MEDIUM: '<span class="badge badge-medium">ORTA</span>',
-        Severity.LOW: '<span class="badge badge-low">DÜŞÜK</span>',
-        Severity.INFO: '<span class="badge badge-info">BİLGİ</span>'
-    }
-
-    def generate_report(self, analysis: ProjectAnalysis) -> str:
-        """Ana HTML raporunu oluşturur."""
-        return f"""<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
-    <title>GitClean Proje Sağlık Raporu - {_esc(analysis.project_path.name)}</title>
-    {self._get_css()}
-</head>
-<body>
-    <div class="container">
-        {self._build_header(analysis)}
-        {self._build_score_section(analysis)}
-        {self._build_stats_grid(analysis)}
-        {self._build_category_section(analysis)}
-        {self._build_critical_issues_section(analysis)}
-        {self._build_other_issues_section(analysis)}
-    </div>
-</body>
-</html>
-"""
-
-    def export_report(self, analysis: ProjectAnalysis, output_path: Path) -> bool:
-        """Raporu belirtilen yola HTML dosyası olarak kaydeder."""
-        try:
-            content = self.generate_report(analysis)
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            return True
-        except Exception:
-            logger.exception("Rapor dışa aktarılamadı: %s", output_path)
-            return False
-
-    def _get_css(self) -> str:
-        """HTML raporu için CSS stillerini döndürür."""
-        return """<style>
+REPORT_CSS = """<style>
         body {
             font-family: 'Segoe UI', Inter, Helvetica, sans-serif;
             background-color: #F8FAFC;
@@ -129,6 +82,56 @@ class ReportService(IReporter):
             .issue-card { page-break-inside: avoid; }
         }
     </style>"""
+
+
+class ReportService(IReporter):
+    """Proje analiz sonuçlarını ve kritik sorunları kurumsal HTML raporu olarak dışa aktaran servis."""
+
+    SEVERITY_BADGES = {
+        Severity.CRITICAL: '<span class="badge badge-critical">KRİTİK</span>',
+        Severity.HIGH: '<span class="badge badge-high">YÜKSEK</span>',
+        Severity.MEDIUM: '<span class="badge badge-medium">ORTA</span>',
+        Severity.LOW: '<span class="badge badge-low">DÜŞÜK</span>',
+        Severity.INFO: '<span class="badge badge-info">BİLGİ</span>'
+    }
+
+    def generate_report(self, analysis: ProjectAnalysis) -> str:
+        """Ana HTML raporunu oluşturur."""
+        return f"""<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+    <title>GitClean Proje Sağlık Raporu - {_esc(analysis.project_path.name)}</title>
+    {self._get_css()}
+</head>
+<body>
+    <div class="container">
+        {self._build_header(analysis)}
+        {self._build_score_section(analysis)}
+        {self._build_stats_grid(analysis)}
+        {self._build_category_section(analysis)}
+        {self._build_critical_issues_section(analysis)}
+        {self._build_other_issues_section(analysis)}
+    </div>
+</body>
+</html>
+"""
+
+    def export_report(self, analysis: ProjectAnalysis, output_path: Path) -> bool:
+        """Raporu belirtilen yola HTML dosyası olarak kaydeder."""
+        try:
+            content = self.generate_report(analysis)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            return True
+        except Exception:
+            logger.exception("Rapor dışa aktarılamadı: %s", output_path)
+            return False
+
+    def _get_css(self) -> str:
+        """HTML raporu için CSS stillerini döndürür."""
+        return REPORT_CSS
 
     def _build_header(self, analysis: ProjectAnalysis) -> str:
         """Rapor başlık bölümünü oluşturur."""

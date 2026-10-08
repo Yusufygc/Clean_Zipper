@@ -144,15 +144,17 @@ class ProjectDoctor:
                     key: finding.metadata[key]
                     for key in ('files', 'total_lines', 'code_lines', 'comment_lines', 'blank_lines')}
             elif kind == 'large_file' and finding.file_path:
-                try:
-                    modified = datetime.fromtimestamp(finding.file_path.stat().st_mtime)
-                except OSError:
-                    modified = analysis.analysis_time
-                analysis.largest_files.append(FileInfo(
-                    path=finding.file_path, size_bytes=finding.size_impact or 0,
-                    extension=finding.file_path.suffix.lower(), last_modified=modified
-                ))
+                analysis.largest_files.append(self._large_file_info(finding, analysis.analysis_time))
         analysis.largest_files.sort(key=lambda f: f.size_bytes, reverse=True)
+
+    @staticmethod
+    def _large_file_info(finding: AnalysisResult, fallback_time: datetime) -> FileInfo:
+        try:
+            modified = datetime.fromtimestamp(finding.file_path.stat().st_mtime)
+        except OSError:
+            modified = fallback_time
+        return FileInfo(path=finding.file_path, size_bytes=finding.size_impact or 0,
+                        extension=finding.file_path.suffix.lower(), last_modified=modified)
 
     @staticmethod
     def _collect_stats(index: ProjectIndex, analysis: ProjectAnalysis):

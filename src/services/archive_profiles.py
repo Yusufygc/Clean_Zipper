@@ -70,21 +70,29 @@ def load_profiles(directories: Optional[Sequence[Path]] = None) -> Dict[str, Arc
     return profiles
 
 
+def _is_valid_profile(data) -> bool:
+    """name boş olmayan metin, exclude metin listesi, description / extends (varsa) metin."""
+    if not isinstance(data, dict):
+        return False
+    name, exclude = data.get('name'), data.get('exclude', [])
+    if not isinstance(name, str) or not name.strip():
+        return False
+    if not isinstance(exclude, list) or not all(isinstance(p, str) for p in exclude):
+        return False
+    return isinstance(data.get('description', ''), str) and isinstance(data.get('extends', ''), str)
+
+
 def _read_profile_file(path: Path) -> Optional[dict]:
     try:
         data = json.loads(path.read_text(encoding='utf-8-sig'))
     except (OSError, ValueError) as e:
         logger.warning("Profil dosyası okunamadı, atlandı: %s (%s)", path, e)
         return None
-    name = data.get('name') if isinstance(data, dict) else None
-    exclude = data.get('exclude', []) if isinstance(data, dict) else None
-    if not isinstance(name, str) or not name.strip() or not isinstance(exclude, list) \
-            or not all(isinstance(p, str) for p in exclude) \
-            or not isinstance(data.get('description', ''), str) or not isinstance(data.get('extends', ''), str):
+    if not _is_valid_profile(data):
         logger.warning("Profil dosyası geçersiz (name/description/extends metin, exclude metin listesi olmalı), atlandı: %s", path)
         return None
-    return {'name': name.strip(), 'description': data.get('description', ''), 'extends': data.get('extends') or None,
-            'exclude': [p.strip() for p in exclude if p.strip()], 'source': str(path)}
+    return {'name': data['name'].strip(), 'description': data.get('description', ''), 'extends': data.get('extends') or None,
+            'exclude': [p.strip() for p in data.get('exclude', []) if p.strip()], 'source': str(path)}
 
 
 def _resolve_patterns(name: str, raw: Dict[str, dict], visiting: Set[str]) -> Optional[List[str]]:

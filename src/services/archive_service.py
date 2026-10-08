@@ -63,29 +63,29 @@ class ArchiveService:
         files: List[Tuple[Path, Path]] = []
         for root, dirs, filenames in os.walk(source_dir):
             root_path = Path(root)
-            sibling_names = dirs + filenames
-            dirs[:] = [d for d in dirs
-                       if not is_excluded_dir(os.path.join(root, d), d, sibling_names)
-                       and not (skip_root_dir and root_path == source_dir and d == skip_root_dir)
-                       and not self._is_ignored_dir(os.path.join(root, d))]
+            skipped_dir = skip_root_dir if root_path == source_dir else None
+            dirs[:] = [d for d in dirs if self._enters_dir(root, d, dirs + filenames, skipped_dir)]
             for name in filenames:
                 fp = root_path / name
                 rp = fp.relative_to(source_dir)
-
-                # Hedef dosyanın kendisini (zip kaynak içindeyse) atla
-                if skip_file is not None and fp.resolve() == skip_file:
+                if self._is_filtered(fp, rp, profile, skip_file):
                     result['skipped_files'] += 1
-                    continue
-                # 1. .gitignore Kurallarını Uygula
-                if self.parser and self.parser.should_ignore(str(fp)):
-                    result['skipped_files'] += 1
-                    continue
-                # 2. Seçilen Profilin Desenlerini Uygula
-                if profile.matches(rp.as_posix()):
-                    result['skipped_files'] += 1
-                    continue
-                files.append((fp, rp))
+                else:
+                    files.append((fp, rp))
         return files
+
+    def _enters_dir(self, root: str, name: str, sibling_names: List[str], skipped_dir: Optional[str]) -> bool:
+        path = os.path.join(root, name)
+        return not (is_excluded_dir(path, name, sibling_names) or (skipped_dir and name == skipped_dir)
+                    or self._is_ignored_dir(path))
+
+    def _is_filtered(self, path: Path, relative: Path, profile: ArchiveProfile, skip_file: Optional[Path]) -> bool:
+        """Dosya arşive girmeyecek mi: hedef zip'in kendisi, .gitignore kuralı ya da profil deseni."""
+        if skip_file is not None and path.resolve() == skip_file:
+            return True                                           # hedef dosyanın kendisini (zip kaynak içindeyse) atla
+        if self.parser and self.parser.should_ignore(str(path)):
+            return True                                           # .gitignore kuralları
+        return profile.matches(relative.as_posix())               # seçilen profilin desenleri
 
     def _refresh_tracked(self, source_dir: Path):
         """Arşiv anındaki git izleme durumunu al: izlenen dosyalar .gitignore'a uysa bile arşive girer."""

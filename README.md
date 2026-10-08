@@ -134,6 +134,7 @@ gitclean-archiver-pro/
 │   │   ├── base.py               #    FunctionInfo / ClassInfo / SourceMetrics
 │   │   ├── python_lang.py        #    Python (ast, kesin sonuç)
 │   │   ├── brace.py              #    C ailesi, Java, C#, JS/TS, Go, Rust (sözcük tabanlı, yaklaşık)
+│   │   ├── brace_headers.py      #    `{` öncesi başlık sınıflama (sınıf / fonksiyon / kontrol bloğu, parametre sayısı)
 │   │   ├── catalog.py            #    Dil tanımları (yeni dil = bir LanguageSpec)
 │   │   ├── registry.py           #    parse_file: önbellekli, üretilmiş/küçültülmüş dosyaları atlar
 │   │   └── ecosystems.py         #    requirements.txt, package.json, go.mod, Cargo.toml

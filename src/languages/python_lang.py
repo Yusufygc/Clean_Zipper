@@ -95,33 +95,45 @@ class StructureMetricsVisitor:
         if isinstance(node, ast.If):
             self._if(node, nesting, depth, is_elif=False)
         elif isinstance(node, _LOOPS):
-            self._structural(nesting, depth)
-            self._expression(node.test if isinstance(node, ast.While) else node.iter, nesting)
-            self._block(node.body, nesting + 1, depth + 1)
-            self._block(node.orelse, nesting + 1, depth + 1)
+            self._loop(node, nesting, depth)
         elif isinstance(node, ast.Try) or type(node).__name__ == 'TryStar':
-            self._touch(depth + 1)
-            self._block(node.body, nesting, depth + 1)
-            for handler in node.handlers:
-                self.cognitive += 1 + nesting
-                if handler.type is not None:
-                    self._expression(handler.type, nesting)
-                self._block(handler.body, nesting + 1, depth + 1)
-            self._block(node.orelse, nesting, depth + 1)
-            self._block(node.finalbody, nesting, depth + 1)
+            self._try(node, nesting, depth)
         elif isinstance(node, (ast.With, ast.AsyncWith)):
-            for item in node.items:
-                self._expression(item.context_expr, nesting)
-            self._block(node.body, nesting, depth)
+            self._with(node, nesting, depth)
         elif hasattr(ast, 'Match') and isinstance(node, ast.Match):
-            self._structural(nesting, depth)
-            self._expression(node.subject, nesting)
-            for case in node.cases:
-                self._block(case.body, nesting + 1, depth + 1)
+            self._match(node, nesting, depth)
         elif isinstance(node, _FUNCTION_NODES + (ast.ClassDef,)):
             self._block(node.body, nesting + 1, depth)               # iç içe fonksiyon/sınıf: seviye artar
         else:
             self._expression(node, nesting)
+
+    def _loop(self, node, nesting: int, depth: int):
+        self._structural(nesting, depth)
+        self._expression(node.test if isinstance(node, ast.While) else node.iter, nesting)
+        self._block(node.body, nesting + 1, depth + 1)
+        self._block(node.orelse, nesting + 1, depth + 1)
+
+    def _try(self, node, nesting: int, depth: int):
+        self._touch(depth + 1)
+        self._block(node.body, nesting, depth + 1)
+        for handler in node.handlers:
+            self.cognitive += 1 + nesting
+            if handler.type is not None:
+                self._expression(handler.type, nesting)
+            self._block(handler.body, nesting + 1, depth + 1)
+        self._block(node.orelse, nesting, depth + 1)
+        self._block(node.finalbody, nesting, depth + 1)
+
+    def _with(self, node, nesting: int, depth: int):
+        for item in node.items:
+            self._expression(item.context_expr, nesting)
+        self._block(node.body, nesting, depth)
+
+    def _match(self, node, nesting: int, depth: int):
+        self._structural(nesting, depth)
+        self._expression(node.subject, nesting)
+        for case in node.cases:
+            self._block(case.body, nesting + 1, depth + 1)
 
     def _if(self, node: ast.If, nesting: int, depth: int, is_elif: bool):
         if is_elif:
@@ -161,10 +173,16 @@ class StructureMetricsVisitor:
         elif isinstance(node, ast.Lambda):
             self._expression(node.body, nesting + 1)
         else:
-            for child in ast.iter_child_nodes(node):
-                if isinstance(child, (ast.expr, ast.comprehension, ast.keyword, ast.arguments, ast.Starred)) \
-                        or isinstance(child, ast.AST) and not isinstance(child, ast.stmt):
-                    self._expression(child, nesting)
+            for child in self._expression_children(node):
+                self._expression(child, nesting)
+
+    @staticmethod
+    def _expression_children(node: ast.AST) -> Iterator[ast.AST]:
+        """İfade ağacında gezilecek çocuklar (deyimler hariç)."""
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.expr, ast.comprehension, ast.keyword, ast.arguments, ast.Starred)) \
+                    or isinstance(child, ast.AST) and not isinstance(child, ast.stmt):
+                yield child
 
     def _is_recursive(self) -> bool:
         name = self.function.name
@@ -227,6 +245,23 @@ def runtime_imports(statements: List[ast.stmt]) -> Iterator[ImportRef]:
                 yield from runtime_imports(block)
 
 
+def _import_names(node: ast.AST) -> List[str]:
+    """`import a.b` -> ['a.b']; `from x import y` -> ['x'] (göreli içe aktarmalar bu listeye girmez)."""
+    if isinstance(node, ast.Import):
+        return [alias.name for alias in node.names]
+    if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+        return [node.module]
+    return []
+
+
+def _blank_span(text: str, start: int, end: int, targets) -> None:
+    """`text[start:end]` aralığını (satır sonları hariç) her hedef listede boşlukla değiştirir."""
+    for index in range(start, end):
+        if text[index] != '\n':
+            for target in targets:
+                target[index] = ' '
+
+
 class PythonLanguage(LanguageSupport):
     id = 'python'
     display_name = 'Python'
@@ -250,17 +285,18 @@ class PythonLanguage(LanguageSupport):
 
         metrics.import_refs = list(runtime_imports(tree.body))
         for node in ast.walk(tree):
-            if isinstance(node, _FUNCTION_NODES):
-                metrics.functions.append(self._function_info(node))
-            elif isinstance(node, ast.ClassDef):
-                methods = sum(1 for item in node.body if isinstance(item, _FUNCTION_NODES))
-                metrics.classes.append(
-                    ClassInfo(node.name, node.lineno, node.end_lineno or node.lineno, methods))
-            elif isinstance(node, ast.Import):
-                metrics.imports.extend(alias.name for alias in node.names)
-            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                metrics.imports.append(node.module)
+            self._collect(metrics, node)
         return metrics
+
+    def _collect(self, metrics: SourceMetrics, node: ast.AST) -> None:
+        """Bir ast düğümünden işlev / sınıf / içe aktarma ölçümünü `metrics`e ekler."""
+        if isinstance(node, _FUNCTION_NODES):
+            metrics.functions.append(self._function_info(node))
+        elif isinstance(node, ast.ClassDef):
+            methods = sum(1 for item in node.body if isinstance(item, _FUNCTION_NODES))
+            metrics.classes.append(ClassInfo(node.name, node.lineno, node.end_lineno or node.lineno, methods))
+        else:
+            metrics.imports.extend(_import_names(node))
 
     @staticmethod
     def _function_info(node: FunctionNode) -> FunctionInfo:
@@ -274,25 +310,16 @@ class PythonLanguage(LanguageSupport):
 
     def stripped(self, text: str) -> Optional[StrippedSource]:
         """`tokenize` ile: COMMENT jetonları (no_comments) ve COMMENT + STRING jetonları (clean) boşlukla değişir."""
-        line_starts = [0]
-        for match in re.finditer('\n', text):
-            line_starts.append(match.end())
+        line_starts = [0] + [match.end() for match in re.finditer('\n', text)]
         no_comments = list(text)
         clean = list(text)
-
-        def blank(span_start, span_end, targets):
-            for index in range(span_start, span_end):
-                if text[index] != '\n':
-                    for target in targets:
-                        target[index] = ' '
-
         try:
             for token in tokenize.generate_tokens(io.StringIO(text).readline):
                 if token.type not in (tokenize.COMMENT, tokenize.STRING):
                     continue
                 start = line_starts[token.start[0] - 1] + token.start[1]
                 end = line_starts[token.end[0] - 1] + token.end[1]
-                blank(start, end, (no_comments, clean) if token.type == tokenize.COMMENT else (clean,))
+                _blank_span(text, start, end, (no_comments, clean) if token.type == tokenize.COMMENT else (clean,))
         except (tokenize.TokenError, IndentationError, SyntaxError, IndexError):
             return None                                              # bozuk dosya: çağıran ham metinle devam eder
         return StrippedSource(''.join(no_comments), ''.join(clean))

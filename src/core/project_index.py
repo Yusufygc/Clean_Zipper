@@ -94,7 +94,6 @@ class ProjectIndex:
 
     def _scan_directory(self, directory: Path, rel: str, depth: int,
                         excluded: FrozenSet[str], stack: list):
-        file_count = dir_count = 0
         try:
             with os.scandir(directory) as it:
                 entries = sorted(it, key=lambda e: e.name)
@@ -102,49 +101,63 @@ class ProjectIndex:
             self.errors.append((directory, str(e)))
             return
         sibling_names = [e.name for e in entries]
+        file_count = dir_count = 0
 
         for entry in entries:
-            try:
-                is_symlink = entry.is_symlink()
-                is_dir = entry.is_dir(follow_symlinks=False)
-            except OSError as e:
-                self.errors.append((Path(entry.path), str(e)))
-                continue
-
-            if is_dir:
+            kind = self._entry_kind(entry)
+            if kind == 'dir':
                 dir_count += 1
-                if is_excluded_dir(entry.path, entry.name, sibling_names, excluded):
-                    continue
-                if self._gitignore is not None and self._gitignore.is_ignored(entry.path, is_dir=True):
-                    self.gitignored['dirs'] += 1
-                    continue
-                child_rel = f"{rel}/{entry.name}" if rel else entry.name
-                stack.append((Path(entry.path), child_rel, depth + 1))
-                continue
-
-            file_count += 1
-            if is_symlink:
-                continue
-            if self._gitignore is not None and self._gitignore.is_ignored(entry.path):
-                self.gitignored['files'] += 1
-                continue
-            try:
-                st = entry.stat(follow_symlinks=False)
-            except OSError as e:
-                self.errors.append((Path(entry.path), str(e)))
-                continue
-            ext = os.path.splitext(entry.name)[1].lower()
-            self.files.append(FileEntry(
-                path=Path(entry.path),
-                rel=f"{rel}/{entry.name}" if rel else entry.name,
-                size=st.st_size, mtime=st.st_mtime, ext=ext,
-            ))
-            self.total_size += st.st_size
-            self.ext_counts[ext] = self.ext_counts.get(ext, 0) + 1
-            self.ext_sizes[ext] = self.ext_sizes.get(ext, 0) + st.st_size
+                child = self._subdirectory(entry, rel, depth, excluded, sibling_names)
+                if child is not None:
+                    stack.append(child)
+            elif kind is not None:
+                file_count += 1
+                if kind == 'file':
+                    self._add_file(entry, rel)
 
         if depth > 0:
             self.dirs.append(DirEntry(directory, rel, depth, file_count, dir_count))
+
+    def _entry_kind(self, entry: 'os.DirEntry') -> Optional[str]:
+        """'dir' | 'symlink' | 'file'; okunamayan girdi hata listesine yazılır ve None döner."""
+        try:
+            is_symlink = entry.is_symlink()
+            is_dir = entry.is_dir(follow_symlinks=False)
+        except OSError as e:
+            self.errors.append((Path(entry.path), str(e)))
+            return None
+        if is_dir:
+            return 'dir'
+        return 'symlink' if is_symlink else 'file'
+
+    def _subdirectory(self, entry: 'os.DirEntry', rel: str, depth: int, excluded: FrozenSet[str],
+                      sibling_names: List[str]) -> Optional[Tuple[Path, str, int]]:
+        """Alt klasör dışlanmamış ve .gitignore'da değilse taranacaklar yığınına eklenecek (yol, rel, derinlik) girdisi."""
+        if is_excluded_dir(entry.path, entry.name, sibling_names, excluded):
+            return None
+        if self._gitignore is not None and self._gitignore.is_ignored(entry.path, is_dir=True):
+            self.gitignored['dirs'] += 1
+            return None
+        return Path(entry.path), (f"{rel}/{entry.name}" if rel else entry.name), depth + 1
+
+    def _add_file(self, entry: 'os.DirEntry', rel: str):
+        if self._gitignore is not None and self._gitignore.is_ignored(entry.path):
+            self.gitignored['files'] += 1
+            return
+        try:
+            st = entry.stat(follow_symlinks=False)
+        except OSError as e:
+            self.errors.append((Path(entry.path), str(e)))
+            return
+        ext = os.path.splitext(entry.name)[1].lower()
+        self.files.append(FileEntry(
+            path=Path(entry.path),
+            rel=f"{rel}/{entry.name}" if rel else entry.name,
+            size=st.st_size, mtime=st.st_mtime, ext=ext,
+        ))
+        self.total_size += st.st_size
+        self.ext_counts[ext] = self.ext_counts.get(ext, 0) + 1
+        self.ext_sizes[ext] = self.ext_sizes.get(ext, 0) + st.st_size
 
     # ------------------------------------------------------------------ #
     #  Sorgular                                                          #

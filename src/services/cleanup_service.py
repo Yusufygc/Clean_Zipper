@@ -68,27 +68,33 @@ class CleanupService:
 
         items: List[CleanupItem] = []
         for root, dirs, files in os.walk(project_path):
-            kept_dirs = []
-            for d in dirs:
-                full = Path(root) / d
-                if d in dir_map and not full.is_symlink():
-                    size, count = self._dir_stats(full)
-                    items.append(CleanupItem(full, size, dir_map[d], is_dir=True, file_count=count))
-                elif d not in EXCLUDED_DIRS:
-                    kept_dirs.append(d)
-            dirs[:] = kept_dirs
-
-            for file in files:
-                fp = Path(root) / file
-                category = ext_map.get(fp.suffix.lower())
-                if category is None or fp.is_symlink():
-                    continue
-                try:
-                    items.append(CleanupItem(fp, fp.stat().st_size, category))
-                except OSError as e:
-                    logger.debug("Dosya boyutu okunamadı: %s (%s)", fp, e)
-                    continue
+            dirs[:] = self._collect_dirs(Path(root), dirs, dir_map, items)
+            self._collect_files(Path(root), files, ext_map, items)
         return items
+
+    def _collect_dirs(self, root: Path, dirs: List[str], dir_map: Dict[str, str], items: List[CleanupItem]) -> List[str]:
+        """Temizlenecek klasörleri `items`e ekler; `os.walk`ın içine gireceği klasörleri döndürür."""
+        kept = []
+        for name in dirs:
+            full = root / name
+            if name in dir_map and not full.is_symlink():
+                size, count = self._dir_stats(full)
+                items.append(CleanupItem(full, size, dir_map[name], is_dir=True, file_count=count))
+            elif name not in EXCLUDED_DIRS:
+                kept.append(name)
+        return kept
+
+    @staticmethod
+    def _collect_files(root: Path, files: List[str], ext_map: Dict[str, str], items: List[CleanupItem]) -> None:
+        for name in files:
+            path = root / name
+            category = ext_map.get(path.suffix.lower())
+            if category is None or path.is_symlink():
+                continue
+            try:
+                items.append(CleanupItem(path, path.stat().st_size, category))
+            except OSError as e:
+                logger.debug("Dosya boyutu okunamadı: %s (%s)", path, e)
 
     def preview_cleanup(self, project_path: Path, categories: Optional[List[str]] = None) -> Dict:
         items = self.scan(project_path, categories)
