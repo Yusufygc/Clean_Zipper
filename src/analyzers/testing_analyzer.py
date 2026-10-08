@@ -96,7 +96,7 @@ class TestingAnalyzer(BaseAnalyzer):
         sleeps = testing_patterns.find_sleeps(metrics.language, stripped.clean)
         if sleeps:
             scan.sleeps[entry.rel] = (metrics.language, sleeps)
-        networks = testing_patterns.find_network_calls(metrics.language, stripped.no_comments)
+        networks = testing_patterns.find_network_calls(metrics.language, stripped.no_comments, stripped.clean)
         if networks:
             scan.networks[entry.rel] = (metrics.language, networks)
 

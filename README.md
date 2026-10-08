@@ -147,6 +147,10 @@ gitclean-archiver-pro/
 │   │   ├── archive_service.py    #    Arşivleme (zip/kopyalama)
 │   │   ├── cleanup_service.py    #    Temizlik servisi
 │   │   ├── backup_service.py     #    Yedekleme servisi
+│   │   ├── report_service.py     #    HTML raporu (kategori puanları dahil)
+│   │   ├── audit_report_service.py # V2 formatında Markdown denetim raporu
+│   │   ├── audit_catalog.py      #    Rapor sabitleri: etiket, efor, etki tabloları
+│   │   ├── audit_evidence.py     #    Bulgu konumu ve kanıt (kod parçası)
 │   │   └── project_service.py    #    Ana servis (Facade)
 │   │
 │   ├── ui/                       # 🎨 Kullanıcı arayüzü
@@ -636,6 +640,25 @@ Eşleşme ada bakar (`foo_bar.py` ↔ `test_foo_bar.py`, `FooBarTests.cs`); fark
 - `hotspot` ve `co-change` bilgi amaçlı **`git`** kategorisindedir ve puana girmez (`HealthChecker.WEIGHTS` içinde yoktur).
 - Güven = ortak commit sayısı / iki dosyadan çok değişenin commit sayısı. Bir dosya ile kendi testi (`foo.py` / `test_foo.py`) birlikte değişir; bu beklenen durum olduğu için çift sayılmaz.
 - 30'dan fazla dosya içeren commit'ler (toplu biçimlendirme, taşıma) ve merge commit'leri her iki analizde de atlanır; geçmişi 20 commit'ten kısa depolarda sıcak nokta / birlikte değişim üretilmez.
+
+### Denetim Raporu (V2 Formatı)
+
+`ProjectService.export_audit_report(yol)` tam teşhisi çalıştırır ve `V2-GenelSablon.md` yapısında bir **Markdown** raporu yazar (`AuditReportService`, `IReporter`). Bölümler sabittir:
+
+| Bölüm | İçerik |
+|-------|--------|
+| **A. Yönetici özeti** | Genel not, öncelik sayıları (🔴 KRİTİK, 🟠 YÜKSEK, 🟡 ORTA, 🟢 DÜŞÜK), kategori puanları ve `# \| Bulgu \| Öncelik \| Boyut \| Efor \| Etki` tablosu (en fazla 15 grup) |
+| **B. İyi pratikler** | `hygiene-summary.present` maddeleri, test özeti ve "olumsuz bulgu yok" tespitleri (yalnızca ilgili analizör çalışmışsa: döngü yok, klon yok, yüksek güvenlik bulgusu yok, bağımlılıklar sabit, hata yutulmuyor) |
+| **C. İncelenmedi** | Analize girmeyen dosyalar (çok büyük, okunamayan, minify, ayrıştırılamayan), hata veren analizörler, `.gitignore` ile dışarıda kalanlar, yaklaşık (sözcük tabanlı) diller, git bulgusu yokluğu ve aracın kapsam dışı konuları (CVE, lisans uyumu, çalışma zamanı performansı) |
+| **D. Ayrıntılı bulgular** | Dosya / Konum, Kategori, Sorun, Etki, Kanıt (ilk 3 kaynak satırı), Çözüm, Efor, Bağımlılık; öncelik sırasıyla, kuraldan en fazla 3, toplam en fazla 25 |
+| **E. Aksiyon planı** | KRİTİK -> 24 saat içinde, YÜKSEK -> bu hafta, ORTA -> bu ay; `Eylem \| Beklenen sonuç \| Bağımlılık \| Risk` tabloları; DÜŞÜK bulgular "fırsat oldukça" |
+| **F. Sonraki adım** | En yüksek öncelikli grup için bir soru |
+
+- Bulgular `kural + öncelik` ile gruplanır (910 benzer işlev bulgusu raporu boğmaz); tabloda grup başına sayı görünür.
+- **Boyut** kategoriden türetilir (Kod Kalitesi, Mimari, Güvenlik, Test, Production). **Efor** (S/M/L/XL) kural tablosundan gelir ve bulgu sayısı arttıkça bir-iki basamak yükselir (`audit_catalog.effort_of`); bu bir tahmindir.
+- **Sır güvenliği:** `hardcoded-secret`, `provider-secret`, `secret-in-history` bulgularında, `kind=sensitive_file` bulgularında ve `.env`, `*.pem`, `*.key`, `id_rsa` gibi dosyalarda kaynak satırı rapora **asla yazılmaz**.
+- Tablo hücreleri ve satır içi metinler Markdown'ı bozmayacak biçimde kaçışlanır (`|`, satır sonu, ters tırnak); kanıt bloğunun çiti içindeki en uzun ``` dizisinden uzundur.
+- HTML rapor (`export_project_report`) artık kategori puanlarını (güvenlik, mimari, test, hijyen ...) en düşükten başlayarak kartlar olarak gösterir.
 
 ### `.gitignore` ve Git Duyarlılığı
 

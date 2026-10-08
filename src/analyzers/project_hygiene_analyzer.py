@@ -1,7 +1,7 @@
 import json
 import logging
 import posixpath
-from typing import Dict, List, Optional, Set
+from typing import List, Set
 
 from src.core.base_analyzer import BaseAnalyzer
 from src.core.path_rules import is_test_path

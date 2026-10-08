@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import datetime
 from src.core.interfaces import IReporter
 from src.models.analysis_models import ProjectAnalysis, Severity, HealthStatus
+from src.services.audit_catalog import CATEGORY_NAMES
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class ReportService(IReporter):
         {self._build_header(analysis)}
         {self._build_score_section(analysis)}
         {self._build_stats_grid(analysis)}
+        {self._build_category_section(analysis)}
         {self._build_critical_issues_section(analysis)}
         {self._build_other_issues_section(analysis)}
     </div>
@@ -180,6 +182,18 @@ class ReportService(IReporter):
                 <div class="card-value" style="color: #DC2626;">{critical_count}</div>
             </div>
         </div>"""
+
+    def _build_category_section(self, analysis: ProjectAnalysis) -> str:
+        """Kategori puanlarını (güvenlik, mimari, test, hijyen ...) en düşükten başlayarak kartlar olarak gösterir."""
+        if not analysis.category_scores:
+            return ''
+        cards = ''.join(
+            f"""<div class="card">
+                <div class="card-title">{_esc(CATEGORY_NAMES.get(category, category))}</div>
+                <div class="card-value" style="color: {self._get_score_color(score)};">{score:.0f}</div>
+            </div>"""
+            for category, score in sorted(analysis.category_scores.items(), key=lambda item: item[1]))
+        return f'<h3 class="section-title">📊 KATEGORİ PUANLARI</h3>\n<div class="grid">{cards}</div>'
 
     def _build_issue_card(self, issue) -> str:
         """Tek bir sorunun HTML kartını oluşturur."""

@@ -64,17 +64,23 @@ def test_count_tests_per_language():
     assert tp.count_tests("python", "", "", python_test_functions=7) == 7
 
 
+def test_network_call_inside_a_string_literal_is_not_a_call():
+    source = "DATA = \"requests.get('https://api.real.io/x')\"\n" + "requests.get('https://api.real.io/y')\n"
+    py = stripped("python", source)
+    assert tp.find_network_calls("python", py.no_comments, py.clean) == [2]
+
+
 def test_skipped_sleep_and_network_detection():
     py = stripped("python", "@pytest.mark.skip\ndef t(): pass\ntime.sleep(1)\nrequests.get('http://localhost:8000')\n"
                             "requests.get('https://example.org/x')\nrequests.get('https://api.real.io/x')\n")
     assert tp.find_skipped("python", py.clean) == 1
     assert tp.find_sleeps("python", py.clean) == [3]
-    assert tp.find_network_calls("python", py.no_comments) == [6]
+    assert tp.find_network_calls("python", py.no_comments, py.clean) == [6]
     js = stripped("javascript", "it.skip('a', f);\nxit('b', f);\nawait sleep(100);\nfetch('https://api.real.io');\n"
                                "fetch('http://localhost:3000');\n")
     assert tp.find_skipped("javascript", js.clean) == 2
     assert tp.find_sleeps("javascript", js.clean) == [3]
-    assert tp.find_network_calls("javascript", js.no_comments) == [4]
+    assert tp.find_network_calls("javascript", js.no_comments, js.clean) == [4]
 
 
 # ---- TestingAnalyzer -----------------------------------------------------------------------------------

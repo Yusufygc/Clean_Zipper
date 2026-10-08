@@ -71,6 +71,10 @@ def find_sleeps(language: str, clean: str) -> List[int]:
     return _lines(pattern, clean) if pattern is not None else []
 
 
-def find_network_calls(language: str, no_comments: str) -> List[int]:
+def find_network_calls(language: str, no_comments: str, clean: str) -> List[int]:
+    """Gerçek ağ çağrısı satırları; çağrının kendisi bir string içinde (örn. test verisi) duruyorsa sayılmaz."""
     pattern = _NETWORK_PATTERNS.get(language)
-    return _lines(pattern, no_comments) if pattern is not None else []
+    if pattern is None:
+        return []
+    return sorted({no_comments.count('\n', 0, m.start()) + 1 for m in pattern.finditer(no_comments)
+                   if clean[m.start()] == no_comments[m.start()]})

@@ -1,6 +1,5 @@
 import re
 from bisect import bisect_right
-from pathlib import Path
 from typing import List, Optional
 from src.core.base_analyzer import BaseAnalyzer
 from src.core.project_index import ProjectIndex

@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 from src.core.base_analyzer import BaseAnalyzer
 from src.core.project_index import ProjectIndex
 from src.core.registry import register_analyzer

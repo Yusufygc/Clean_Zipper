@@ -56,3 +56,11 @@ class ProjectService:
         from src.services.report_service import ReportService
         reporter = ReportService()
         return reporter.export_report(analysis, output_path)
+
+    def export_audit_report(self, output_path: Path) -> bool:
+        """V2 denetim şablonunda (A-F bölümleri) Markdown raporu yazar."""
+        if not self._current_project:
+            raise ProjectNotSelectedError()
+        from src.services.audit_report_service import AuditReportService
+        analysis = self.doctor.diagnose(self._current_project)
+        return AuditReportService().export_report(analysis, output_path)
