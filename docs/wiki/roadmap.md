@@ -10,8 +10,8 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | 4 | Tarama 9 kez tekrarlanıyor, `rglob` dışlamaları yok sayıyor | 🟠 | Tamamlandı (2026-10-08) |
 | 5 | Analizör kaydı UI içinde, arayüzler yarım uygulanmış | 🟠 | Tamamlandı (2026-10-08) |
 | 6 | Sadece Python ve `requirements.txt` destekleniyor | 🟠 | Tamamlandı (2026-10-08) |
-| 7 | Hatalar sessizce yutuluyor, logger yok | 🟠 | Kısmen (`ProjectDoctor` loglıyor ve `failed_analyzers` tutuyor; analizörlerin içindeki `except` blokları bekliyor) |
-| 8 | Test yok | 🟠 | Başladı (151 test) |
+| 7 | Hatalar sessizce yutuluyor, logger yok | 🟠 | Tamamlandı (2026-10-08) |
+| 8 | Test yok | 🟠 | Başladı (183 test) |
 | 9 | Çift dosya bulucu tüm dosyayı belleğe okuyor | 🟠 | Tamamlandı (2026-10-08, parçalı hash) |
 | 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Kısmen (`EXCLUDED_DIRS`: `CleanupService` ve `BaseAnalyzer` bağlı, `ArchiveService`/`BackupService` bekliyor) |
 | 11 | Arşiv profil regex'leri iç içe klasörleri kaçırıyor | 🟡 | Bekliyor |
@@ -27,9 +27,10 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 
 ## Açık notlar
 - Analiz `.gitignore`'u dikkate almıyor. `.env` dosyası `.gitignore`'da olsa bile KRİTİK bulgu üretiyor (yanlış pozitif). Ayrı karar gerektirir.
-- Analizör içinde kalan geniş `except` blokları (Bulgu 7) bekliyor.
 - Analiz iptal edilemiyor (UI'da iptal düğmesi yok).
 - `read_text` 2 MB üstü dosyaları atlıyor: büyük kaynak dosyalar karmaşıklık ve sızıntı taramasına girmez.
 - Java/Go yalnızca örnek kodla doğrulandı (diskte gerçek kod yoktu). Kotlin/PHP/Swift: yalnızca yeni bir `LanguageSpec` gerekir.
 - Donmuş exe içinde analiz çalıştırılamadı (Windows Uygulama Denetimi imzasız exe'yi engelliyor); paket içeriği doğrulandı.
-- Sıradaki adaylar: Bulgu 7 (geniş `except` blokları), 11 (arşiv profil regex'leri), 12 (params/derinlik/fonksiyon uzunluğu eşikleri), `.gitignore`'a duyarlı analiz.
+- UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı.
+- `pathspec` `'gitwildmatch'` adı bu sürümde kullanımdan kalkmış (DeprecationWarning); `'gitignore'` fabrikasına geçiş Bulgu 13 ile birlikte (`requirements.txt` alt sınırı yükselmeli).
+- Sıradaki adaylar: 11 (arşiv profil regex'leri), 12 (params/derinlik/fonksiyon uzunluğu eşikleri), `.gitignore`'a duyarlı analiz.

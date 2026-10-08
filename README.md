@@ -501,6 +501,15 @@ class MyCustomAnalyzer(BaseAnalyzer):
 Başka bir sınıf adıyla çakışma `ValueError` verir. Bir analizörü kapatmak için `ProjectService(disabled_analyzers=["MyCustomAnalyzer"])`.
 Not: yeni bir kategori puanlanmaz; puanlanması için `HealthChecker.WEIGHTS` güncellenmelidir.
 
+### Loglama ve Hata Yönetimi
+
+`main.py` açılışta `setup_logging()` çağırır. Loglar `~/.gitclean/logs/gitclean.log` dosyasına yazılır (1 MB × 3 dönen dosya). Seviye `GITCLEAN_LOG_LEVEL` ortam değişkeniyle ayarlanır (varsayılan `INFO`; `DEBUG` okunamayan dosya ayrıntılarını da yazar). Konsolsuz (windowed) exe'de yakalanmayan istisnaların traceback'i de bu dosyaya düşer.
+
+- Arşiv, kopya ve yedek işlemleri tek dosya hatasında durmaz: sonuç sözlüğünde `failed_files` (yol, hata) dolar, `complete` `False` olur, `success` yine `True` kalır. Ölümcül hatada (disk dolu vb.) yarım çıktı silinir, `success=False` ve `error` döner.
+- `.gitignore` okunamıyorsa arşiv/kopya **reddedilir** (gizli dosyaların sızmaması için); analiz etkilenmez.
+- Analize girmeyen dosyalar sessiz kalmaz: `quick_scan` çıktısındaki `skipped_files` neden başına sayı verir (`too_large`: 2 MB üstü, `unreadable`, `parse_error`, `minified`, `unreadable_dir`). Çöken analizör `failed_analyzers` listesine yazılır ve skordan çıkarılır.
+- Proje seçilmeden işlem istenirse `ProjectNotSelectedError` (`ValueError` alt sınıfı) fırlatılır.
+
 ### Test Çalıştırma
 
 ```bash

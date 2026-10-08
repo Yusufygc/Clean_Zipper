@@ -85,6 +85,8 @@ class ProjectAnalysis:
     # dil kimliği -> {files, total_lines, code_lines, comment_lines, blank_lines}
     language_stats: Dict[str, Dict[str, int]] = field(default_factory=dict)
     failed_analyzers: List[str] = field(default_factory=list)
+    # neden -> dosya sayısı ('too_large', 'unreadable', 'parse_error', 'unreadable_dir'): analize girmeyenler
+    skipped_files: Dict[str, int] = field(default_factory=dict)
     
     @property
     def all_findings(self) -> List[AnalysisResult]:

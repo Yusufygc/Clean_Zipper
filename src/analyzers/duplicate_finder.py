@@ -1,9 +1,12 @@
+import logging
 from collections import defaultdict
 from typing import Dict, List
 from src.core.base_analyzer import BaseAnalyzer
 from src.core.project_index import FileEntry, ProjectIndex
 from src.core.registry import register_analyzer
 from src.models.analysis_models import AnalysisResult, Severity
+
+logger = logging.getLogger(__name__)
 
 
 @register_analyzer
@@ -55,6 +58,8 @@ class DuplicateFinder(BaseAnalyzer):
         for entry in entries:
             try:
                 buckets[index.hash_file(entry, partial=partial)].append(entry)
-            except OSError:
+            except OSError as e:
+                logger.debug("Özet hesaplanamadı: %s (%s)", entry.rel, e)
+                index.mark_skipped(entry, 'unreadable')
                 continue
         return [b for b in buckets.values() if len(b) > 1]

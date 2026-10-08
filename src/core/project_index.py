@@ -54,6 +54,8 @@ class ProjectIndex:
         self._binary: Dict[str, bool] = {}
         self._text_cache: Dict[str, str] = {}
         self._text_cache_chars = 0
+        # rel -> neden ('too_large', 'unreadable', 'parse_error'): analize giremeyen dosyalar
+        self.skipped: Dict[str, str] = {}
         self._memo: Dict[str, Dict[str, Any]] = {}
 
     @classmethod
@@ -168,19 +170,26 @@ class ProjectIndex:
         self._binary[entry.rel] = result
         return result
 
+    def mark_skipped(self, entry: FileEntry, reason: str):
+        """Analize giremeyen dosyayı kaydeder (ilk neden korunur); sonuçta 'atlananlar' olarak raporlanır."""
+        self.skipped.setdefault(entry.rel, reason)
+
     def read_text(self, entry: FileEntry, max_bytes: int = DEFAULT_MAX_TEXT_BYTES) -> Optional[str]:
         """Metin dosyasının içeriği. İkilik, çok büyük veya okunamayan dosyada None."""
         cached = self._text_cache.get(entry.rel)
         if cached is not None:
             return cached
         if entry.size > max_bytes:
+            self.mark_skipped(entry, 'too_large')
             return None
         try:
             with open(entry.path, 'rb') as f:
                 data = f.read(max_bytes + 1)
         except OSError:
+            self.mark_skipped(entry, 'unreadable')
             return None
         if len(data) > max_bytes:
+            self.mark_skipped(entry, 'too_large')
             return None
         binary = b'\x00' in data[:BINARY_SNIFF_BYTES]
         self._binary[entry.rel] = binary

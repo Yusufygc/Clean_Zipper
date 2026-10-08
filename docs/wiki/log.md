@@ -1,5 +1,16 @@
 # Değişiklik Günlüğü
 
+## [2026-10-08] [REVIEW] | Bulgu 7: hata yönetimi ve loglama
+- `src/utils/logging_config.py`: `setup_logging()` (dönen dosya `~/.gitclean/logs/gitclean.log`, `GITCLEAN_LOG_LEVEL`, idempotent) ve `sys.excepthook` / `threading.excepthook` ile yakalanmayan istisnaların kaydı. `main.py` çağırıyor. Gerçek bir alt süreçte doğrulandı: yakalanmayan `RuntimeError` log dosyasında traceback ile görünüyor.
+- `src/core/errors.py`: `GitCleanError`, `ProjectNotSelectedError(ValueError)`; `ProjectService` düz `ValueError` yerine bunu fırlatıyor.
+- `GitignoreParser`: `utf-8-sig` + `errors='replace'` (BOM'lu / cp1254 `.gitignore` artık okunuyor); `OSError` → `load_error`. `ArchiveService` `load_error` doluysa arşivi reddediyor (gizli dosya sızıntısı önlemi).
+- `ArchiveService` (ortak `_collect_files` ile iki kopya döngü birleşti), `BackupService`: dosya başına hata `failed_files`'a yazılıp devam ediliyor, `complete` bayrağı; ölümcül hatada yarım zip siliniyor ve `logger.exception`. Eski bir hata da düzeldi: kaynak dışına işaret eden symlink `relative_to` ile `ValueError` fırlatıyordu.
+- `ProjectIndex.skipped` + `mark_skipped`: `too_large`, `unreadable`, `parse_error`, `minified`; `ProjectAnalysis.skipped_files` (okunamayan klasörler `unreadable_dir`) ve `quick_scan['skipped_files']`. `DuplicateFinder` ve `CleanupService` hataları loglanıyor.
+- Gerileme koruması: `test_skipped_and_hygiene.py` içindeki AST testi `src/` (UI hariç) altında çıplak `except:` ve loglamayan/yeniden fırlatmayan `except Exception` bloklarını yasaklıyor (dedektörün sessiz bloğu yakaladığı ayrıca doğrulandı).
+- Konsol doğrulaması: Windows'ta `CreateFileW` paylaşım modu 0 ile gerçek dosya kilidi → `create_zip` `success=True`, `complete=False`, `failed_files=[locked.txt]`, log satırı yazıldı. 2,4 MB dosya `skipped_files={'too_large': 1}`; bu repo için `{}`.
+- Testler: `test_logging_config.py` (9), `test_archive_service.py` (13), `test_skipped_and_hygiene.py` (10); toplam 183 test.
+- Doğrulanamadı: UI'nın `complete=False` durumunu göstermesi (UI yeniden yazılacak; not edildi). Bkz. [[roadmap]].
+
 ## [2026-10-08] [REVIEW] | Bulgu 6 tamamlandı: ekosistemler, dil istatistikleri, bağlamsal dışlama
 - `src/languages/ecosystems.py`: Python (`requirements.txt`), npm (`package.json` `dependencies`, `scripts` içindeki CLI kullanımı sayılır), Go (`go.mod`, `// indirect` atlanır), Rust (`Cargo.toml`, `use` ve `crate::` tam yol kullanımı). Manifestin klasör alt ağacı kapsamdır. `DeadWeightAnalyzer` buna bağlandı; "requirements.txt eksik" bildirimi artık yalnızca Python kaynağı olup hiçbir Python manifesti (`requirements.txt`, `pyproject.toml`, `Pipfile`, `setup.py`, `setup.cfg`) olmayan projelerde.
 - Davranış değişikliği: Python araç paketleri (pytest, pyinstaller, black, ...) artık "kullanılmayan" diye raporlanmıyor.

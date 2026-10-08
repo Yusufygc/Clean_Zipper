@@ -6,8 +6,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QPalette, QColor, QIcon
 from src.ui.main_window import GitCleanArchiverPro
+from src.utils.logging_config import setup_logging
 
 def main():
+    setup_logging()
     app = QApplication(sys.argv)
     
     # 1. Temel stili belirle

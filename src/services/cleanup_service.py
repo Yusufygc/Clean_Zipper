@@ -1,3 +1,4 @@
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,6 +7,8 @@ from typing import Callable, Dict, List, Optional
 from send2trash import send2trash
 
 from src.core.constants import EXCLUDED_DIRS
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -82,7 +85,8 @@ class CleanupService:
                     continue
                 try:
                     items.append(CleanupItem(fp, fp.stat().st_size, category))
-                except OSError:
+                except OSError as e:
+                    logger.debug("Dosya boyutu okunamadı: %s (%s)", fp, e)
                     continue
         return items
 
@@ -111,6 +115,7 @@ class CleanupService:
             try:
                 self._trash(os.path.abspath(item.path))
             except Exception as e:
+                logger.warning("Geri Dönüşüm Kutusu'na taşınamadı: %s (%s)", item.path, e)
                 result['failed'].append((str(item.path), str(e)))
                 continue
             result['cleaned_files'] += item.file_count
@@ -126,6 +131,7 @@ class CleanupService:
                 try:
                     size += (Path(root) / file).stat().st_size
                     count += 1
-                except OSError:
+                except OSError as e:
+                    logger.debug("Dosya boyutu okunamadı: %s (%s)", file, e)
                     continue
         return size, count

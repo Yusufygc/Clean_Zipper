@@ -73,11 +73,15 @@ def parse_file(index: ProjectIndex, entry: FileEntry,
 def _analyze(index: ProjectIndex, entry: FileEntry, language: LanguageSupport,
              registry: LanguageRegistry) -> Optional[SourceMetrics]:
     text = index.read_text(entry)
-    if text is None or looks_minified(text):
+    if text is None:
+        return None                                  # neden (büyük/okunamayan) read_text içinde işaretlendi
+    if looks_minified(text):
+        index.mark_skipped(entry, 'minified')
         return None
     language = registry.get(language.refine(text)) or language
     try:
         return language.analyze(text)
     except Exception:
         logger.warning("Dosya çözümlenemedi, atlandı: %s (%s)", entry.rel, language.id, exc_info=True)
+        index.mark_skipped(entry, 'parse_error')
         return None

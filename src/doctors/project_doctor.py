@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 from datetime import datetime
@@ -46,6 +47,7 @@ class ProjectDoctor:
             logger.warning("Okunamayan yol atlandı: %s (%s)", path, error)
 
         all_results, ran_categories = self._run_analyzers(index, analysis, report)
+        self._collect_skipped(index, analysis)
 
         for result in all_results:
             if result.severity in [Severity.CRITICAL, Severity.HIGH]:
@@ -62,6 +64,16 @@ class ProjectDoctor:
         analysis.health_score = self._health_checker.calculate_score(analysis)
         analysis.health_status = self._health_checker.get_health_status(analysis.health_score)
         return analysis
+
+    @staticmethod
+    def _collect_skipped(index: ProjectIndex, analysis: ProjectAnalysis):
+        """Analizörler çalıştıktan sonra: hangi dosya/klasörler neden dışarıda kaldı."""
+        counts = Counter(index.skipped.values())
+        if index.errors:
+            counts['unreadable_dir'] = len(index.errors)
+        analysis.skipped_files = dict(counts)
+        if counts:
+            logger.info("Analize girmeyen öğeler: %s", dict(counts))
 
     def _run_analyzers(self, index: ProjectIndex, analysis: ProjectAnalysis,
                        report: ProgressCallback) -> Tuple[List[AnalysisResult], Set[str]]:
@@ -99,6 +111,7 @@ class ProjectDoctor:
             'potential_savings_mb': analysis.potential_savings_mb,
             'file_type_distribution': analysis.file_type_distribution,
             'language_stats': analysis.language_stats,
+            'skipped_files': analysis.skipped_files,
             'top_recommendations': self._recommendation_engine.get_top_recommendations(analysis),
             'project_path': str(project_path),
             'all_issues': analysis.issues + analysis.warnings # Sadece gerçek hatalar ve uyarılar listeleniyor
