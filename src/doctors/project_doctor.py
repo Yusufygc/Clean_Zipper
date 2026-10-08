@@ -19,7 +19,8 @@ ANALYZER_PROGRESS_SHARE = 85
 
 
 class ProjectDoctor:
-    def __init__(self, analyzers: Optional[Iterable[IAnalyzer]] = None):
+    def __init__(self, analyzers: Optional[Iterable[IAnalyzer]] = None, respect_gitignore: bool = True):
+        self.respect_gitignore = respect_gitignore
         self._analyzers: List[IAnalyzer] = []
         self._health_checker = HealthChecker()
         self._recommendation_engine = RecommendationEngine()
@@ -41,8 +42,11 @@ class ProjectDoctor:
         report(0, "Dosyalar taranıyor…")
         index = ProjectIndex.build(
             project_path,
-            progress=lambda n: report(INDEX_PROGRESS_SHARE // 2, f"Dosyalar taranıyor… ({n} dosya)")
+            progress=lambda n: report(INDEX_PROGRESS_SHARE // 2, f"Dosyalar taranıyor… ({n} dosya)"),
+            respect_gitignore=self.respect_gitignore,
         )
+        analysis.gitignore_applied = index.gitignore_applied
+        analysis.ignored_by_gitignore = dict(index.gitignored)
         for path, error in index.errors:
             logger.warning("Okunamayan yol atlandı: %s (%s)", path, error)
 
@@ -112,6 +116,8 @@ class ProjectDoctor:
             'file_type_distribution': analysis.file_type_distribution,
             'language_stats': analysis.language_stats,
             'skipped_files': analysis.skipped_files,
+            'gitignore_applied': analysis.gitignore_applied,
+            'ignored_by_gitignore': analysis.ignored_by_gitignore,
             'top_recommendations': self._recommendation_engine.get_top_recommendations(analysis),
             'project_path': str(project_path),
             'all_issues': analysis.issues + analysis.warnings # Sadece gerçek hatalar ve uyarılar listeleniyor

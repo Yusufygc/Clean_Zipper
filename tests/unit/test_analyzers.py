@@ -207,3 +207,119 @@ def test_language_stats_aggregates_per_language_sorted_by_code_lines(tmp_path):
     assert by_lang["java"]["approximate"] is True and by_lang["python"]["approximate"] is False
     codes = [r.metadata["code_lines"] for r in results]
     assert codes == sorted(codes, reverse=True)
+
+
+# ---- Güvenlik: .gitignore ve git izleme farkındalığı (gerçek git depolarıyla) --------------------
+
+import shutil
+import subprocess
+
+needs_git = __import__("pytest").mark.skipif(shutil.which("git") is None, reason="git kurulu değil")
+
+
+def git(repo, *args):
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+                   cwd=repo, check=True, capture_output=True)
+
+
+def make_repo(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git(repo, "init", "-q")
+    write(repo / "app.py", "x = 1\n")
+    return repo
+
+
+def commit_all(repo, message="c"):
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", message)
+
+
+def sensitive_findings(root, **build_kwargs):
+    results = SecurityLeakAnalyzer().analyze(ProjectIndex.build(root, **build_kwargs))
+    return [r for r in results if r.metadata.get("kind") == "sensitive_file"]
+
+
+@needs_git
+def test_gitignored_untracked_env_is_correct_practice_and_not_reported(tmp_path):
+    repo = make_repo(tmp_path)
+    write(repo / ".gitignore", ".env\n")
+    write(repo / ".env", "SECRET=1")
+    commit_all(repo)
+    assert sensitive_findings(repo) == []
+    assert SecurityLeakAnalyzer().analyze(ProjectIndex.build(repo)) == []
+
+
+@needs_git
+def test_untracked_env_missing_from_gitignore_is_flagged_as_risk(tmp_path):
+    repo = make_repo(tmp_path)
+    commit_all(repo)
+    write(repo / ".env", "SECRET=1")
+    [finding] = sensitive_findings(repo)
+    assert finding.severity == Severity.CRITICAL and finding.metadata["committed"] is False
+    assert finding.metadata["tracking_known"] is True
+    assert ".gitignore'a eklenmemiş" in finding.description and "kökte" not in finding.description
+
+
+@needs_git
+def test_committed_env_is_reported_as_committed(tmp_path):
+    repo = make_repo(tmp_path)
+    write(repo / "config" / ".env", "SECRET=1")
+    commit_all(repo)
+    [finding] = sensitive_findings(repo)
+    assert finding.metadata["committed"] is True and finding.metadata["gitignored"] is False
+    assert "commit edilmiş" in finding.title and "git rm --cached config/.env" in finding.recommendation
+
+
+@needs_git
+def test_env_committed_then_gitignored_is_still_reported(tmp_path):
+    """.gitignore izlenen dosyayı geçmişten silmez: ignore'lu ama izlenen .env sessizce kaybolmamalı."""
+    repo = make_repo(tmp_path)
+    write(repo / ".env", "SECRET=1")
+    commit_all(repo)
+    write(repo / ".gitignore", ".env\n")                              # sonradan eklendi
+    [finding] = sensitive_findings(repo)
+    assert finding.metadata["committed"] is True and finding.metadata["gitignored"] is True
+    assert finding.file_path == repo.resolve() / ".env" and ".gitignore'da olmasına rağmen" in finding.description
+
+
+@needs_git
+def test_nested_gitignore_protects_nested_env(tmp_path):
+    repo = make_repo(tmp_path)
+    write(repo / "backend" / ".gitignore", ".env\n")
+    write(repo / "backend" / ".env", "SECRET=1")
+    write(repo / "frontend" / ".env", "SECRET=2")
+    commit_all(repo)
+    git(repo, "rm", "-q", "--cached", "frontend/.env")                 # frontend: izlenmeyen ve ignore'sız
+    findings = sensitive_findings(repo)
+    assert [f.file_path.relative_to(repo.resolve()).as_posix() for f in findings] == ["frontend/.env"]
+
+
+@needs_git
+def test_secret_patterns_are_not_scanned_in_gitignored_files(tmp_path):
+    repo = make_repo(tmp_path)
+    write(repo / ".gitignore", "local/\n")
+    write(repo / "local" / "creds.py", LEAK)
+    write(repo / "src" / "creds.py", LEAK)
+    results = SecurityLeakAnalyzer().analyze(ProjectIndex.build(repo))
+    assert [r.file_path.relative_to(repo.resolve()).as_posix() for r in results] == ["src/creds.py"]
+
+
+def test_outside_git_repo_behaviour_without_gitignore_is_unchanged(tmp_path):
+    write(tmp_path / ".env", "SECRET=1")
+    [finding] = sensitive_findings(tmp_path)
+    assert finding.severity == Severity.CRITICAL
+    assert finding.metadata["tracking_known"] is False and "git bilgisi alınamadı" in finding.description
+
+
+def test_gitignored_env_outside_git_repo_is_not_reported(tmp_path):
+    write(tmp_path / ".gitignore", ".env\n")
+    write(tmp_path / ".env", "SECRET=1")
+    assert sensitive_findings(tmp_path) == []
+
+
+def test_with_gitignore_support_disabled_ignore_status_is_unknown_so_file_is_flagged(tmp_path):
+    write(tmp_path / ".gitignore", ".env\n")
+    write(tmp_path / ".env", "SECRET=1")
+    [finding] = sensitive_findings(tmp_path, respect_gitignore=False)
+    assert finding.severity == Severity.CRITICAL                       # eski, ihtiyatlı davranış

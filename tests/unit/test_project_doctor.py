@@ -135,3 +135,23 @@ def test_project_service_registers_all_builtin_analyzers_without_ui(tmp_path):
     seen = []
     result = service.analyze_project(progress=lambda p, t: seen.append(p))
     assert result["total_files"] == 2 and seen
+
+
+def test_gitignore_is_respected_and_reported_by_service(tmp_path):
+    from src.services.project_service import ProjectService
+    (tmp_path / ".gitignore").write_text("generated/\n*.log\n", encoding="utf-8")
+    (tmp_path / "app.py").write_text("x = 1\n", encoding="utf-8")
+    (tmp_path / "run.log").write_text("log", encoding="utf-8")
+    (tmp_path / "generated").mkdir()
+    (tmp_path / "generated" / "big.py").write_text("y = 2\n" * 50, encoding="utf-8")
+
+    with_ignore = ProjectService()
+    with_ignore.set_project(tmp_path)
+    result = with_ignore.analyze_project()
+    assert result["gitignore_applied"] is True and result["ignored_by_gitignore"] == {"files": 1, "dirs": 1}
+    assert result["language_stats"]["python"]["files"] == 1
+
+    without = ProjectService(respect_gitignore=False)
+    without.set_project(tmp_path)
+    result = without.analyze_project()
+    assert result["gitignore_applied"] is False and result["language_stats"]["python"]["files"] == 2

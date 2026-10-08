@@ -87,6 +87,9 @@ class ProjectAnalysis:
     failed_analyzers: List[str] = field(default_factory=list)
     # neden -> dosya sayısı ('too_large', 'unreadable', 'parse_error', 'unreadable_dir'): analize girmeyenler
     skipped_files: Dict[str, int] = field(default_factory=dict)
+    # .gitignore uygulandı mı ve neler dışarıda kaldı ({'files': n, 'dirs': m}; budanan klasörün içi sayılmaz)
+    gitignore_applied: bool = False
+    ignored_by_gitignore: Dict[str, int] = field(default_factory=dict)
     
     @property
     def all_findings(self) -> List[AnalysisResult]:

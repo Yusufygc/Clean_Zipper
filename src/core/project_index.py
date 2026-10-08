@@ -7,10 +7,12 @@ import hashlib
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, FrozenSet, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Dict, FrozenSet, Iterator, List, Optional, Set, Tuple
 
 from src.core.constants import EXCLUDED_DIRS
 from src.core.exclusions import is_excluded_dir
+from src.utils.git_info import tracked_paths
+from src.utils.gitignore_parser import GitignoreMatcher
 
 BINARY_SNIFF_BYTES = 8192
 PARTIAL_HASH_BYTES = 64 * 1024
@@ -56,13 +58,26 @@ class ProjectIndex:
         self._text_cache_chars = 0
         # rel -> neden ('too_large', 'unreadable', 'parse_error'): analize giremeyen dosyalar
         self.skipped: Dict[str, str] = {}
+        # .gitignore ile dışarıda kalanlar. Budanan klasörün içindeki dosyalar sayılmaz (içine girilmez).
+        self.gitignored: Dict[str, int] = {'files': 0, 'dirs': 0}
+        self.gitignore_applied = False
+        self._gitignore: Optional[GitignoreMatcher] = None
+        self._git_tracked: Optional[Set[str]] = None
+        self._git_tracked_loaded = False
         self._memo: Dict[str, Dict[str, Any]] = {}
 
     @classmethod
     def build(cls, root: Path, excluded: FrozenSet[str] = EXCLUDED_DIRS,
-              progress: Optional[Callable[[int], None]] = None) -> 'ProjectIndex':
+              progress: Optional[Callable[[int], None]] = None,
+              respect_gitignore: bool = True) -> 'ProjectIndex':
         root = Path(root).resolve()
         index = cls(root)
+        if respect_gitignore:
+            # İzlenen dosyalar kurala uysa bile ignore sayılmaz (git semantiği); aynı liste güvenlik analizörü için saklanır.
+            index._git_tracked = tracked_paths(root)
+            index._git_tracked_loaded = True
+            index._gitignore = GitignoreMatcher(str(root), tracked=index._git_tracked)
+            index.gitignore_applied = True
         stack: List[Tuple[Path, str, int]] = [(root, '', 0)]
         reported = 0
         while stack:
@@ -72,6 +87,8 @@ class ProjectIndex:
             if progress and len(index.files) - reported >= PROGRESS_EVERY_FILES:
                 reported = len(index.files)
                 progress(reported)
+        if index._gitignore is not None:
+            index.errors.extend((root, message) for message in index._gitignore.load_errors)
         return index
 
     def _scan_directory(self, directory: Path, rel: str, depth: int,
@@ -95,13 +112,20 @@ class ProjectIndex:
 
             if is_dir:
                 dir_count += 1
-                if not is_excluded_dir(entry.path, entry.name, sibling_names, excluded):
-                    child_rel = f"{rel}/{entry.name}" if rel else entry.name
-                    stack.append((Path(entry.path), child_rel, depth + 1))
+                if is_excluded_dir(entry.path, entry.name, sibling_names, excluded):
+                    continue
+                if self._gitignore is not None and self._gitignore.is_ignored(entry.path, is_dir=True):
+                    self.gitignored['dirs'] += 1
+                    continue
+                child_rel = f"{rel}/{entry.name}" if rel else entry.name
+                stack.append((Path(entry.path), child_rel, depth + 1))
                 continue
 
             file_count += 1
             if is_symlink:
+                continue
+            if self._gitignore is not None and self._gitignore.is_ignored(entry.path):
+                self.gitignored['files'] += 1
                 continue
             try:
                 st = entry.stat(follow_symlinks=False)
@@ -136,6 +160,14 @@ class ProjectIndex:
     def files_with_ext(self, *exts: str) -> Iterator[FileEntry]:
         wanted = {e.lower() for e in exts}
         return (f for f in self.files if f.ext in wanted)
+
+    @property
+    def git_tracked(self) -> Optional[Set[str]]:
+        """Git'in izlediği dosyalar (köke göre, '/' ayraçlı); git yoksa / depo değilse None. İlk erişimde bir kez çalışır."""
+        if not self._git_tracked_loaded:
+            self._git_tracked = tracked_paths(self.root)
+            self._git_tracked_loaded = True
+        return self._git_tracked
 
     def memo(self, namespace: str, entry: FileEntry, factory: Callable[[], Any]) -> Any:
         """Dosya başına türetilmiş veriyi (None dahil) bir kez üretir; analizörler arasında paylaşılır."""

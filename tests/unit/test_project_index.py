@@ -175,3 +175,72 @@ def test_virtualenv_is_detected_by_pyvenv_cfg_whatever_its_name(tmp_path):
     write(tmp_path / "myenv" / "Lib" / "site-packages" / "dep.py")
     write(tmp_path / "app.py")
     assert rels(ProjectIndex.build(tmp_path)) == ["app.py"]
+
+
+# ---- .gitignore duyarlılığı ------------------------------------------------------------------
+
+def gitignore_tree(tmp_path):
+    write(tmp_path / ".gitignore", "*.log\ngen/\n/local.cfg\n")
+    write(tmp_path / "app.py", "x")
+    write(tmp_path / "run.log", "log")
+    write(tmp_path / "local.cfg", "cfg")
+    write(tmp_path / "gen" / "out.py", "generated")
+    write(tmp_path / "sub" / "local.cfg", "kök kuralı buna uymaz")
+    write(tmp_path / "sub" / ".gitignore", "*.cache\n")
+    write(tmp_path / "sub" / "a.cache", "x")
+    write(tmp_path / "sub" / "keep.py", "x")
+    return tmp_path
+
+
+def test_gitignored_files_and_dirs_are_left_out_and_counted(tmp_path):
+    index = ProjectIndex.build(gitignore_tree(tmp_path))
+    assert rels(index) == [".gitignore", "app.py", "sub/.gitignore", "sub/keep.py", "sub/local.cfg"]
+    assert index.gitignore_applied is True
+    assert index.gitignored == {"files": 3, "dirs": 1}          # run.log, local.cfg, sub/a.cache; gen/ (içi sayılmaz)
+
+
+def test_respect_gitignore_can_be_disabled(tmp_path):
+    index = ProjectIndex.build(gitignore_tree(tmp_path), respect_gitignore=False)
+    assert "gen/out.py" in rels(index) and "run.log" in rels(index)
+    assert index.gitignore_applied is False and index.gitignored == {"files": 0, "dirs": 0}
+
+
+def test_directory_with_only_ignored_files_is_not_reported_empty(tmp_path):
+    write(tmp_path / ".gitignore", "*.log\n")
+    write(tmp_path / "logs" / "a.log", "x")
+    (tmp_path / "truly_empty").mkdir()
+    index = ProjectIndex.build(tmp_path)
+    by_rel = {d.rel: d for d in index.dirs}
+    assert by_rel["logs"].file_count == 1                         # git boş klasörü izlemez; içi dolu klasör "boş" sayılmaz
+    assert by_rel["truly_empty"].file_count == 0 and by_rel["truly_empty"].dir_count == 0
+
+
+def test_unreadable_gitignore_is_reported_in_index_errors(tmp_path, monkeypatch):
+    import builtins
+    write(tmp_path / ".gitignore", "x\n")
+    write(tmp_path / "a.py", "x")
+    real_open = builtins.open
+
+    def deny(path, *args, **kwargs):
+        if str(path).endswith(".gitignore"):
+            raise PermissionError("kilitli")
+        return real_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", deny)
+    index = ProjectIndex.build(tmp_path)
+    assert "a.py" in rels(index)                                  # analiz ignore'suz sürer
+    assert any("kilitli" in message for _, message in index.errors)
+
+
+@pytest.mark.skipif(__import__("shutil").which("git") is None, reason="git kurulu değil")
+def test_tracked_file_matching_a_gitignore_rule_stays_in_the_index(tmp_path):
+    import subprocess
+    write(tmp_path / ".gitignore", ".gitignore\n*.txt\n")
+    write(tmp_path / "forced.txt", "x")
+    write(tmp_path / "notes.txt", "x")
+    write(tmp_path / "app.py", "x")
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "add", "-f", ".gitignore", "forced.txt", "app.py"], cwd=tmp_path, check=True)
+    index = ProjectIndex.build(tmp_path)
+    assert rels(index) == [".gitignore", "app.py", "forced.txt"]
+    assert index.gitignored == {"files": 1, "dirs": 0}                  # yalnızca notes.txt

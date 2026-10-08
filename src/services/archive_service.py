@@ -7,6 +7,7 @@ from typing import Optional, Callable, Dict, List, Mapping, Tuple
 
 from src.core.exclusions import is_excluded_dir
 from src.services.archive_profiles import ArchiveProfile, load_profiles
+from src.utils.git_info import tracked_paths
 from src.utils.gitignore_parser import GitignoreParser
 
 logger = logging.getLogger(__name__)
@@ -36,9 +37,13 @@ class ArchiveService:
                 for name, p in self.profiles.items()}
 
     def _refuse_if_gitignore_unreadable(self, result: Dict) -> bool:
-        """Okunamayan .gitignore ile arşivleme gizli dosyaları sızdırabilir; işlem reddedilir."""
-        if self.parser is not None and self.parser.load_error:
-            result['error'] = f"{self.parser.load_error}. Gizli dosyaların arşive sızmaması için işlem durduruldu."
+        """Okunamayan .gitignore (kök ya da iç içe) ile arşivleme gizli dosyaları sızdırabilir; işlem reddedilir.
+
+        İç içe dosyalar yürüyüş sırasında tembel yüklendiğinden bu kontrol toplamadan önce ve sonra yapılır.
+        """
+        errors = list(getattr(self.parser, 'load_errors', []) or [])
+        if errors:
+            result['error'] = f"{'; '.join(errors)}. Gizli dosyaların arşive sızmaması için işlem durduruldu."
             logger.error("Arşivleme reddedildi: %s", result['error'])
             return True
         return False
@@ -61,7 +66,8 @@ class ArchiveService:
             sibling_names = dirs + filenames
             dirs[:] = [d for d in dirs
                        if not is_excluded_dir(os.path.join(root, d), d, sibling_names)
-                       and not (skip_root_dir and root_path == source_dir and d == skip_root_dir)]
+                       and not (skip_root_dir and root_path == source_dir and d == skip_root_dir)
+                       and not self._is_ignored_dir(os.path.join(root, d))]
             for name in filenames:
                 fp = root_path / name
                 rp = fp.relative_to(source_dir)
@@ -80,6 +86,17 @@ class ArchiveService:
                     continue
                 files.append((fp, rp))
         return files
+
+    def _refresh_tracked(self, source_dir: Path):
+        """Arşiv anındaki git izleme durumunu al: izlenen dosyalar .gitignore'a uysa bile arşive girer."""
+        setter = getattr(self.parser, 'set_tracked', None)
+        if setter is not None:
+            setter(tracked_paths(source_dir))
+
+    def _is_ignored_dir(self, dir_path: str) -> bool:
+        """.gitignore'lu klasöre hiç girilmez (git gibi içi geri eklenemez); büyük ignore'lu veri klasörlerinde hızlıdır."""
+        checker = getattr(self.parser, 'is_dir_ignored', None)
+        return bool(checker and checker(dir_path))
 
     @staticmethod
     def _record_failure(result: Dict, path: Path, error: Exception):
@@ -113,8 +130,11 @@ class ArchiveService:
         except ValueError:
             zip_inside_source = False
 
+        self._refresh_tracked(source_dir)
         files_to_add = self._collect_files(
             source_dir, profile, result, skip_file=output_path if zip_inside_source else None)
+        if self._refuse_if_gitignore_unreadable(result):             # iç içe .gitignore yürüyüşte yüklendi
+            return result
         result['total_files'] = len(files_to_add)
 
         try:
@@ -154,7 +174,10 @@ class ArchiveService:
         except (ValueError, IndexError):
             skip_root_dir = None
 
+        self._refresh_tracked(source_dir)
         files_to_copy = self._collect_files(source_dir, profile, result, skip_root_dir=skip_root_dir)
+        if self._refuse_if_gitignore_unreadable(result):
+            return result
         total = len(files_to_copy)
 
         try:

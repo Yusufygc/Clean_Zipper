@@ -501,6 +501,16 @@ class MyCustomAnalyzer(BaseAnalyzer):
 Başka bir sınıf adıyla çakışma `ValueError` verir. Bir analizörü kapatmak için `ProjectService(disabled_analyzers=["MyCustomAnalyzer"])`.
 Not: yeni bir kategori puanlanmaz; puanlanması için `HealthChecker.WEIGHTS` güncellenmelidir.
 
+### `.gitignore` ve Git Duyarlılığı
+
+Analiz ve arşivleme projenin `.gitignore` kurallarını **git ile aynı öncelikle** uygular: kökteki ve alt klasörlerdeki tüm `.gitignore` dosyaları, `.git/info/exclude`, `!` ile geri alma, ignore'lu klasörün içine girilmeyişi. Git deposunda `git ls-files` ile **izlenen** dosyalar (kendi adını içeren `.gitignore`, `git add -f` ile eklenenler) kurala uysa bile dahil edilir.
+
+- Analizde ignore'lu dosyalar (derleme çıktısı, yerel veri, `*.log`) boyut, dil istatistiği, karmaşıklık, çift dosya ve bağımlılık sayılarına girmez. `quick_scan` çıktısında `gitignore_applied` ve `ignored_by_gitignore` (`files`/`dirs`; budanan klasörün içi sayılmaz) görünür. Kapatmak için `ProjectService(respect_gitignore=False)`.
+- `git` kurulu değilse ya da klasör bir depo değilse yalnızca `.gitignore` kuralları uygulanır.
+- Güvenlik: `.gitignore`'daki izlenmeyen `.env` doğru uygulamadır ve bulgu üretmez. `.gitignore`'a eklenmemiş `.env` / `credentials.json` / `secrets.yaml` "commit edilme riski"; **git'e commit edilmiş** olanlar (sonradan `.gitignore`'a eklenmiş olsa bile) KRİTİK "commit edilmiş" bulgusudur: `.gitignore` izlenen dosyayı geçmişten silmez (`git rm --cached` + sırları değiştirin).
+- Okunamayan bir `.gitignore` arşivlemeyi reddeder (gizli dosya sızıntısı önlemi); analiz ignore'suz sürer ve hata `index.errors`'a yazılır.
+- `CleanupService` bilerek `.gitignore`'a bakmaz: temizlediği önbellek ve geçici dosyalar zaten ignore'ludur.
+
 ### Arşiv Profilleri
 
 Arşivlemede hangi dosyaların elendiği **profil** dosyalarıyla belirlenir: paketli `resources/profiles/*.json` ve kullanıcının `~/.gitclean/profiles/*.json` dosyaları (aynı adlı kullanıcı profili paketliyi geçersiz kılar, yeni adlar eklenir). Dosya adı sırası listeleme sırasıdır; bozuk dosya atlanır ve loglanır.

@@ -9,14 +9,14 @@ Python 3.10, PySide6 6.6.1 masaüstü uygulaması. Giriş noktası `main.py`. Yo
 - `src/analyzers/`: 9 analizör (boyut, tür, dil istatistikleri, çift dosya, boş klasör, yapı, güvenlik sızıntısı, bağımlılık, karmaşıklık). Her biri `@register_analyzer` ile kendini kaydeder ve `analyze(index)` ile bulgu listesi döner. Yeni analizör = tek dosya.
 - `src/doctors/`: `ProjectDoctor` analizörleri çalıştırır, bulguları şiddete göre `issues/warnings/suggestions` listelerine ayırır. `HealthChecker` bulgu şiddetinden kategori ve genel skor üretir (kategoriler: security, complexity, duplicate, size, structure, dependency), `RecommendationEngine` öneri üretir.
 - `src/services/`: `ProjectService` (cephe), `ArchiveService` (profil tabanlı; `archive_profiles.py` JSON profilleri yükler), `CleanupService` (kategori tabanlı, Geri Dönüşüm Kutusu'na taşır), `BackupService`, `ReportService` (HTML).
-- `src/utils/`: `gitignore_parser.py` (okunamazsa `load_error`), `logging_config.py` (`setup_logging`, istisna kancaları). `src/core/errors.py`: `GitCleanError`, `ProjectNotSelectedError`.
+- `src/utils/`: `gitignore_parser.py` (`GitignoreMatcher`: iç içe `.gitignore`, git önceliği, izlenen dosya farkındalığı; `GitignoreParser` eski API), `git_info.py` (`tracked_paths`, salt-okunur `git ls-files`), `logging_config.py` (`setup_logging`, istisna kancaları). `src/core/errors.py`: `GitCleanError`, `ProjectNotSelectedError`.
 - `src/ui/`: `main_window.py`, `dashboard/`, `tabs/` (arşiv, temizlik), `widgets/`, `themes/style.qss`. Ağır işler `QThread` worker'larında.
 
 ## Veri akışı
-UI (`AnalyzeWorker`, QThread) → `ProjectService.analyze_project(progress)` → `ProjectDoctor.quick_scan` → `ProjectIndex.build` (tek tarama) → kayıtlı analizörler sırayla `can_analyze(index)` + `analyze(index)` → bulgular → `HealthChecker` → sözlük (`dict`) olarak dashboard'a. İlerleme `progress(yüzde, metin)` ile sinyal üzerinden döner.
+UI (`AnalyzeWorker`, QThread) → `ProjectService.analyze_project(progress)` → `ProjectDoctor.quick_scan` → `ProjectIndex.build` (tek tarama; `.gitignore` uygulanır, izlenen dosyalar korunur) → kayıtlı analizörler sırayla `can_analyze(index)` + `analyze(index)` → bulgular → `HealthChecker` → sözlük (`dict`) olarak dashboard'a. İlerleme `progress(yüzde, metin)` ile sinyal üzerinden döner.
 
 ## Bilinen sorunlar
-Tam liste ve öncelik için [[roadmap]]. Özet: analiz `.gitignore`'a duyarsız.
+Tam liste ve öncelik için [[roadmap]]. Özet: analiz sınırları (2 MB üstü dosya vb.) `skipped_files` ile görünür.
 
 ## Hedef yön
 Çok dilli analiz tamam (9 dil). Sıradaki: eşik genişletme, `.gitignore` duyarlılığı. CLI bilinçli olarak kapsam dışı: GUI çekirdeği tek tüketici olarak kalır.

@@ -9,16 +9,17 @@ from src.services.backup_service import BackupService
 from src.utils.gitignore_parser import GitignoreParser
 
 class ProjectService:
-    def __init__(self, disabled_analyzers=()):
+    def __init__(self, disabled_analyzers=(), respect_gitignore: bool = True):
         load_builtin_analyzers()
-        self.doctor = ProjectDoctor(default_registry.create_all(disabled=disabled_analyzers))
+        self.doctor = ProjectDoctor(default_registry.create_all(disabled=disabled_analyzers),
+                                    respect_gitignore=respect_gitignore)
         self.archive_service = ArchiveService()
         self.cleanup_service = CleanupService()
         self.backup_service = BackupService()
         self._current_project: Optional[Path] = None
     
     def set_project(self, project_path: Path):
-        self._current_project = Path(project_path)
+        self._current_project = Path(project_path).resolve()
         parser = GitignoreParser(str(self._current_project))
         self.archive_service.parser = parser
     

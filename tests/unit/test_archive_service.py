@@ -1,4 +1,5 @@
 import logging
+import os
 import zipfile
 from pathlib import Path
 
@@ -268,3 +269,85 @@ def test_custom_profiles_can_be_injected(nested, tmp_path):
     service = ArchiveService(profiles={"Özel": ArchiveProfile("Özel", "yalnız logo", ["*.md"])})
     included = zipped(service, nested, tmp_path, "Özel")
     assert "app.py" in included and not any(p.endswith(".md") for p in included)
+
+
+# ---- iç içe .gitignore ------------------------------------------------------------------------
+
+@pytest.fixture
+def nested_ignore(tmp_path):
+    root = tmp_path / "ni"
+    write(root / ".gitignore", "*.log\n")
+    write(root / "app.py", "x")
+    write(root / "backend" / ".gitignore", ".env\nuploads/\n!keep.log\n")
+    write(root / "backend" / "server.py", "x")
+    write(root / "backend" / ".env", "SECRET=1")
+    write(root / "backend" / "uploads" / "big.bin", "x")
+    write(root / "backend" / "keep.log", "x")
+    write(root / "backend" / "other.log", "x")
+    write(root / "frontend" / ".env", "SECRET=2")
+    return root
+
+
+def test_nested_gitignore_is_applied_to_archive_and_copy(nested_ignore, tmp_path):
+    service = ArchiveService(GitignoreParser(str(nested_ignore)))
+    out = tmp_path / "o.zip"
+    result = service.create_zip(nested_ignore, out)
+    assert result["success"]
+    assert names(out) == [".gitignore", "app.py", "backend/.gitignore", "backend/keep.log", "backend/server.py", "frontend/.env"]
+    # backend/.env ve uploads/ elendi; backend/keep.log iç içe `!` ile geri geldi; frontend/.env'i backend kuralı etkilemez
+    copy = service.copy_project(nested_ignore, tmp_path / "copy")
+    copied = sorted(p.relative_to(tmp_path / "copy").as_posix() for p in (tmp_path / "copy").rglob("*") if p.is_file())
+    assert copy["success"] and copied == names(out)
+
+
+def test_ignored_directories_are_pruned_not_walked(nested_ignore, tmp_path, monkeypatch):
+    import os
+    visited = []
+    real_walk = os.walk
+
+    def spy(top, *args, **kwargs):
+        for root, dirs, files in real_walk(top, *args, **kwargs):
+            visited.append(Path(root).name)
+            yield root, dirs, files
+
+    monkeypatch.setattr("src.services.archive_service.os.walk", spy)
+    ArchiveService(GitignoreParser(str(nested_ignore))).create_zip(nested_ignore, tmp_path / "o.zip")
+    assert "uploads" not in visited
+
+
+def test_unreadable_nested_gitignore_makes_archive_refuse(nested_ignore, tmp_path, monkeypatch):
+    import builtins
+    real_open = builtins.open
+
+    def deny(path, *args, **kwargs):
+        if str(path).endswith(os.path.join("backend", ".gitignore")):
+            raise PermissionError("kilitli")
+        return real_open(path, *args, **kwargs)
+
+    parser = GitignoreParser(str(nested_ignore))                       # kök dosya sorunsuz yüklenir
+    assert parser.load_error is None
+    monkeypatch.setattr(builtins, "open", deny)
+    service = ArchiveService(parser)
+    out = tmp_path / "o.zip"
+    zip_result = service.create_zip(nested_ignore, out)
+    monkeypatch.setattr(builtins, "open", real_open)
+    assert zip_result["success"] is False and "kilitli" in zip_result["error"]
+    assert "Gizli dosyaların" in zip_result["error"] and not out.exists()
+
+
+@pytest.mark.skipif(__import__("shutil").which("git") is None, reason="git kurulu değil")
+def test_archive_keeps_tracked_files_even_when_gitignore_matches_them(tmp_path):
+    """Gerçek vaka: `.gitignore` kendi adını içeriyor ve izleniyor; `git add -f` ile eklenenler de depodadır."""
+    import subprocess
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    write(repo / ".gitignore", ".gitignore\n*.txt\n")
+    for rel in ["app.py", "forced.txt", "notes.txt"]:
+        write(repo / rel, "x")
+    subprocess.run(["git", "add", "-f", ".gitignore", "forced.txt", "app.py"], cwd=repo, check=True)
+
+    out = tmp_path / "o.zip"
+    result = ArchiveService(GitignoreParser(str(repo))).create_zip(repo, out)
+    assert result["success"]
+    assert names(out) == [".gitignore", "app.py", "forced.txt"]        # notes.txt izlenmiyor + ignore'lu: arşivde yok

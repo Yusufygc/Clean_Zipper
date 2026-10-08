@@ -11,7 +11,7 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | 5 | Analizör kaydı UI içinde, arayüzler yarım uygulanmış | 🟠 | Tamamlandı (2026-10-08) |
 | 6 | Sadece Python ve `requirements.txt` destekleniyor | 🟠 | Tamamlandı (2026-10-08) |
 | 7 | Hatalar sessizce yutuluyor, logger yok | 🟠 | Tamamlandı (2026-10-08) |
-| 8 | Test yok | 🟠 | Başladı (234 test) |
+| 8 | Test yok | 🟠 | Başladı (276 test) |
 | 9 | Çift dosya bulucu tüm dosyayı belleğe okuyor | 🟠 | Tamamlandı (2026-10-08, parçalı hash) |
 | 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Kısmen (`exclusions.py`: analiz, temizlik ve arşiv ortak; `BackupService` bilerek yalnızca `.git` dışlıyor, karar bekliyor) |
 | 11 | Arşiv profil regex'leri iç içe klasörleri kaçırıyor | 🟡 | Tamamlandı (2026-10-08) |
@@ -26,11 +26,11 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 - Kapsam dışı bu turda: `ArchiveService`/`BackupService` dışlama birleştirme, `FileIndex`, registry.
 
 ## Açık notlar
-- Analiz `.gitignore`'u dikkate almıyor. `.env` dosyası `.gitignore`'da olsa bile KRİTİK bulgu üretiyor (yanlış pozitif). Ayrı karar gerektirir.
 - Analiz iptal edilemiyor (UI'da iptal düğmesi yok).
 - `read_text` 2 MB üstü dosyaları atlıyor: büyük kaynak dosyalar karmaşıklık ve sızıntı taramasına girmez.
 - Java/Go yalnızca örnek kodla doğrulandı (diskte gerçek kod yoktu). Kotlin/PHP/Swift: yalnızca yeni bir `LanguageSpec` gerekir.
 - Donmuş exe içinde analiz çalıştırılamadı (Windows Uygulama Denetimi imzasız exe'yi engelliyor); paket içeriği doğrulandı.
 - UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı.
 - Karar bekliyor (kullanıcı "sonra konuşalım" dedi): `BackupService` yedeği "olduğu gibi" mi kalsın, ortak dışlama mı uygulansın. Bulgu 12 unutulmayacak.
-- Sıradaki adaylar: 12 (params/derinlik/fonksiyon uzunluğu eşikleri), `.gitignore`'a duyarlı analiz.
+- Sıradaki: **Bulgu 12** (params/derinlik/fonksiyon uzunluğu eşikleri; kullanıcı unutulmamasını istedi). Sonra Bulgu 13.
+- Fikir: git'e commit edilmiş derleme çıktısı / bağımlılık klasörü tespiti (P005'te 381 `bin/obj` dosyası izleniyor), `.gitignore` önerisi üretme.
