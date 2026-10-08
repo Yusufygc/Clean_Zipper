@@ -92,6 +92,7 @@
 | `CloneAnalyzer` | duplicate | Kopyala-yapıştır kod blokları (dosyalar arası ve dosya içi) |
 | `ArchitectureAnalyzer` | architecture | Dosya bağımlılık grafiği: döngüsel bağımlılık, en çok kullanılan dosyalar |
 | `CodeSecurityAnalyzer` | security | SAST-lite: 39 kuralla tehlikeli API ve kalıp taraması (CWE etiketli) |
+| `ReliabilityAnalyzer` | reliability | Yutulan hatalar, kodlamasız dosya açma, saat dilimsiz tarih, DEBUG, konsol çıktısı, TODO envanteri |
 
 ---
 
@@ -298,8 +299,9 @@ Skor, analizörlerin ürettiği bulgulardan hesaplanır. Sabit değer yoktur.
 | **Bağımlılık** | %8 | Kullanılmayan kütüphaneler, eksik `requirements.txt` |
 | **Ölü Kod** | %6 | Kullanılmayan import / değişken, ulaşılamaz kod, sihirli sayı |
 | **Mimari** | %6 | Döngüsel bağımlılıklar |
+| **Güvenilirlik** | %8 | Yutulan hatalar, kodlamasız dosya açma, DEBUG, konsol çıktısı |
 
-Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz. Yeni kategoriler (`reliability`, `testing`, `hygiene`) ilgili analizörler eklendikçe devreye girer.
+Ağırlıklar çalışan analizörlerin kategorilerine göre yeniden normalize edilir; çalışmayan veya hata veren analizörün kategorisi hesaba katılmaz. Dosya türü dağılımı bilgi amaçlıdır, puanlanmaz. Yeni kategoriler (`testing`, `hygiene`) ilgili analizörler eklendikçe devreye girer.
 
 **Hesaplama:** her bulgunun şiddeti ceza puanı getirir (KRİTİK 40, YÜKSEK 15, ORTA 5, DÜŞÜK 1, BİLGİ 0). Kategori skoru `100 × e^(−ceza/60)` formülüyle bulunur. Genel skor, kategori skorlarının ağırlıklı ortalamasıdır. Hiçbir analizör çalışmazsa skor 0 olur.
 
@@ -574,6 +576,26 @@ Bir fonksiyon birden çok eşiği aşarsa **tek** bulgu üretilir (aşılan metr
 **`SecurityLeakAnalyzer`** sağlayıcı biçimli sırları da yakalar: AWS erişim anahtarı, PEM özel anahtar, GitHub, Slack, Google API, Stripe canlı anahtar ve JWT. Bulguya **değer yazılmaz** (yalnızca 4 karakterlik maskeli önek ve uzunluk). Satırında `example` geçenler (belge örnekleri) atlanır.
 
 **Sürüm sabitleme:** `DeadWeightAnalyzer` manifest başına tek DÜŞÜK bulgu üretir (`unpinned-dependencies`). Python `requirements.txt`: `==` olmayan her satır. npm: `*`, `latest`, boş, `>=` gibi açık uçlu aralıklar ve git/URL bağımlılıkları (`^`/`~` normal sayılır). Go ve Cargo denetlenmez.
+
+### Güvenilirlik ve Üretim Hijyeni
+
+`ReliabilityAnalyzer` kural başına dosya başına tek bulgu üretir (test dosyaları hariç). Python `ast` ile kesindir, diğer diller sözcük tabanlıdır.
+
+| Kural | Kapsam | Öncelik |
+|-------|--------|---------|
+| `bare-except` | Python: çıplak `except:` (içinde `raise` yoksa) | YÜKSEK |
+| `swallowed-exception` | Python: `except Exception/BaseException` gövdesi yalnızca `pass`, `...`, `continue`, `break`, `return`/`return None` | ORTA |
+| `empty-catch` | JS/TS/Java/C#/C++: boş `catch {}` ve `.catch(() => {})` | ORTA |
+| `open-without-encoding` | Python: metin kipinde `open()`, `Path.read_text/write_text` kodlamasız (Windows'ta cp1254/cp1252'ye bağımlı) | ORTA |
+| `debug-flag` | Python: modül düzeyi `DEBUG = True` | ORTA |
+| `debugger-statement` | JS/TS: `debugger;` | ORTA |
+| `naive-datetime` | Python: `datetime.now()` (argümansız), `utcnow()`, `today()` | DÜŞÜK |
+| `print-density` | `print` / `console.log` / `System.out` / `Console.Write` / `fmt.Print` / `println!` dosya başına > 5 (`QualityThresholds.print_calls`) | DÜŞÜK |
+| `todo-inventory` | Yorumlardaki `TODO` `FIXME` `HACK` `XXX`; projede tek bulgu, liste metadata'da | BİLGİ |
+
+- **Bilinçli yutma sayılmaz:** gövdesinde açıklama yorumu olan `except Exception: pass  # neden` ve `catch { /* neden */ }` raporlanmaz; `return False` / `return 0` gibi değer döndürenler de yutma değil geri dönüş değeri sayılır.
+- **Atlananlar:** `if __name__ == "__main__":` içindeki `print`, `datetime.now().astimezone()` (saat dilimi eklenir), C/C++ konsol çıktısı (konsol programı olduğundan), `encoding=` veya ikilik kip (`'rb'`) verilen `open`.
+- **Sınırlar:** `.read_text()`/`.write_text()` yöntem adına bakılır (nesne türü bilinmez); `datetime` yalnızca `datetime` adıyla tanınır (`import datetime as dt` takma adı atlanır). TODO işaretleri yalnızca yorumlarda aranır (docstring içindeki `TODO` sayılmaz).
 
 ### `.gitignore` ve Git Duyarlılığı
 

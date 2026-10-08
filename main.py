@@ -1,5 +1,6 @@
 import sys
 import ctypes
+import logging
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -40,7 +41,7 @@ def main():
         myappid = 'gitclean.archiver.pro.2.0.0'
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     except Exception:
-        pass
+        logging.getLogger(__name__).debug("AppUserModelID ayarlanamadı", exc_info=True)
     
     window = GitCleanArchiverPro()
     window.show()
