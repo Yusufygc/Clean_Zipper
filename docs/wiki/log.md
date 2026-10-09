@@ -1,5 +1,10 @@
 # Değişiklik Günlüğü
 
+## [2026-10-10] [FIX] | Kesik alt kartlar, kategori listesi, ortalı sekmeler
+- **Gösterge paneli alt kartları kesikti:** `ScrollView.contentHeight` düzenin gerçek yüksekliğini izlemiyordu (905 px'te takılı, düzen 911-941 px), kaydırma içeriğin sonuna ulaşmıyordu. Gösterge Paneli, Arşiv ve Ayarlar kaydırıcılarında `contentHeight: bodyColumn.implicitHeight` ile düzene bağlandı. Test (proje yüklüyken içerik yüksekliği = düzen yüksekliği): düzeltme kaldırılınca kırmızı.
+- **Kategori listesi:** ad solda, sayı sağ uçtaydı ve aradaki mesafe çok geniş kalıyordu; açılan liste artık en uzun adın genişliğine daralır, ad sola, sayı sağa yaslı, iki yanda 14 px iç boşluk; kapalı kutu da aynı genişlikte (`FilterComboBox`).
+- **Sekmeler çubuğun ortasında:** başlık `RowLayout` yerine sol / orta / sağ yerleşim; sekmeler tam ortada durur, yer yoksa komşularına çarpmayacak kadar kayar (test: 1400, 1600, 1920 px'te merkez farkı en çok 1 px; dar genişliklerde üst üste binme testi geçerli).
+
 ## [2026-10-10] [FIX] | Sade süzgeç çubuğu, simetrik gösterge paneli, takılı kalan teşhis çubuğu
 - **Sorunlar sayfası:** 6 şiddet + 12 kategori düğmesinin iki satırı yerine tek satırlık süzgeç çubuğu: şiddet için bitişik seçenekli `SegmentedFilter` (renk noktası + sayı), kategori için açılır liste `FilterComboBox` (Qt Quick Controls Basic stili, sayılarla), sağda "N sonuç" ve süzgeç varken "Süzgeçleri Temizle". `SeverityFilterPill` işlevsiz kaldığı için silindi.
 - **Gösterge paneli:** satırlar eşit sütunlu ve aynı yükseklikte: 4 eşit metrik kartı (dar pencerede 2 x 2), sağlık skoru | kategori puanları, dosya türü | dil dağılımı, öneriler | analiz bütünlüğü. Eski düzende sütun oranları satırdan satıra değişiyordu (230 / 600:400 / 500:500) ve yan yana kartların yüksekliği farklıydı.
