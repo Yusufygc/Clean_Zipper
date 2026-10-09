@@ -27,7 +27,7 @@ class SizeAnalyzer(BaseAnalyzer):
         severity = Severity.HIGH if total_mb > 500 else Severity.MEDIUM if total_mb > 200 else Severity.INFO
         results.append(self._create_result(
             title=f"Toplam proje boyutu: {total_mb:.1f} MB",
-            description=f"Proje {total_mb:.1f} MB disk alani kapliyor.",
+            description=f"Proje {total_mb:.1f} MB disk alanı kaplıyor.",
             severity=severity, kind='total_size', total_bytes=index.total_size
         ))
 

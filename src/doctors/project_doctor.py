@@ -98,12 +98,18 @@ class ProjectDoctor:
             try:
                 if not analyzer.can_analyze(index):
                     continue
-                all_results.extend(analyzer.analyze(index))
+                all_results.extend(self._without_disabled_rules(analyzer.analyze(index)))
                 ran_categories.add(analyzer.category)
             except Exception:
                 logger.exception("Analizor hatasi (%s)", analyzer.name)
                 analysis.failed_analyzers.append(analyzer.name)
         return all_results, ran_categories
+
+    def _without_disabled_rules(self, results: List[AnalysisResult]) -> List[AnalysisResult]:
+        """Kapatılan kural kimlikli (`metadata['rule']`) bulguları eler; skor da bunlarsız hesaplanır."""
+        if not self.disabled_rules:
+            return results
+        return [r for r in results if r.metadata.get('rule') not in self.disabled_rules]
 
     def quick_scan(self, project_path: Path, progress: Optional[ProgressCallback] = None) -> Dict:
         analysis = self.diagnose(project_path, progress)

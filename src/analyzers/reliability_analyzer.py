@@ -125,7 +125,7 @@ class ReliabilityAnalyzer(BaseAnalyzer):
         title, severity, advice = RULES[rule]
         shown = ", ".join(str(n) for n in lines[:MAX_LISTED_LINES])
         more = f" ... (+{len(lines) - MAX_LISTED_LINES})" if len(lines) > MAX_LISTED_LINES else ""
-        limit = f" (Limit: {self.thresholds.print_calls})" if rule == 'print-density' else ""
+        limit = f" (Eşik: {self.thresholds.print_calls})" if rule == 'print-density' else ""
         return self._create_result(
             title=f"{title}: {path.name}",
             description=f"{title}{limit}. {len(lines)} yerde, satır: {shown}{more}.",

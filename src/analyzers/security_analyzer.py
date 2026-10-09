@@ -106,7 +106,7 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
                     continue
                 line_num = lines.number(match.start())
                 results.append(self._create_result(
-                    title=f"Açık Şifreleme/Key Sızıntısı ({file_path.name})",
+                    title=f"Açık Şifre / Anahtar Sızıntısı ({file_path.name})",
                     description=f"Satır {line_num}: Kod içinde sertifikasız '{pattern_name}' algılandı.",
                     severity=severity,
                     file_path=file_path,

@@ -69,7 +69,7 @@ class CodeComplexityAnalyzer(BaseAnalyzer):
             severity = Severity.HIGH if t.is_severe(metrics.total_lines, t.file_lines) else Severity.MEDIUM
             results.append(self._create_result(
                 title=f"Aşırı Şişmiş Dosya: {file_path.name}",
-                description=f"Dosya toplamda {metrics.total_lines} satır kod içeriyor (Limit: {t.file_lines}).",
+                description=f"Dosya toplamda {metrics.total_lines} satır kod içeriyor (Eşik: {t.file_lines}).",
                 severity=severity, file_path=file_path,
                 recommendation="Bu dosyayı mantıksal olarak daha küçük, tek sorumluluğa (SRP) sahip modüllere veya alt sınıflara parçalayın.",
                 rule='file-length', **extra))
@@ -78,7 +78,7 @@ class CodeComplexityAnalyzer(BaseAnalyzer):
             severity = Severity.MEDIUM if t.is_severe(imports, t.module_imports) else Severity.LOW
             results.append(self._create_result(
                 title=f"Çok Fazla Import: {file_path.name}",
-                description=f"Dosya {imports} farklı modül içe aktarıyor (Limit: {t.module_imports}); yüksek bağımlılık (fan-out).",
+                description=f"Dosya {imports} farklı modül içe aktarıyor (Eşik: {t.module_imports}); yüksek bağımlılık (fan-out).",
                 severity=severity, file_path=file_path,
                 recommendation="Sorumlulukları ayırın; bağımlılıkları bir cephe (facade) arkasında toplayın.",
                 rule='module-imports', imports=imports, **extra))
@@ -93,8 +93,8 @@ class CodeComplexityAnalyzer(BaseAnalyzer):
             return []
         return [self._create_result(
             title=f"Tanrı Sınıf (God Object) Riski: {cls.name}",
-            description=(f"'{cls.name}' sınıfı {cls.method_count} metoda (Limit: {t.class_methods}) ve yaklaşık "
-                         f"{cls.lines} satır koda (Limit: {t.class_lines}) sahip. Bu sınıf sistemde çok fazla sorumluluk üstleniyor."),
+            description=(f"'{cls.name}' sınıfı {cls.method_count} metoda (Eşik: {t.class_methods}) ve yaklaşık "
+                         f"{cls.lines} satır koda (Eşik: {t.class_lines}) sahip. Bu sınıf sistemde çok fazla sorumluluk üstleniyor."),
             severity=Severity.HIGH, file_path=file_path,
             recommendation="Sınıfı SOLID prensiplerine uygun olarak parçalayın. Sınıfın sadece tek bir aktöre veya amaca hizmet etmesini sağlayın.",
             rule='class-size', class_name=cls.name, start_line=cls.start_line, **extra)]
@@ -124,7 +124,7 @@ class CodeComplexityAnalyzer(BaseAnalyzer):
         if not violations:
             return []
         severity = max((v[4] for v in violations), key=SEVERITY_ORDER.index)
-        details = "; ".join(f"{label} {value} (Limit: {threshold})" for _, label, value, threshold, _ in violations)
+        details = "; ".join(f"{label} {value} (Eşik: {threshold})" for _, label, value, threshold, _ in violations)
         advice = " ".join(dict.fromkeys(ADVICE[key] for key, *_ in violations))
         return [self._create_result(
             title=f"Karmaşık Fonksiyon: {func.name}()",

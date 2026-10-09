@@ -22,7 +22,7 @@ class TypeAnalyzer(BaseAnalyzer):
         results = []
         for ext, count in sorted(index.ext_counts.items(), key=lambda x: x[1], reverse=True)[:5]:
             results.append(self._create_result(
-                title=f"Dosya turu: {ext or 'uzantisiz'}",
+                title=f"Dosya türü: {ext or 'uzantısız'}",
                 description=f"{count} adet dosya",
                 severity=Severity.INFO
             ))

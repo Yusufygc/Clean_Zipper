@@ -21,8 +21,8 @@ class EmptyFolderFinder(BaseAnalyzer):
     def analyze(self, index: ProjectIndex) -> List[AnalysisResult]:
         return [
             self._create_result(
-                title=f"Bos klasor: {d.path.name}",
-                description="Bu klasor bos.",
+                title=f"Boş klasör: {d.path.name}",
+                description="Bu klasör boş.",
                 severity=Severity.LOW,
                 file_path=d.path,
                 kind='empty_dir'

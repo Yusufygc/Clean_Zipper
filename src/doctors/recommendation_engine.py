@@ -7,7 +7,7 @@ class RecommendationEngine:
         if analysis.total_size_mb > 100:
             recs.append(("Buyuk proje boyutu", f"Proje {analysis.total_size_mb:.1f} MB, buyuk dosyalari kontrol edin.", 80))
         if analysis.empty_dirs:
-            recs.append(("Bos klasorler", f"{len(analysis.empty_dirs)} bos klasor bulundu, temizleyin.", 40))
+            recs.append(("Boş klasörler", f"{len(analysis.empty_dirs)} boş klasör bulundu, temizleyin.", 40))
         if analysis.duplicate_files:
             recs.append(("Cift dosyalar", f"{len(analysis.duplicate_files)} grup cift dosya, temizleyerek alan kazanin.", 75))
         if len(analysis.issues) > 5:

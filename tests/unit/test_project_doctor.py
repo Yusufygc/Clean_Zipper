@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from src.core.base_analyzer import BaseAnalyzer
+from src.analyzers.dead_code_analyzer import DeadCodeAnalyzer
 from src.analyzers.duplicate_finder import DuplicateFinder
 from src.analyzers.empty_folder_finder import EmptyFolderFinder
 from src.analyzers.size_analyzer import SizeAnalyzer
@@ -155,3 +156,12 @@ def test_gitignore_is_respected_and_reported_by_service(tmp_path):
     without.set_project(tmp_path)
     result = without.analyze_project()
     assert result["gitignore_applied"] is False and result["language_stats"]["python"]["files"] == 2
+
+
+def test_disabled_rules_filter_findings_of_every_analyzer_and_the_score(tmp_path):
+    (tmp_path / "a.py").write_text("import os\nimport sys\nx = 1\n", encoding="utf-8")
+    full = ProjectDoctor(analyzers=[DeadCodeAnalyzer()]).diagnose(tmp_path)
+    muted = ProjectDoctor(analyzers=[DeadCodeAnalyzer()], disabled_rules=["unused-import"]).diagnose(tmp_path)
+    assert any(f.metadata.get("rule") == "unused-import" for f in full.all_findings)
+    assert not any(f.metadata.get("rule") == "unused-import" for f in muted.all_findings)
+    assert muted.category_scores["deadcode"] > full.category_scores["deadcode"]

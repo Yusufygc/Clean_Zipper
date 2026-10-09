@@ -68,7 +68,7 @@ class MagicNumberAnalyzer(BaseAnalyzer):
         return self._create_result(
             title=f"Sihirli Sayılar: {entry.path.name}",
             description=(f"Fonksiyon gövdelerinde {len(numbers)} adsız sayısal sabit var "
-                         f"(Limit: {self.thresholds.magic_numbers}); en sık geçenler: {listed}."),
+                         f"(Eşik: {self.thresholds.magic_numbers}); en sık geçenler: {listed}."),
             severity=Severity.LOW, file_path=entry.path,
             recommendation="Anlamlı sabitleri adlandırılmış sabitlere (BÜYÜK_HARF / const) taşıyın.",
             rule='magic-numbers', count=len(numbers), top_values=top, first_lines=[n.line for n in numbers[:10]],

@@ -40,7 +40,7 @@ def test_type_analyzer_top_five_by_count(tmp_path):
             write(tmp_path / f"f{i}{ext}")
     results = TypeAnalyzer().analyze(ProjectIndex.build(tmp_path))
     assert len(results) == 5
-    assert results[0].title == "Dosya turu: .py" and results[0].description == "3 adet dosya"
+    assert results[0].title == "Dosya türü: .py" and results[0].description == "3 adet dosya"
 
 
 def test_structure_analyzer_flags_only_deeper_than_ten(tmp_path):
@@ -56,7 +56,7 @@ def test_empty_folder_finder(tmp_path):
     write(tmp_path / "full" / "a.txt")
     write(tmp_path / "wrapper" / "venv" / "x.py")
     results = EmptyFolderFinder().analyze(ProjectIndex.build(tmp_path))
-    assert titles(results) == ["Bos klasor: empty"]
+    assert titles(results) == ["Boş klasör: empty"]
     assert results[0].metadata["kind"] == "empty_dir"
 
 
@@ -349,7 +349,7 @@ def test_function_exceeding_several_metrics_gets_one_combined_finding(tmp_path):
     body = "\n".join(f"    if p0 == {i}:\n        pass" for i in range(11))  # siklomatik 12, bilişsel 11
     [finding] = function_findings(tmp_path, f"def big({params}):\n{body}\n")
     assert finding.metadata["violations"] == {"cyclomatic": 12, "params": 7}
-    assert "siklomatik karmaşıklık 12 (Limit: 10)" in finding.description and "parametre sayısı 7 (Limit: 5)" in finding.description
+    assert "siklomatik karmaşıklık 12 (Eşik: 10)" in finding.description and "parametre sayısı 7 (Eşik: 5)" in finding.description
     assert finding.severity == Severity.MEDIUM                               # en yüksek metrik: siklomatik ORTA
     assert "Extract Method" in finding.recommendation and "Parameter Object" in finding.recommendation
 

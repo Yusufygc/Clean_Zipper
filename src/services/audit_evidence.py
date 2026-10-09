@@ -47,7 +47,14 @@ def evidence(finding: AnalysisResult, line: Optional[int]) -> Optional[str]:
     """Bulgunun bulunduğu satırdan başlayan birkaç satır (numaralı); yazılamıyorsa None."""
     if not line or not _may_show_source(finding):
         return None
-    path = Path(finding.file_path)
+    return snippet(Path(finding.file_path), line)
+
+
+def snippet(path: Path, line: int) -> Optional[str]:
+    """`path` dosyasının `line` satırından başlayan numaralı birkaç satırı; okunamıyorsa ya da büyükse None.
+    Sır denetimi çağıranın işidir (`evidence` yapar)."""
+    if not line or line < 1:
+        return None
     try:
         if not path.is_file() or path.stat().st_size > EVIDENCE_MAX_BYTES:
             return None
