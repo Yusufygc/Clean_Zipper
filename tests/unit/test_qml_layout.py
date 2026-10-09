@@ -450,3 +450,45 @@ def test_diagnosis_banner_state_is_reported_when_the_diagnosis_ends(qapp):
     vm._is_diagnosing = True
     vm._on_error("hata")
     assert changes == [False, False] and vm.isDiagnosing is False
+
+
+def test_scroll_areas_cover_their_whole_content_so_the_last_row_is_not_cut(qapp, monkeypatch, tmp_path):
+    """Kullanıcı: gösterge panelinin alt kartları kesik duruyordu (proje yüklenince kaydırma içeriğin sonuna ulaşmıyordu)."""
+    import time
+    from PySide6.QtQml import QQmlContext, QQmlExpression
+    for index in range(6):
+        (tmp_path / f"m{index}.py").write_text("import os\n\n\ndef f(a):\n    return a + 41\n", encoding="utf-8")
+    (tmp_path / "bos_klasor").mkdir()                                   # "Boş klasörler" önerisi: içerik uzar
+    engine, window = open_tab(qapp, monkeypatch, 0, width=1900, height=700)
+    engine.rootContext().contextProperty("appVM").setProjectPath(str(tmp_path))
+    scan = engine.rootContext().contextProperty("scanVM")
+    deadline = time.time() + 40
+    while time.time() < deadline and (scan.isScanning or scan.totalFiles == 0):
+        QCoreApplication.processEvents()
+        time.sleep(0.02)
+    for _ in range(30):
+        QCoreApplication.processEvents()
+    for tab in (0, 2, 4):
+        window.setProperty("currentTab", tab)
+        for _ in range(20):
+            QCoreApplication.processEvents()
+        flicks = [i for i in all_items(window.contentItem()) if i.isVisible()
+                  and i.metaObject().className() == "QQuickFlickable"]
+        assert flicks, tab
+        for flick in flicks:
+            content = QQmlExpression(QQmlContext(engine.rootContext()), flick, "contentHeight").evaluate()[0]
+            column = flick.childItems()[0].childItems()[0]            # contentItem -> ColumnLayout
+            assert abs(content - column.height()) <= 1, (tab, content, column.height())   # içerik yüksekliği düzeni izler
+
+
+def test_tab_navigation_is_centred_in_the_header_when_it_fits(qapp, monkeypatch):
+    """Kullanıcı: navbar butonları çubuğun ortasında durmalı."""
+    from PySide6.QtCore import QPointF
+    from src.qml_ui import app as qml_app
+    monkeypatch.setattr(qml_app, "setup_logging", lambda: None)
+    _, engine = qml_app.create_qml_app()
+    window = engine.rootObjects()[0]
+    for width in (1400, 1600, 1920):
+        edges = header_edges(window, width)
+        nav = edges["tabNav"]
+        assert abs((nav[0] + nav[1]) / 2 - width / 2) <= 1, (width, nav)

@@ -11,7 +11,9 @@ ComboBox {
     property string current: "ALL"
     signal picked(string key)
 
-    implicitWidth: 240
+    // Kapalı kutu ile açılan liste aynı genişliktedir; genişlik en uzun adın genişliğinden hesaplanır
+    implicitWidth: Math.max(160, labelWidth + 28 + 2 * rowPadding + 8,
+                            12 + captionMetrics.width + 6 + labelWidth + 8 + 16 + 12)
     implicitHeight: 36
     model: []
     textRole: "label"
@@ -64,6 +66,30 @@ ComboBox {
 
     indicator: Item { }
 
+    // Açılan listede ad solda, sayı sağda, aralarında az boşluk
+    property real labelWidth: 0
+    readonly property int rowPadding: 14
+    onModelChanged: labelWidth = 0
+
+    TextMetrics {
+        id: captionMetrics
+        text: root.caption
+        font.family: AppTheme.fontFamily
+        font.pixelSize: AppTheme.fontSizeSmall
+    }
+
+    Repeater {
+        model: root.model
+        delegate: Text {
+            visible: false
+            text: modelData.label
+            font.family: AppTheme.fontFamily
+            font.pixelSize: AppTheme.fontSizeSmall
+            font.bold: true
+            Component.onCompleted: root.labelWidth = Math.max(root.labelWidth, implicitWidth)
+        }
+    }
+
     delegate: ItemDelegate {
         id: option
         required property var modelData
@@ -76,10 +102,12 @@ ComboBox {
             radius: AppTheme.radiusSmall
             color: option.highlighted ? AppTheme.surfaceActive : "transparent"
         }
+        // Ad sola, sayı sağa yaslı; iki yanda eşit iç boşluk
         contentItem: RowLayout {
-            spacing: 8
+            spacing: 12
             Text {
                 Layout.fillWidth: true
+                Layout.leftMargin: root.rowPadding - 4
                 text: option.modelData.label
                 color: root.current === option.modelData.key ? AppTheme.accent : AppTheme.textPrimary
                 font.family: AppTheme.fontFamily
@@ -89,11 +117,13 @@ ComboBox {
                 renderType: Text.NativeRendering
             }
             Text {
+                Layout.rightMargin: root.rowPadding - 4
                 text: option.modelData.count
                 color: AppTheme.textMuted
                 font.family: AppTheme.fontFamily
                 font.pixelSize: AppTheme.fontSizeSmall
                 font.bold: true
+                horizontalAlignment: Text.AlignRight
                 renderType: Text.NativeRendering
             }
         }

@@ -203,7 +203,6 @@ Item {
             FilterComboBox {
                 objectName: "categoryFilter"
                 caption: "Kategori:"
-                implicitWidth: 250
                 current: findingsVM.selectedCategory
                 enabled: findingsVM.categories.length > 0
                 model: {

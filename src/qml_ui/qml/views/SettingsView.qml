@@ -41,8 +41,11 @@ Item {
         clip: true
         // Uçlarda dur: içerik uçtan öteye sürüklenip bırakılınca geri sıçramasın
         Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
+        // İçerik yüksekliği düzenin gerçek yüksekliğidir; aksi hâlde son satır kesik kalır (kaydırma ucu erken biter)
+        contentHeight: bodyColumn.implicitHeight
 
         ColumnLayout {
+            id: bodyColumn
             width: parent.width
             spacing: 16
 

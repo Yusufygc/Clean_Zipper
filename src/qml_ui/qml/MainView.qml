@@ -63,14 +63,17 @@ ApplicationWindow {
             Behavior on color { ColorAnimation { duration: AppTheme.animFast } }
             Behavior on border.color { ColorAnimation { duration: AppTheme.animFast } }
 
-            RowLayout {
+            Item {
+                id: headerBar
                 anchors.fill: parent
-                anchors.leftMargin: 20
-                anchors.rightMargin: 20
-                spacing: window.iconOnlyTabs ? 6 : (window.compactHeader ? 10 : 24)
+                readonly property int gap: window.iconOnlyTabs ? 6 : (window.compactHeader ? 10 : 24)
 
                 // Sol: Logo ve Başlık
                 RowLayout {
+                    id: headerLeft
+                    anchors.left: parent.left
+                    anchors.leftMargin: 20
+                    anchors.verticalCenter: parent.verticalCenter
                     spacing: 10
 
                     SvgIcon {
@@ -98,9 +101,13 @@ ApplicationWindow {
                 }
 
                 // Orta: Sekme Menüsü (Segmented Nav)
+                // Orta: çubuğun tam ortasında; solda / sağda yer yoksa komşularına çarpmayacak kadar kayar
                 RowLayout {
+                    id: tabNav
                     objectName: "tabNav"
-                    Layout.alignment: Qt.AlignHCenter
+                    anchors.verticalCenter: parent.verticalCenter
+                    x: Math.max(headerLeft.x + headerLeft.width + headerBar.gap,
+                                Math.min((headerBar.width - width) / 2, headerRight.x - width - headerBar.gap))
                     spacing: window.compactHeader ? 2 : 4
 
                     Repeater {
@@ -172,10 +179,12 @@ ApplicationWindow {
                     }
                 }
 
-                Item { Layout.fillWidth: true } // Yay
-
                 // Sağ: Proje Açma & Tema Değiştirme
                 RowLayout {
+                    id: headerRight
+                    anchors.right: parent.right
+                    anchors.rightMargin: 20
+                    anchors.verticalCenter: parent.verticalCenter
                     spacing: 12
 
                     // Proje Seçim Butonu
