@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Optional
 
 from send2trash import send2trash
 
-from src.core.constants import EXCLUDED_DIRS
+from src.core.exclusions import is_excluded_dir
 
 logger = logging.getLogger(__name__)
 
@@ -68,19 +68,24 @@ class CleanupService:
 
         items: List[CleanupItem] = []
         for root, dirs, files in os.walk(project_path):
-            dirs[:] = self._collect_dirs(Path(root), dirs, dir_map, items)
+            dirs[:] = self._collect_dirs(Path(root), dirs, dirs + files, dir_map, items)
             self._collect_files(Path(root), files, ext_map, items)
         return items
 
-    def _collect_dirs(self, root: Path, dirs: List[str], dir_map: Dict[str, str], items: List[CleanupItem]) -> List[str]:
-        """Temizlenecek klasörleri `items`e ekler; `os.walk`ın içine gireceği klasörleri döndürür."""
+    def _collect_dirs(self, root: Path, dirs: List[str], siblings: List[str], dir_map: Dict[str, str],
+                      items: List[CleanupItem]) -> List[str]:
+        """Temizlenecek klasörleri `items`e ekler; `os.walk`ın içine gireceği klasörleri döndürür.
+
+        Girilmeyecek klasörler analizle aynı kuraldır (`is_excluded_dir`): `pyvenv.cfg` içeren sanal ortamlar ve
+        derleme dosyası yanındaki `target` / `bin` / `obj` dahil. `siblings`: aynı klasördeki tüm girdi adları.
+        """
         kept = []
         for name in dirs:
             full = root / name
             if name in dir_map and not full.is_symlink():
                 size, count = self._dir_stats(full)
                 items.append(CleanupItem(full, size, dir_map[name], is_dir=True, file_count=count))
-            elif name not in EXCLUDED_DIRS:
+            elif not is_excluded_dir(str(full), name, siblings):
                 kept.append(name)
         return kept
 

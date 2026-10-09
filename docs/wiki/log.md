@@ -1,5 +1,14 @@
 # Değişiklik Günlüğü
 
+## [2026-10-10] [FIX] | Backend denetimi Faz 1: kural kimlikleri, temizlik dışlaması, hassas dosyalar, puan, sır deseni, kopya hedefi
+- **Kural kimliği:** `large-file`, `project-size`, `duplicate-files`, `empty-folder`, `sensitive-file`, `deep-structure`, `missing-manifest` eklendi; bu bulgular artık Ayarlar'dan kapatılabilir ve `disabled_rules` ile elenir. `agent_tasks.KIND_RULES` geri dönüşü gereksiz kaldı, silindi. Etiket / efor `audit_catalog.py`'de. Görev parmak izi değişen tek yer: yapı ve eksik manifest görevleri (önceden kategori adıyla anahtarlanıyordu).
+- **Temizlik:** `CleanupService._collect_dirs` `is_excluded_dir` kullanır (`pyvenv.cfg` içeren her klasör, bağlamsal `target`/`bin`/`obj`).
+- **Hassas dosyalar:** `secret_kind` `path_rules.py`'ye taşındı; `SecurityLeakAnalyzer` onu kullanır (çalışma kopyası ve izlenip ignore'lanmış dosyalar). Yalnızca sertifika içeren `.pem` / `.key` hariç.
+- **Puan:** bulgunun kategorisi de puanlanan kategorilere eklenir (`ProjectDoctor._run_analyzers`).
+- **Sır deseni:** değerde `!@#$%^&*+=?~` kabul edilir.
+- **Kopya:** hedef kaynağın kendisi / üst klasörüyse reddedilir.
+- **Doğrulama:** 731 testten 744 teste; yeni 13 testten 12'si eski kodda kırmızı (13. test yanlış pozitif koruması, eskide de yeşil). Bağımsız: `C:\2UYGULAMALAR` üzerinde eski / yeni desen ve hassas dosya bulguları karşılaştırıldı (sır deseni: 2 yeni bulgu; hassas dosya: fark 0, ignore kapatılınca `.env.test` / `.env.local` yakalanıyor). Kendi taramamız: değişen dosyalarda yeni bulgu yok (önceden var olan `py-weak-hash`, `naive-datetime` duruyor).
+
 ## [2026-10-10] [FIX] | Kesik alt kartlar, kategori listesi, ortalı sekmeler
 - **Gösterge paneli alt kartları kesikti:** `ScrollView.contentHeight` düzenin gerçek yüksekliğini izlemiyordu (905 px'te takılı, düzen 911-941 px), kaydırma içeriğin sonuna ulaşmıyordu. Gösterge Paneli, Arşiv ve Ayarlar kaydırıcılarında `contentHeight: bodyColumn.implicitHeight` ile düzene bağlandı. Test (proje yüklüyken içerik yüksekliği = düzen yüksekliği): düzeltme kaldırılınca kırmızı.
 - **Kategori listesi:** ad solda, sayı sağ uçtaydı ve aradaki mesafe çok geniş kalıyordu; açılan liste artık en uzun adın genişliğine daralır, ad sola, sayı sağa yaslı, iki yanda 14 px iç boşluk; kapalı kutu da aynı genişlikte (`FilterComboBox`).

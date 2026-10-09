@@ -12,7 +12,9 @@ Her karar: ne seçildi, neden, nasıl uygulanır. Bulgu durumları için [[roadm
 - **Eşikler V2 şablonuna hizalı** (`V2-GenelSablon.md`), tek yerde (`QualityThresholds`); eşik aşılırsa (`>`) bulgu, 2 katında bir seviye yukarı. Üst düzey yapılandırma `ProjectService(thresholds=...)`.
 - **Gürültü azaltma:** bir fonksiyon birden çok eşiği aşarsa tek bulgu; dosya başına toplulaştırma (sihirli sayı, `print`, TODO); raporda `kural + öncelik` ile gruplama.
 - **Skor bulgu tabanlıdır** (`100 × exp(-ceza/60)`), sabit değer değil. Çalışmayan analizörün kategorisi hesaba katılmaz. `git` ve `type` kategorileri puanlanmaz (bilgi amaçlı); tek istisna `secret-in-history`, bulgusu `security` kategorisinde puanlanır.
-- **Kural kimliği + `disabled_rules`:** her bulguda `metadata['rule']`; yanlış pozitif kapatma tek yerden.
+- **Kural kimliği + `disabled_rules`:** her bulguda `metadata['rule']`; yanlış pozitif kapatma tek yerden. Yalnızca puanlanmayan `type` bilgileri kimliksizdir (2026-10-10: boyut, çift dosya, boş klasör, hassas dosya, yapı, eksik manifest bulgularına kimlik eklendi; önceden yalnızca `kind` taşıyorlardı ve kapatılamıyorlardı).
+- **Puanlanan kategori bulgudan da gelir** (2026-10-10): bir analizörün bulgusu başka kategoride puanlanıyorsa (`secret-in-history` -> `security`) o kategori, kendi analizörü çökse ya da kapalı olsa bile puanlanır.
+- **Boş klasör = diskte boş.** Yalnızca `.gitignore`'lu dosya içeren klasör boş sayılmaz (2026-10-10 denetiminde önerilen değişiklik reddedildi): "boş" denip silinmesi önerilirse yerel veri kaybolur.
 - **Klon tespiti yalnızca Tip-1** (birebir aynı satırlar). Dize ve sayıları normalleştiren sürüm sahte klon üretti, vazgeçildi.
 - **Test eşleme ada bakar.** Farklı adla yazılmış test "testsiz" görünür; bu yüzden `untested-modules` yalnızca BİLGİ.
 - **Yorumla gerekçelendirilmiş hata yutma bulgu sayılmaz** (`swallowed-exception`); gerekçesiz yutma sayılır.
@@ -24,11 +26,14 @@ Her karar: ne seçildi, neden, nasıl uygulanır. Bulgu durumları için [[roadm
 - **Silme kalıcı değil:** temizlik Geri Dönüşüm Kutusu'na taşır (`send2trash`); `venv`, `node_modules` gibi klasörlerin içine girilmez; `cleanup` varsayılanı `dry_run=True`.
 - **Git erişimi salt-okunur ve zaman aşımlıdır** (`GIT_OPTIONAL_LOCKS=0`, `core.fsmonitor=false`, etkileşimli soru yok); git yoksa `None` ve sessiz atlama. `--all` yerine `--branches --tags --remotes` (stash taranmaz).
 - **Okunamayan `.gitignore` varken arşiv reddedilir:** gizli dosyalar sızabilirdi.
+- **Hassas dosya adla tanınır, tek liste** (2026-10-10): `path_rules.secret_kind` hem çalışma kopyasında (`sensitive-file`) hem geçmişte (`secret-in-history`) kullanılır. Önceden çalışma kopyası yalnızca 3 ada bakıyordu; izlenen `id_rsa`, `*.jks` gibi anahtarlar iki analizörden de kaçıyordu. Yalnızca sertifika içeren `.pem` / `.key` hassas sayılmaz (ortak sertifika yanlış pozitifi).
+- **Genel sır deseninin değer karakterleri** (2026-10-10): harf, rakam, `_-!@#$%^&*+=?~`. `/ . : {` ve boşluk bilinçli dışarıda: `C:\2UYGULAMALAR` karşılaştırmasında bunlara izin veren desen 36 yeni bulgu üretti, hepsi yanlış pozitifti (ayar anahtarı `ui/theme`, f-string, örnek metin); seçilen desen 2 yeni bulgu üretti (biri denetim raporundaki örnek parola, biri `@` ile başlayan bir depolama anahtarı).
+- **Kopya hedefi kaynağın kendisi ya da üst klasörü olamaz** (2026-10-10): aynı klasörde her dosya kendi üzerine kopyalanır, üst klasörde oradaki dosyaların üzerine yazılır; işlem hiçbir dosyaya dokunmadan reddedilir.
 
 ## Dosya seçimi (arşiv / yedek / analiz)
 - **Analiz ve arşiv `.gitignore` uygular, izlenen dosyalar korunur** (git semantiği: izlenen dosya sonradan ignore'a girse de dışlanmaz). Dışarıda kalan sayılar görünür (`ignored_by_gitignore`).
 - **Yedek `.gitignore` uygulamaz** (2026-10-09): yedek felaket kurtarma içindir, `.env`, yerel veritabanı, model gibi git'ten geri getirilemeyen dosyalar çoğunlukla ignore'dadır. Yalnızca yeniden üretilebilir klasörler (`EXCLUDED_DIRS`, koşullu `target`/`bin`/`obj`, `pyvenv.cfg` içeren klasör) dışlanır. Ölçüm (30 depo): eski davranış 36,1 GB, seçilen 3,8 GB, `.gitignore` de uygulansaydı 69 MB ve ~0,9 GB veritabanı kaybolurdu. Dışlananlar sonuçta bildirilir (sessiz dışlama yok).
-- **Tek dışlama kaynağı:** `src/core/exclusions.py` (`is_excluded_dir`); analiz, temizlik, arşiv ve yedek ortak kullanır.
+- **Tek dışlama kaynağı:** `src/core/exclusions.py` (`is_excluded_dir`); analiz, temizlik, arşiv ve yedek ortak kullanır. Temizlik 2026-10-10'a kadar yalnızca sabit `EXCLUDED_DIRS` kümesine bakıyordu (`myenv` gibi sanal ortamlara giriyordu); düzeltildi.
 
 ## Ajan görevleri (2026-10-09)
 - **Bulgular ajana görev olarak verilir; sırlar verilmez.** Dalga 0 (sır yenileme, LICENSE kararı, git izleme) insan aksiyonudur: görev dosyasında kaynak satırı ve değer yoktur, ajana "yapma" denir.

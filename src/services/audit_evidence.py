@@ -3,7 +3,7 @@ from itertools import islice
 from pathlib import Path
 from typing import Optional
 
-from src.analyzers.git_history_analyzer import secret_kind
+from src.core.path_rules import secret_kind
 from src.models.analysis_models import AnalysisResult
 from src.services import audit_catalog as catalog
 

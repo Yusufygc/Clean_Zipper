@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from src.core.base_analyzer import BaseAnalyzer
+from src.core.registry import load_builtin_analyzers
 from src.analyzers.dead_code_analyzer import DeadCodeAnalyzer
 from src.analyzers.duplicate_finder import DuplicateFinder
 from src.analyzers.empty_folder_finder import EmptyFolderFinder
@@ -165,3 +166,51 @@ def test_disabled_rules_filter_findings_of_every_analyzer_and_the_score(tmp_path
     assert any(f.metadata.get("rule") == "unused-import" for f in full.all_findings)
     assert not any(f.metadata.get("rule") == "unused-import" for f in muted.all_findings)
     assert muted.category_scores["deadcode"] > full.category_scores["deadcode"]
+
+
+class HistorySecretAnalyzer(BaseAnalyzer):
+    """GitHistoryAnalyzer gibi: kendi kategorisi `git`, sır bulgusu `security` kategorisinde puanlanır."""
+    category = "git"
+
+    @property
+    def name(self):
+        return "Geçmiş"
+
+    def analyze(self, index):
+        result = self._create_result("sır", "geçmişte", Severity.HIGH, rule="secret-in-history")
+        result.category = "security"
+        return [result]
+
+
+def test_findings_scored_in_another_category_count_even_if_its_analyzer_failed(tmp_path):
+    (tmp_path / "a.txt").write_text("x", encoding="utf-8")
+    analysis = ProjectDoctor(analyzers=[BoomAnalyzer(), HistorySecretAnalyzer()]).diagnose(tmp_path)
+    assert analysis.failed_analyzers == ["Boom"]
+    assert analysis.category_scores["security"] < 100
+
+
+def test_every_scored_finding_has_a_rule_id(tmp_path):
+    """Kural kimliği olmayan bulgu kapatılamaz; yalnızca puanlanmayan `type` bilgileri kimliksizdir."""
+    make_project(tmp_path)
+    (tmp_path / ".env").write_text("A=1\n", encoding="utf-8")
+    (tmp_path / "x.py").write_text("print(1)\n", encoding="utf-8")
+    deep = tmp_path.joinpath(*"pqrstuvwxyz")
+    deep.mkdir(parents=True)
+    (deep / "leaf.txt").write_text("x", encoding="utf-8")
+    analyzers = load_builtin_analyzers().create_all()
+    findings = ProjectDoctor(analyzers, respect_gitignore=False).diagnose(tmp_path).all_findings
+    rules = {f.metadata.get("rule") for f in findings}
+    assert {"empty-folder", "duplicate-files", "sensitive-file", "deep-structure", "missing-manifest",
+            "project-size"} <= rules
+    assert [f.title for f in findings if not f.metadata.get("rule") and f.category != "type"] == []
+
+
+def test_disabled_rules_filter_kind_based_findings(tmp_path):
+    make_project(tmp_path)
+    analyzers = lambda: [DuplicateFinder(), EmptyFolderFinder(), SizeAnalyzer(large_file_threshold_mb=0.001)]
+    full = ProjectDoctor(analyzers=analyzers()).diagnose(tmp_path)
+    muted = ProjectDoctor(analyzers=analyzers(),
+                          disabled_rules=["duplicate-files", "empty-folder", "large-file"]).diagnose(tmp_path)
+    assert {"duplicate-files", "empty-folder", "large-file"} <= {f.metadata.get("rule") for f in full.all_findings}
+    assert {f.metadata.get("rule") for f in muted.all_findings} == {"project-size"}
+    assert muted.category_scores["duplicate"] > full.category_scores["duplicate"]

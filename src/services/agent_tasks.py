@@ -18,8 +18,6 @@ SCHEMA_VERSION = 1
 DEFAULT_BATCH_SIZE = 15
 MESSAGE_LIMIT = 400
 MAX_NEW_REPORTED = 50
-KIND_RULES = {'large_file': 'large-file', 'duplicate_group': 'duplicate-files', 'empty_dir': 'empty-folder',
-              'sensitive_file': 'sensitive-file', 'total_size': 'project-size'}
 # kuralın ayırt edici adını taşıyan metadata alanı (parmak izi için)
 DISCRIMINATOR_KEYS = {'function-metrics': 'function', 'class-size': 'class_name', 'unused-dependency': 'dependency',
                       'tracked-artifacts': 'root'}
@@ -67,8 +65,7 @@ class Task:
 
 
 def rule_of(finding: AnalysisResult) -> str:
-    meta = finding.metadata
-    return meta.get('rule') or KIND_RULES.get(meta.get('kind', ''), '') or finding.category
+    return finding.metadata.get('rule') or finding.category
 
 
 def _fingerprint(key: str, ordinal: int) -> str:

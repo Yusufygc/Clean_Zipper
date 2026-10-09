@@ -43,10 +43,11 @@ UI bunları kullanıcıya göstermelidir (sessiz kısmi sonuç yok):
 - Arşiv: `total_files`, `added_files`, `skipped_files`; kopya: `copied_files`, `skipped_files`; arşiv ve kopya `profile_name` alır (`resources/profiles/*.json`, gitignore sözdizimi, `extends` ile kalıtım).
 - Yedek: `backup_name`, `size`, `excluded_dirs` (en çok 100) ve `excluded_dir_count`. Yedek `.gitignore` uygulamaz, yalnızca yeniden üretilebilir klasörleri dışlar ([[decisions]]).
 - Arşiv, `.gitignore` okunamıyorsa gizli dosyaları sızdırmamak için işlemi reddeder (`error` dolu, `success=False`).
+- Kopya, hedef kaynağın kendisi ya da üst klasörüyse hiçbir dosyaya dokunmadan reddeder (`error` dolu, `success=False`).
 - UI `complete=False` ve `failed_files`'ı kullanıcıya göstermelidir.
 
 ## Temizlik
-`CleanupService.scan / preview_cleanup / cleanup(dry_run=True)`: kategoriler `python_cache`, `temp_files` (varsayılan açık), `logs`, `backups` (varsayılan kapalı). `venv`, `node_modules` gibi dışlanan klasörlerin içine girilmez. Silme kalıcı değildir: Geri Dönüşüm Kutusu (`send2trash`). `cleanup` varsayılanı `dry_run=True`.
+`CleanupService.scan / preview_cleanup / cleanup(dry_run=True)`: kategoriler `python_cache`, `temp_files` (varsayılan açık), `logs`, `backups` (varsayılan kapalı). Dışlanan klasörlerin içine girilmez; kural analizle aynıdır (`is_excluded_dir`: `venv`, `node_modules`, adı ne olursa olsun `pyvenv.cfg` içeren sanal ortam, derleme dosyası yanındaki `target` / `bin` / `obj`). Silme kalıcı değildir: Geri Dönüşüm Kutusu (`send2trash`). `cleanup` varsayılanı `dry_run=True`.
 
 ## Denetim raporu
 `AuditReportService` (Markdown) bölümleri: A yönetici özeti, B iyi pratikler, C incelenmedi, D ayrıntılı bulgular, E aksiyon planı, F sonraki adım. Kurallar:

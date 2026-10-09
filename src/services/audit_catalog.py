@@ -40,7 +40,8 @@ RULE_EFFORT: Dict[str, str] = {
     'missing-readme': 'S', 'missing-license': 'S', 'missing-gitignore': 'S', 'missing-lockfile': 'S',
     'missing-env-example': 'S', 'missing-ci': 'M', 'function-metrics': 'M', 'module-imports': 'M', 'code-clone': 'M',
     'test-real-network': 'M', 'hotspot': 'M', 'class-size': 'L', 'file-length': 'L', 'import-cycle': 'L',
-    'low-test-ratio': 'L', 'no-tests': 'XL',
+    'low-test-ratio': 'L', 'no-tests': 'XL', 'sensitive-file': 'S', 'empty-folder': 'S', 'duplicate-files': 'S',
+    'missing-manifest': 'S', 'large-file': 'M', 'deep-structure': 'L',
 }
 
 RULE_LABELS: Dict[str, str] = {
@@ -55,6 +56,9 @@ RULE_LABELS: Dict[str, str] = {
     'test-sleep': 'Testte sleep', 'test-real-network': 'Testte gerçek ağ çağrısı', 'hotspot': 'Sık değişen karmaşık dosya',
     'missing-readme': 'README eksik', 'missing-license': 'LICENSE eksik', 'missing-gitignore': '.gitignore eksik',
     'missing-ci': 'CI yok', 'missing-lockfile': 'Kilit dosyası yok', 'missing-env-example': '.env.example eksik',
+    'sensitive-file': 'Hassas dosya', 'large-file': 'Büyük dosya', 'project-size': 'Proje boyutu',
+    'duplicate-files': 'Çift dosyalar', 'empty-folder': 'Boş klasör', 'deep-structure': 'Derin klasör yapısı',
+    'missing-manifest': 'Bağımlılık dosyası eksik',
 }
 
 RULE_IMPACT: Dict[str, str] = {

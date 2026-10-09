@@ -418,7 +418,7 @@ service = ArchiveService(parser=parser)
 result = service.create_zip(Path("/proje"), Path("/cikti.zip"))
 
 # Temiz kopya
-result = service.copy_project(Path("/proje"), Path("/temiz_kopya"))
+result = service.copy_project(Path("/proje"), Path("/temiz_kopya"))   # hedef kaynağın kendisi / üst klasörü olamaz
 ```
 
 #### `CleanupService`
@@ -710,7 +710,7 @@ Analiz ve arşivleme projenin `.gitignore` kurallarını **git ile aynı önceli
 
 - Analizde ignore'lu dosyalar (derleme çıktısı, yerel veri, `*.log`) boyut, dil istatistiği, karmaşıklık, çift dosya ve bağımlılık sayılarına girmez. `quick_scan` çıktısında `gitignore_applied` ve `ignored_by_gitignore` (`files`/`dirs`; budanan klasörün içi sayılmaz) görünür. Kapatmak için `ProjectService(respect_gitignore=False)`.
 - `git` kurulu değilse ya da klasör bir depo değilse yalnızca `.gitignore` kuralları uygulanır.
-- Güvenlik: `.gitignore`'daki izlenmeyen `.env` doğru uygulamadır ve bulgu üretmez. `.gitignore`'a eklenmemiş `.env` / `credentials.json` / `secrets.yaml` "commit edilme riski"; **git'e commit edilmiş** olanlar (sonradan `.gitignore`'a eklenmiş olsa bile) KRİTİK "commit edilmiş" bulgusudur: `.gitignore` izlenen dosyayı geçmişten silmez (`git rm --cached` + sırları değiştirin).
+- Güvenlik: `.gitignore`'daki izlenmeyen `.env` doğru uygulamadır ve bulgu üretmez. `.gitignore`'a eklenmemiş hassas dosyalar (`.env`, `.env.*` (örnek/şablon hariç), `credentials.json`, `secrets.{yaml,yml,json}`, `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`; yalnızca sertifika içeren `.pem` hariç) "commit edilme riski"; **git'e commit edilmiş** olanlar (sonradan `.gitignore`'a eklenmiş olsa bile) KRİTİK "commit edilmiş" bulgusudur: `.gitignore` izlenen dosyayı geçmişten silmez (`git rm --cached` + sırları değiştirin).
 - Okunamayan bir `.gitignore` arşivlemeyi reddeder (gizli dosya sızıntısı önlemi); analiz ignore'suz sürer ve hata `index.errors`'a yazılır.
 - `CleanupService` bilerek `.gitignore`'a bakmaz: temizlediği önbellek ve geçici dosyalar zaten ignore'ludur.
 

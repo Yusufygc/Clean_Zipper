@@ -106,6 +106,14 @@ def test_copy_skips_target_dir_inside_source(project):
     assert copied == [".gitignore", "app.py", "src/mod.py"]               # export/ kendi içine kopyalanmaz
 
 
+@pytest.mark.parametrize("target_of", [lambda p: p, lambda p: p.parent, lambda p: p / "src" / ".."])
+def test_copy_refuses_source_itself_or_its_parent_as_target(project, target_of):
+    before = sorted(p.as_posix() for p in project.parent.rglob("*"))
+    result = ArchiveService(GitignoreParser(str(project))).copy_project(project, target_of(project))
+    assert not result["success"] and result["copied_files"] == 0 and "olamaz" in result["error"]
+    assert sorted(p.as_posix() for p in project.parent.rglob("*")) == before
+
+
 def test_progress_callback_reports_every_file(project, tmp_path):
     seen = []
     ArchiveService().create_zip(project, tmp_path / "o.zip", progress_callback=lambda d, t: seen.append((d, t)))

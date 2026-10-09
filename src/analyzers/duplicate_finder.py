@@ -32,7 +32,7 @@ class DuplicateFinder(BaseAnalyzer):
                 description=f"{len(group)-1} kopya, {waste/(1024*1024):.1f} MB gereksiz",
                 severity=Severity.HIGH, size_impact=waste,
                 file_path=group[0].path,
-                kind='duplicate_group', paths=[f.path for f in group], reclaimable=True
+                rule='duplicate-files', kind='duplicate_group', paths=[f.path for f in group], reclaimable=True
             ))
         return results
 

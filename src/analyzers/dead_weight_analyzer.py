@@ -140,5 +140,5 @@ class DeadWeightAnalyzer(BaseAnalyzer):
             description="Projede requirements.txt bulunamadı. Bağımlılık yönetimi için eklemeniz önerilir.",
             severity=Severity.INFO,
             recommendation="Proje kök dizininde pip bağımlılıklarını içeren bir requirements.txt oluşturun.",
-            ecosystem='python',
+            rule='missing-manifest', ecosystem='python',
         )]

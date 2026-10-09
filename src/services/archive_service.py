@@ -157,6 +157,14 @@ class ArchiveService:
 
         return result
 
+    @staticmethod
+    def _refuse_if_target_contains_source(source_dir: Path, target_dir: Path, result: Dict) -> bool:
+        """Aynı klasör: her dosya kendi üzerine kopyalanır. Üst klasör: proje dosyaları oradakilerin üzerine yazılır."""
+        if target_dir == source_dir or target_dir in source_dir.parents:
+            result['error'] = "Hedef klasör, kaynak klasörün kendisi ya da üst klasörü olamaz."
+            return True
+        return False
+
     def copy_project(self, source_dir: Path, target_dir: Path,
                      profile_name: str = "Geliştirici (Standart)",
                      progress_callback: Optional[ProgressCallback] = None) -> Dict:
@@ -165,6 +173,8 @@ class ArchiveService:
 
         result = {'success': False, 'complete': False, 'copied_files': 0,
                   'skipped_files': 0, 'failed_files': [], 'error': None}
+        if self._refuse_if_target_contains_source(source_dir, target_dir, result):
+            return result
         profile = self._resolve_profile(profile_name, result)
         if profile is None or self._refuse_if_gitignore_unreadable(result):
             return result

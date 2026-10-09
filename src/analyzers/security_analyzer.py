@@ -2,13 +2,11 @@ import re
 from bisect import bisect_right
 from typing import List, Optional
 from src.core.base_analyzer import BaseAnalyzer
-from src.core.path_rules import is_test_path
+from src.core.path_rules import is_test_path, is_unverified_secret, secret_kind
 from src.core.project_index import ProjectIndex
 from src.core.registry import register_analyzer
 from src.models.analysis_models import AnalysisResult, Severity
 from src.utils.gitignore_parser import GitignoreMatcher
-
-SENSITIVE_FILE_NAMES = frozenset({'.env', 'credentials.json', 'secrets.yaml'})
 
 # Biçimi bilinen sağlayıcı sırları (kalıplar parçalanır: kendi kaynağımız yanlışlıkla eşleşmesin).
 # Her kalıbın `hints` alanı: metinde bulunması gereken sabit parçalar. Hızlı alt dize araması, pahalı regex'i
@@ -26,7 +24,9 @@ PROVIDER_SECRETS = (
 
 # Genel sızıntılar iki adımdır: ucuz bir "çapa" (sabit karakterle başlar, regex motoru hızlı tarar) ve eşleşmenin
 # hemen öncesindeki anahtar sözcük denetimi. Anlamı `(key|secret|...)\s*=\s*'değer'` ile aynıdır.
-_ASSIGNED_LITERAL = re.compile(r'=[^\S\n]*[\'"][A-Za-z0-9_\-]{8,}[\'"]')
+# Değer: harf, rakam ve parolalarda yaygın özel karakterler. `/`, `.`, `:`, `{`, boşluk bilinçli olarak yok: bunlar
+# ayar anahtarı (`ui/theme`), yol, URL ya da şablon (`${VAR}`, f-string) olur; gerçek projelerde yanlış pozitif üretiyordu.
+_ASSIGNED_LITERAL = re.compile(r'=[^\S\n]*[\'"][A-Za-z0-9_\-!@#$%^&*+=?~]{8,}[\'"]')
 _SECRET_WORD_BEFORE = re.compile(r'(?:key|secret|password|passwd|token)[^\S\n]*\Z', re.IGNORECASE)
 _DB_SCHEME = re.compile(r'://')
 # Kendi kodumuzu yanlışlıkla sızıntı olarak işaretlememesi (False Positive) için dizeler parçalanır.
@@ -77,8 +77,8 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
         for entry in index.files:
             file_path = entry.path
 
-            # Riskli dosya adı (.env veya credentials kontrolü)
-            if file_path.name in SENSITIVE_FILE_NAMES:
+            # Riskli dosya adı (.env, credentials, özel anahtar / anahtar deposu); ortak sertifika değilse
+            if secret_kind(entry.rel) and not self._is_public_certificate(index, entry):
                 results.append(self._sensitive_file_result(index, entry.rel, file_path, tracked))
                 continue
 
@@ -89,6 +89,14 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
 
         results.extend(self._tracked_but_ignored(index, tracked))
         return results
+
+    @staticmethod
+    def _is_public_certificate(index: ProjectIndex, entry) -> bool:
+        """İçinde özel anahtar olmayan, yalnızca sertifika / ortak anahtar taşıyan PEM metni (`.pem`, `.key`)."""
+        if not is_unverified_secret(entry.rel):
+            return False
+        text = index.read_text(entry)
+        return text is not None and '-----BEGIN ' in text and 'PRIV' + 'ATE KEY' not in text
 
     def _scan_text(self, text: str, file_path, is_test: bool = False) -> List[AnalysisResult]:
         """Tüm metin üzerinde tek geçiş (satır satır döngüden çok daha hızlı); kalıplar satır sınırını aşmaz."""
@@ -149,7 +157,7 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
             severity=Severity.CRITICAL,
             file_path=file_path,
             recommendation="Bu dosyayı hemen .gitignore içerisine ekleyin ve sunucuda ortam değişkeni (env) olarak tanımlayın.",
-            kind='sensitive_file', committed=False, tracking_known=tracking_known,
+            rule='sensitive-file', kind='sensitive_file', committed=False, tracking_known=tracking_known,
         )
 
     def _committed_result(self, rel: str, file_path, ignored: bool) -> AnalysisResult:
@@ -162,7 +170,7 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
             file_path=file_path,
             recommendation=(f"'git rm --cached {rel}' ile izlemeden çıkarın, içindeki sırları değiştirin (rotate) "
                             "ve gerekirse geçmişi temizleyin."),
-            kind='sensitive_file', committed=True, tracking_known=True, gitignored=ignored,
+            rule='sensitive-file', kind='sensitive_file', committed=True, tracking_known=True, gitignored=ignored,
         )
 
     def _tracked_but_ignored(self, index: ProjectIndex, tracked) -> List[AnalysisResult]:
@@ -173,5 +181,5 @@ class SecurityLeakAnalyzer(BaseAnalyzer):
         return [
             self._committed_result(rel, index.root / rel, ignored=True)
             for rel in sorted(tracked)
-            if rel.rsplit('/', 1)[-1] in SENSITIVE_FILE_NAMES and rel not in in_index
+            if secret_kind(rel) and rel not in in_index
         ]

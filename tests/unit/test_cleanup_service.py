@@ -47,6 +47,17 @@ def test_excluded_dirs_are_never_scanned(project):
     assert not any(p.startswith(("venv", "node_modules", ".git")) for p in found)
 
 
+
+def test_virtualenv_with_any_name_and_build_outputs_are_never_scanned(tmp_path):
+    """Analizle aynı dışlama kuralı (`is_excluded_dir`): adı ne olursa olsun sanal ortam, bağlamsal derleme klasörü."""
+    write(tmp_path / "myenv" / "pyvenv.cfg", "home = x")
+    write(tmp_path / "myenv" / "Lib" / "site-packages" / "__pycache__" / "m.pyc")
+    write(tmp_path / "rs" / "Cargo.toml", "[package]")
+    write(tmp_path / "rs" / "target" / "debug" / "build.log")
+    write(tmp_path / "plain" / "target" / "keep.log")
+    found = paths(CleanupService(FakeTrash()).scan(tmp_path, ["python_cache", "logs"]), tmp_path)
+    assert found == {"plain/target/keep.log"}
+
 def test_pycache_dir_is_single_item_with_totals(project):
     items = CleanupService(FakeTrash()).scan(project, ["python_cache"])
     assert len(items) == 1

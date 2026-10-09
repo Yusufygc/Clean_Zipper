@@ -114,6 +114,20 @@ def test_security_finds_secret_with_line_number(tmp_path):
     assert results[0].severity == Severity.HIGH
 
 
+def test_security_finds_passwords_with_special_characters(tmp_path):
+    write(tmp_path / "cfg.py", 'pass' + 'word = "P@ssw0rd!#$2026"\n' + 'sec' + "ret = 'M$K!9#zL@82p'\n")
+    results = SecurityLeakAnalyzer().analyze(ProjectIndex.build(tmp_path))
+    assert ["Satır 1" in r.description or "Satır 2" in r.description for r in results] == [True, True]
+
+
+def test_security_ignores_settings_keys_paths_and_templates(tmp_path):
+    write(tmp_path / "keys.py", 'THEME_SETTINGS_KEY = "ui/theme_mode"\n'
+                                'token = "${API_TOKEN}"\n'
+                                'secret_file = "conf/app.secret"\n'
+                                'password = f"{prefix}-{suffix}"\n')
+    assert SecurityLeakAnalyzer().analyze(ProjectIndex.build(tmp_path)) == []
+
+
 def test_security_scans_cp1254_files_that_used_to_be_skipped_as_binary(tmp_path):
     write(tmp_path / "ayar.py", "# şifre ayarları: öğrenci çalışması\n" + LEAK, encoding="cp1254")
     results = SecurityLeakAnalyzer().analyze(ProjectIndex.build(tmp_path))
@@ -305,6 +319,48 @@ def test_secret_patterns_are_not_scanned_in_gitignored_files(tmp_path):
     write(repo / "src" / "creds.py", LEAK)
     results = SecurityLeakAnalyzer().analyze(ProjectIndex.build(repo))
     assert [r.file_path.relative_to(repo.resolve()).as_posix() for r in results] == ["src/creds.py"]
+
+
+PEM_KEY = "-----BEGIN " + "PRIV" + "ATE KEY-----\nMIIB\n-----END " + "PRIV" + "ATE KEY-----\n"
+PEM_CERT = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
+
+
+def test_private_keys_and_keystores_in_working_copy_are_sensitive_files(tmp_path):
+    """Yalnızca adıyla tanınan anahtarlar (ikilik anahtar deposu dahil) içerik taramasına kalmaz."""
+    write(tmp_path / "id_rsa", "opaque")
+    write(tmp_path / "app.jks", b"\xfe\xed\xfe\xed\x00\x00")
+    write(tmp_path / "server.key", PEM_KEY)
+    write(tmp_path / ".env.local", "A=1")
+    write(tmp_path / ".env.example", "A=")
+    findings = sensitive_findings(tmp_path)
+    assert sorted(f.file_path.name for f in findings) == [".env.local", "app.jks", "id_rsa", "server.key"]
+    assert {f.metadata["rule"] for f in findings} == {"sensitive-file"}
+
+
+def test_public_certificate_pem_is_not_a_sensitive_file(tmp_path):
+    write(tmp_path / "ca.pem", PEM_CERT)
+    write(tmp_path / "bundle.pem", PEM_CERT + PEM_KEY)
+    assert [f.file_path.name for f in sensitive_findings(tmp_path)] == ["bundle.pem"]
+
+
+@needs_git
+def test_committed_and_still_tracked_private_key_is_reported(tmp_path):
+    """Geçmiş analizörü izlenen dosyayı atlar; izlenen anahtarı güvenlik analizörü raporlamalı."""
+    repo = make_repo(tmp_path)
+    write(repo / "deploy" / "id_ed25519", "opaque")
+    commit_all(repo)
+    [finding] = sensitive_findings(repo)
+    assert finding.metadata["committed"] is True and "git rm --cached deploy/id_ed25519" in finding.recommendation
+
+
+@needs_git
+def test_tracked_but_gitignored_keystore_is_reported(tmp_path):
+    repo = make_repo(tmp_path)
+    write(repo / "release.keystore", b"\x00\x01")
+    commit_all(repo)
+    write(repo / ".gitignore", "*.keystore\n")
+    [finding] = sensitive_findings(repo)
+    assert finding.metadata["committed"] is True and finding.metadata["gitignored"] is True
 
 
 def test_outside_git_repo_behaviour_without_gitignore_is_unchanged(tmp_path):

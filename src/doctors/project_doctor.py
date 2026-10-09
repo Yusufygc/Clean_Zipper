@@ -98,8 +98,12 @@ class ProjectDoctor:
             try:
                 if not analyzer.can_analyze(index):
                     continue
-                all_results.extend(self._without_disabled_rules(analyzer.analyze(index)))
+                results = self._without_disabled_rules(analyzer.analyze(index))
+                all_results.extend(results)
                 ran_categories.add(analyzer.category)
+                # Bulgu başka kategoride puanlanabilir (ör. git geçmişindeki sır -> security); o kategorinin
+                # kendi analizörü çalışmasa / çökse bile bulgu puana yansır.
+                ran_categories.update(r.category for r in results)
             except Exception:
                 logger.exception("Analizor hatasi (%s)", analyzer.name)
                 analysis.failed_analyzers.append(analyzer.name)

@@ -14,33 +14,35 @@ Her analizör `src/analyzers/` altında tek dosyadır, `@register_analyzer` ile 
 ## Katalog
 Sıra, çalışma önceliğidir (küçük önce). `*` ile işaretli kategori puanlanmaz (bilgi amaçlı).
 
+Puanlanan her bulgu `metadata['rule']` taşır; kimliksiz bulgu Ayarlar'dan kapatılamaz (kart düğmeyi göstermez) ve `disabled_rules` süzgecinden geçer. Yalnızca `type*` bilgileri kimliksizdir (test: `test_every_scored_finding_has_a_rule_id`). Eski `kind` alanları (`large_file`, `duplicate_group`, `empty_dir`, `sensitive_file`, `total_size`) ek bilgi olarak kalır.
+
 | Öncelik | Analizör | Kategori | Kurallar (`metadata['rule']` / `kind`) |
 |---|---|---|---|
-| 10 | `SizeAnalyzer` | size | `large_file`, `total_size` |
+| 10 | `SizeAnalyzer` | size | `large-file`, `project-size` |
 | 12 | `CodeComplexityAnalyzer` | complexity | `function-metrics`, `class-size`, `file-length`, `module-imports` |
 | 14 | `DeadCodeAnalyzer` | deadcode | `unused-import`, `unused-variable`, `unreachable-code` |
-| 15 | `SecurityLeakAnalyzer` | security | `hardcoded-secret`, `provider-secret`, `sensitive_file` |
+| 15 | `SecurityLeakAnalyzer` | security | `hardcoded-secret`, `provider-secret`, `sensitive-file` |
 | 16 | `CodeSecurityAnalyzer` | security | SAST-lite: `resources/rules/security_rules.json` (39 kural: `py-*`, `js-*`, `java-*`, `cs-*`, `c-*`, `go-*`, `rust-*`) |
 | 16 | `MagicNumberAnalyzer` | deadcode | `magic-numbers` |
 | 18 | `CloneAnalyzer` | duplicate | `code-clone`, `clone-summary` |
 | 20 | `TypeAnalyzer` | type* | dosya türü dağılımı |
 | 22 | `LanguageStatsAnalyzer` | type* | `language_stats` (satır / dosya sayıları) |
-| 25 | `DeadWeightAnalyzer` | dependency | `unused-dependency`, `unpinned-dependencies`, `dev-dependency-in-runtime` |
+| 25 | `DeadWeightAnalyzer` | dependency | `unused-dependency`, `unpinned-dependencies`, `dev-dependency-in-runtime`, `missing-manifest` |
 | 30 | `ArchitectureAnalyzer` | architecture | `import-cycle`, `dependency-graph` |
-| 30 | `DuplicateFinder` | duplicate | `duplicate_group` (aynı içerikli dosyalar) |
+| 30 | `DuplicateFinder` | duplicate | `duplicate-files` (aynı içerikli dosyalar) |
 | 35 | `ReliabilityAnalyzer` | reliability | `bare-except`, `swallowed-exception`, `empty-catch`, `open-without-encoding`, `naive-datetime`, `debug-flag`, `debugger-statement`, `print-density`, `todo-inventory` |
-| 40 | `EmptyFolderFinder` | structure | `empty_dir` |
+| 40 | `EmptyFolderFinder` | structure | `empty-folder` |
 | 40 | `TestingAnalyzer` | testing | `no-tests`, `low-test-ratio`, `untested-modules`, `test-sleep`, `test-real-network`, `test-summary` |
 | 45 | `ProjectHygieneAnalyzer` | hygiene | `missing-readme/license/gitignore/ci/lockfile/env-example`, `tracked-artifacts`, `hygiene-summary` |
 | 50 | `GitHistoryAnalyzer` | git* (+ security) | `secret-in-history` (security), `hotspot`, `co-change` |
-| 50 | `StructureAnalyzer` | structure | klasör yapısı denetimi |
+| 50 | `StructureAnalyzer` | structure | `deep-structure` (klasör derinliği) |
 
 ## Önemli kural ayrıntıları
 - **`function-metrics`:** tek fonksiyon birden çok eşiği aşarsa tek bulgu. Siklomatik, bilişsel ve iç içe derinlik ORTA; uzunluk ve parametre DÜŞÜK; eşiğin 2 katı bir seviye yukarı. Python'da kesin (`ast`; siklomatik `radon`, bilişsel Sonar kurallarıyla), diğer dillerde yaklaşık. `class-size` YÜKSEK (God Object), `file-length` ORTA (2 katı YÜKSEK), `module-imports` DÜŞÜK.
 - **Ölü kod:** `unused-import` DÜŞÜK (`# noqa` ve `__all__` dikkate alınır), `unused-variable` DÜŞÜK, `unreachable-code` ORTA (Python) / DÜŞÜK (brace). `magic-numbers` dosya başına tek DÜŞÜK bulgu.
 - **Klon:** Tip-1 (birebir aynı satırlar, yorumlar hariç), 8 satırlık pencere; ≥ 20 satır ORTA, daha kısası DÜŞÜK.
 - **Mimari:** Python (mutlak + göreli) ve JS/TS için dosya grafiği, Tarjan SCC. `import-cycle` ORTA, ≥ 4 dosya YÜKSEK. `if TYPE_CHECKING` ve fonksiyon içi import grafiğe girmez.
-- **Güvenlik:** `hardcoded-secret` YÜKSEK (test klasöründe DÜŞÜK); sağlayıcı anahtarları (AWS, GitHub, Slack, Google, Stripe, JWT, PEM) sağlayıcıya göre; bulguya **değer yazılmaz**, yalnızca maskeli önek. `sensitive_file` KRİTİK (`.env`, `credentials.json`, `secrets.yaml`). Kullanıcı kuralları `~/.gitclean/rules`.
+- **Güvenlik:** `hardcoded-secret` YÜKSEK (test klasöründe DÜŞÜK); sağlayıcı anahtarları (AWS, GitHub, Slack, Google, Stripe, JWT, PEM) sağlayıcıya göre; bulguya **değer yazılmaz**, yalnızca maskeli önek. `sensitive-file` KRİTİK, dosya adıyla: `.env`, `.env.*` (örnek/şablon hariç), `credentials.json`, `secrets.{yaml,yml,json}`, `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore` (`secret-in-history` ile aynı liste, `path_rules.secret_kind`). İçinde özel anahtar olmayan `.pem` / `.key` (yalnızca sertifika) hassas sayılmaz. Genel sır deseni değerde harf, rakam ve `_-!@#$%^&*+=?~` kabul eder; `/ . : {` ve boşluk içeren değerler (ayar anahtarı, yol, URL, şablon) bilinçli olarak dışarıda. Kullanıcı kuralları `~/.gitclean/rules`.
 - **Güvenilirlik:** `bare-except` YÜKSEK; `swallowed-exception`, `empty-catch`, `open-without-encoding`, `debug-flag`, `debugger-statement` ORTA; `naive-datetime`, `print-density` DÜŞÜK; `todo-inventory` BİLGİ. Yorumla gerekçelendirilmiş yutma bulgu sayılmaz.
 - **Test:** `no-tests` (≥ 100 kaynak satırı, ORTA; > 500 YÜKSEK), `low-test-ratio` (< 0,3 DÜŞÜK, < 0,1 ORTA), `untested-modules`, `test-summary` BİLGİ. Kaynak-test eşleme ada bakar, bu yüzden `untested-modules` yalnızca bilgidir.
 - **Hijyen:** eksik madde DÜŞÜK; `tracked-artifacts` bağımlılık klasörü ORTA, diğerleri DÜŞÜK (`dist`/`build` `approximate`; `lib/`, `vendor/` altı sayılmaz). `hygiene-summary` BİLGİ `present` / `missing` listeleri ([[backend-api]] denetim raporunun "iyi pratikler" bölümünü besler).

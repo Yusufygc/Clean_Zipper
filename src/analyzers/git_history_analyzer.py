@@ -2,10 +2,10 @@ import posixpath
 import time
 from collections import Counter
 from itertools import combinations
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Sequence, Tuple
 
 from src.core.base_analyzer import BaseAnalyzer
-from src.core.path_rules import is_test_path, module_key
+from src.core.path_rules import SECRET_PATHSPECS, is_test_path, is_unverified_secret, module_key, secret_kind
 from src.core.project_index import FileEntry, ProjectIndex
 from src.core.registry import register_analyzer
 from src.languages import parse_file
@@ -23,30 +23,6 @@ MIN_SHARED_COMMITS = 5
 MIN_CONFIDENCE = 0.6
 CO_CHANGE_LIMIT = 10
 SECRET_LIMIT = 25
-
-# `git log -- <pathspec>` için; `**/` kökü de kapsar
-SECRET_PATHSPECS = tuple(f':(glob)**/{pattern}' for pattern in (
-    '.env', '.env.*', 'credentials.json', 'secrets.yaml', 'secrets.yml', 'secrets.json',
-    'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519',
-    '*.pem', '*.key', '*.p12', '*.pfx', '*.jks', '*.keystore'))
-_EXACT_KINDS = {
-    '.env': 'env', 'credentials.json': 'credentials', 'secrets.yaml': 'credentials', 'secrets.yml': 'credentials',
-    'secrets.json': 'credentials', 'id_rsa': 'private-key', 'id_dsa': 'private-key', 'id_ecdsa': 'private-key',
-    'id_ed25519': 'private-key'}
-_KEY_EXTENSIONS = ('.pem', '.key', '.p12', '.pfx', '.jks', '.keystore')
-_PUBLIC_ENV_SUFFIXES = ('.example', '.sample', '.template', '.dist', '.tpl')
-_UNVERIFIED_EXTENSIONS = ('.pem', '.key')      # içerik doğrulanmadığı için ortak sertifika olabilir
-
-
-def secret_kind(rel: str) -> Optional[str]:
-    """Dosya adından hassas dosya türü (`env`, `credentials`, `private-key`); hassas değilse None."""
-    name = posixpath.basename(rel).lower()
-    if name in _EXACT_KINDS:
-        return _EXACT_KINDS[name]
-    if name.startswith('.env.'):
-        return None if name.endswith(_PUBLIC_ENV_SUFFIXES) else 'env'
-    return 'private-key' if name.endswith(_KEY_EXTENSIONS) else None
-
 
 @register_analyzer
 class GitHistoryAnalyzer(BaseAnalyzer):
@@ -102,7 +78,7 @@ class GitHistoryAnalyzer(BaseAnalyzer):
             file_path=index.root / rel,
             recommendation="İçindeki anahtar/parolaları geçersiz kılıp yenileyin (rotate). Geçmişten silmek gerekirse git filter-repo veya BFG kullanın.",
             rule='secret-in-history', kind=kind, commit=entry.sha, committed_at=when, in_tests=in_tests,
-            approximate=rel.lower().endswith(_UNVERIFIED_EXTENSIONS), history_scanned=True)
+            approximate=is_unverified_secret(rel), history_scanned=True)
         result.category = 'security'              # puanlanan kategori; analizörün kendi kategorisi (`git`) bilgi amaçlıdır
         return result
 

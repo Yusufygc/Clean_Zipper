@@ -34,6 +34,30 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | - | Bulgu 13 build / bağımlılık hijyeni | `df3b0ff` |
 | - | BackupService dışlama kararı | `fdf8271` |
 
+## Backend denetimi (2026-10-10)
+Kaynak: `BACKEND_ANALIZ_RAPORU.md` (işler bitince silinecek). İddialar kodla doğrulandı; reddedilenler gerekçesiyle [[decisions]] içinde.
+
+| Faz | Bulgu | Durum |
+|---|---|---|
+| 1 | Bazı analizörlerin bulgularında kural kimliği yok; kapatılamıyorlar | Tamamlandı |
+| 1 | Temizlik `is_excluded_dir` kullanmıyor (`myenv`, `target`, `bin`, `obj` içine giriyor) | Tamamlandı |
+| 1 | Çalışma kopyasındaki `id_rsa`, `*.key`, `*.jks` ... hiçbir analizörce bildirilmiyor | Tamamlandı |
+| 1 | Güvenlik analizörü çökerse `secret-in-history` puana yansımıyor | Tamamlandı |
+| 1 | Genel sır deseni özel karakterli parolaları kaçırıyor | Tamamlandı |
+| 1 | `copy_project` hedefi kaynağın kendisi / üst klasörü olabiliyor | Tamamlandı |
+| 2 | Teşhis önbelleği yok (her sayfa yeniden tarıyor) | Planlandı |
+| 2 | Eşzamanlı işlemler için kilit / meşgul durumu yok | Planlandı |
+| 2 | `RecommendationEngine` 4 eski koşula bakıyor | Planlandı |
+| 3 | `pyproject.toml` bağımlılıkları okunmuyor (`tomli` eklenecek) | Planlandı |
+| 3 | `module_key` klasörü yok sayıyor | Planlandı |
+| 3 | UTF-16 dosyalar ikilik sayılıyor | Planlandı |
+| 3 | İç içe boş klasörler raporlanmıyor | Planlandı |
+| 3 | Karmaşıklık uyarısında "satır kod" yanlış ifade | Planlandı |
+| 3 | ViewModel'lerde `file:///` için `[8:]` kesmesi | Planlandı |
+| 3 | Metin önbelleği dolunca yeni dosya önbelleğe alınmıyor (LRU yok) | Planlandı |
+| - | Yalnızca ignore'lu dosya içeren klasör "boş" sayılmalı | Reddedildi ([[decisions]]) |
+| - | `GitignoreMatcher._tracked` harf duyarlılığı | Ertelendi: yalnızca harf git dışından değişirse; `normcase` POSIX yolunu bozar |
+
 ## Kararlar
 Tam liste ve gerekçeler: [[decisions]]. Özet: önce backend (UI sonradan sıfırdan), çok dilli analiz, CLI yok, silme kalıcı değil (Geri Dönüşüm Kutusu), kendi kodumuz kendi taramamızdan geçer.
 

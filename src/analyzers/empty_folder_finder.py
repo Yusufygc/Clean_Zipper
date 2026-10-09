@@ -25,7 +25,7 @@ class EmptyFolderFinder(BaseAnalyzer):
                 description="Bu klasör boş.",
                 severity=Severity.LOW,
                 file_path=d.path,
-                kind='empty_dir'
+                rule='empty-folder', kind='empty_dir'
             )
             for d in index.dirs if d.file_count == 0 and d.dir_count == 0
         ]

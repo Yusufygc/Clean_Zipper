@@ -1,4 +1,5 @@
-"""Yol adından çıkarılan kurallar (test dosyası tanıma gibi); I/O yapmaz."""
+"""Yol adından çıkarılan kurallar (test dosyası, hassas dosya tanıma gibi); I/O yapmaz."""
+import posixpath
 import re
 from typing import Optional, Tuple
 
@@ -74,3 +75,32 @@ def artifact_root(rel: str) -> Optional[Tuple[str, str]]:
     if parts[-1].lower().endswith('.pyc'):
         return '/'.join(parts[:-1] + ['*.pyc']), 'bytecode'
     return None
+
+
+# `git log -- <pathspec>` için; `**/` kökü de kapsar
+SECRET_PATHSPECS = tuple(f':(glob)**/{pattern}' for pattern in (
+    '.env', '.env.*', 'credentials.json', 'secrets.yaml', 'secrets.yml', 'secrets.json',
+    'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519',
+    '*.pem', '*.key', '*.p12', '*.pfx', '*.jks', '*.keystore'))
+_EXACT_KINDS = {
+    '.env': 'env', 'credentials.json': 'credentials', 'secrets.yaml': 'credentials', 'secrets.yml': 'credentials',
+    'secrets.json': 'credentials', 'id_rsa': 'private-key', 'id_dsa': 'private-key', 'id_ecdsa': 'private-key',
+    'id_ed25519': 'private-key'}
+_KEY_EXTENSIONS = ('.pem', '.key', '.p12', '.pfx', '.jks', '.keystore')
+_PUBLIC_ENV_SUFFIXES = ('.example', '.sample', '.template', '.dist', '.tpl')
+_UNVERIFIED_EXTENSIONS = ('.pem', '.key')      # içerik doğrulanmadığı için ortak sertifika olabilir
+
+
+def secret_kind(rel: str) -> Optional[str]:
+    """Dosya adından hassas dosya türü (`env`, `credentials`, `private-key`); hassas değilse None."""
+    name = posixpath.basename(rel).lower()
+    if name in _EXACT_KINDS:
+        return _EXACT_KINDS[name]
+    if name.startswith('.env.'):
+        return None if name.endswith(_PUBLIC_ENV_SUFFIXES) else 'env'
+    return 'private-key' if name.endswith(_KEY_EXTENSIONS) else None
+
+
+def is_unverified_secret(rel: str) -> bool:
+    """Adı yalnızca olası bir sırrı gösteren dosya (`.pem`, `.key`): ortak sertifika da olabilir."""
+    return rel.lower().endswith(_UNVERIFIED_EXTENSIONS)
