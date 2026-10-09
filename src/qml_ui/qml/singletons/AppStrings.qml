@@ -45,7 +45,8 @@ QtObject {
     readonly property string archiveTitle: "Proje Arşivleme ve Dağıtım"
     readonly property string archiveSubtitle: "Gitignore kurallarına ve sıkıştırma profillerine uygun temiz arşiv üretir."
     readonly property string takeBackup: "Hızlı Proje Yedeği Al"
-    readonly property string backupDescription: "Yeniden üretilebilir klasörler hariç tutularak doğrudan ~/.gitclean_backups dizinine yedekler."
+    readonly property string backupDescription: "Yeniden üretilebilir klasörler hariç tutularak doğrudan ~/.gitclean_backups dizinine yedekler. Fazla otomatik yedekler Geri Dönüşüm Kutusu'na taşınır."
+    readonly property string keptBackups: "Saklanan yedek:"
 
     // Temizlik
     readonly property string cleanupTitle: "Güvenli Proje Temizliği"

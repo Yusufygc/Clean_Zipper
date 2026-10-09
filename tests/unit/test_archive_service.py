@@ -106,6 +106,17 @@ def test_copy_skips_target_dir_inside_source(project):
     assert copied == [".gitignore", "app.py", "src/mod.py"]               # export/ kendi içine kopyalanmaz
 
 
+def test_copy_into_nested_dir_inside_source_keeps_its_parent_dirs(project):
+    """Hedef `src/out/yedek` iken eskiden kökteki `src` tümden atlanıyordu (kaynak kod kopyada yoktu)."""
+    write(project / "src" / "out" / "keep_sibling.txt", "k")
+    target = project / "src" / "out" / "yedek"
+    result = ArchiveService(GitignoreParser(str(project))).copy_project(project, target)
+    assert result["success"] and result["complete"]
+    copied = sorted(p.relative_to(target).as_posix() for p in target.rglob("*") if p.is_file())
+    assert "src/mod.py" in copied and "app.py" in copied and "src/out/keep_sibling.txt" in copied
+    assert not any(p.startswith("src/out/yedek") for p in copied)        # hedef kendi içine kopyalanmaz
+
+
 @pytest.mark.parametrize("target_of", [lambda p: p, lambda p: p.parent, lambda p: p / "src" / ".."])
 def test_copy_refuses_source_itself_or_its_parent_as_target(project, target_of):
     before = sorted(p.as_posix() for p in project.parent.rglob("*"))

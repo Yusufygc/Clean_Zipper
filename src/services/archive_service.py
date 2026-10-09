@@ -57,14 +57,17 @@ class ArchiveService:
         return profile
 
     def _collect_files(self, source_dir: Path, profile: ArchiveProfile, result: Dict,
-                       skip_root_dir: Optional[str] = None,
+                       skip_dir: Optional[Path] = None,
                        skip_file: Optional[Path] = None) -> List[Tuple[Path, Path]]:
-        """Kaynak ağacı gezer, .gitignore ve profil süzgecinden geçen (mutlak, göreli) yolları döner."""
+        """Kaynak ağacı gezer, .gitignore ve profil süzgecinden geçen (mutlak, göreli) yolları döner.
+
+        `skip_dir`: kaynağın içindeki kopya hedefi; hangi derinlikte olursa olsun yalnızca o klasör atlanır (üst
+        klasörleri değil: `src/dist/yedek` hedefinde `src` kopyalanır).
+        """
         files: List[Tuple[Path, Path]] = []
         for root, dirs, filenames in os.walk(source_dir):
             root_path = Path(root)
-            skipped_dir = skip_root_dir if root_path == source_dir else None
-            dirs[:] = [d for d in dirs if self._enters_dir(root, d, dirs + filenames, skipped_dir)]
+            dirs[:] = [d for d in dirs if self._enters_dir(root, d, dirs + filenames, skip_dir)]
             for name in filenames:
                 fp = root_path / name
                 rp = fp.relative_to(source_dir)
@@ -74,9 +77,9 @@ class ArchiveService:
                     files.append((fp, rp))
         return files
 
-    def _enters_dir(self, root: str, name: str, sibling_names: List[str], skipped_dir: Optional[str]) -> bool:
+    def _enters_dir(self, root: str, name: str, sibling_names: List[str], skip_dir: Optional[Path]) -> bool:
         path = os.path.join(root, name)
-        return not (is_excluded_dir(path, name, sibling_names) or (skipped_dir and name == skipped_dir)
+        return not (is_excluded_dir(path, name, sibling_names) or (skip_dir is not None and Path(path) == skip_dir)
                     or self._is_ignored_dir(path))
 
     def _is_filtered(self, path: Path, relative: Path, profile: ArchiveProfile, skip_file: Optional[Path]) -> bool:
@@ -179,13 +182,8 @@ class ArchiveService:
         if profile is None or self._refuse_if_gitignore_unreadable(result):
             return result
 
-        try:
-            skip_root_dir = target_dir.relative_to(source_dir).parts[0]
-        except (ValueError, IndexError):
-            skip_root_dir = None
-
         self._refresh_tracked(source_dir)
-        files_to_copy = self._collect_files(source_dir, profile, result, skip_root_dir=skip_root_dir)
+        files_to_copy = self._collect_files(source_dir, profile, result, skip_dir=target_dir)
         if self._refuse_if_gitignore_unreadable(result):
             return result
         total = len(files_to_copy)

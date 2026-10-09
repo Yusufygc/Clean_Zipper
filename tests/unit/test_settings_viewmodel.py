@@ -193,3 +193,15 @@ def test_verify_without_exported_tasks_reports_an_error(qapp, tmp_path):
     vm.taskExportError.connect(errors.append)
     vm.verifyAgentTasks()
     assert errors and "Doğrulama yapılamadı" in errors[0]
+
+
+def test_max_backups_is_applied_to_backup_service_and_saved_at_once(qapp):
+    service, vm = make(qapp)
+    assert vm.maxBackups == 5 and service.backup_service.max_backups == 5
+    vm.adjustMaxBackups(-10)
+    assert vm.maxBackups == 0 and service.backup_service.max_backups == 0          # 0 = sınırsız, altı yok
+    vm.adjustMaxBackups(3)
+    saved = json.loads(app_settings.settings_path().read_text(encoding="utf-8"))
+    assert saved["max_backups"] == 3
+    service2, vm2 = make(qapp)
+    assert vm2.maxBackups == 3 and service2.backup_service.max_backups == 3

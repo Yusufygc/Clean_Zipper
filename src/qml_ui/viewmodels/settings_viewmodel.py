@@ -65,6 +65,7 @@ class SettingsViewModel(QObject):
         analyzers = default_registry.create_all(disabled=tuple(s.disabled_analyzers))
         self.service.doctor = ProjectDoctor(analyzers=analyzers, respect_gitignore=s.respect_gitignore,
                                             thresholds=s.quality_thresholds(), disabled_rules=s.disabled_rules)
+        self.service.backup_service.max_backups = s.max_backups
 
     def _apply(self, message: str) -> bool:
         """Doctor'ı yeniden kurar ve ayarları diske yazar."""
@@ -103,6 +104,11 @@ class SettingsViewModel(QObject):
     @Property("QVariantList", notify=settingsChanged)
     def disabledRules(self) -> List[Dict[str, str]]:
         return [{"id": rule, "title": RULE_LABELS.get(rule, rule)} for rule in self._settings.disabled_rules]
+
+    @Property(int, notify=settingsChanged)
+    def maxBackups(self) -> int:
+        """Proje başına saklanan otomatik yedek sayısı; 0 = sınırsız."""
+        return self._settings.max_backups
 
     @Property(int, notify=settingsChanged)
     def agentBatchSize(self) -> int:
@@ -185,6 +191,19 @@ class SettingsViewModel(QObject):
         self._settings.disabled_rules = [r for r in self._settings.disabled_rules if r != rule]
         if self._apply(f"'{RULE_LABELS.get(rule, rule)}' kuralı yeniden etkinleştirildi."):
             self.rulesChanged.emit()
+
+    # ── Slots: yedek ──
+
+    @Slot(int)
+    def adjustMaxBackups(self, delta: int):
+        """Hemen uygulanır ve kaydedilir (teşhisi etkilemez, analiz yenilenmez)."""
+        value = min(max(self._settings.max_backups + delta, 0), app_settings.MAX_KEPT_BACKUPS)
+        if value == self._settings.max_backups:
+            return
+        self._settings.max_backups = value
+        self.service.backup_service.max_backups = value
+        app_settings.save_settings(self._settings)
+        self.settingsChanged.emit()
 
     # ── Slots: ajan görevleri ──
 

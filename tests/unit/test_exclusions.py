@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from src.core.exclusions import is_excluded_dir
 
 
@@ -33,3 +31,12 @@ def test_virtualenv_detected_by_marker_file(tmp_path):
 def test_custom_excluded_set(tmp_path):
     assert is_excluded_dir(str(tmp_path / "x"), "x", ["x"], excluded=frozenset({"x"})) is True
     assert is_excluded_dir(str(tmp_path / "venv"), "venv", ["venv"], excluded=frozenset({"x"})) is False
+
+
+def test_names_match_case_insensitively(tmp_path):
+    """Windows dosya sistemi harf duyarsızdır: `Build`, `Dist`, `Node_Modules` de derleme / bağımlılık klasörüdür."""
+    for name in ("Build", "DIST", "Node_Modules", "__PyCache__"):
+        assert is_excluded_dir(str(tmp_path / name), name, [name]) is True
+    assert is_excluded_dir(str(tmp_path / "Bin"), "Bin", ["Bin", "App.csproj"]) is True
+    assert is_excluded_dir(str(tmp_path / "Bin"), "Bin", ["Bin", "main.py"]) is False      # koşul yine geçerli
+    assert is_excluded_dir(str(tmp_path / "X"), "X", ["X"], excluded=frozenset({"x"})) is True

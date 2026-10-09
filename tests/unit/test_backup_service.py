@@ -1,3 +1,4 @@
+import json
 import zipfile
 from pathlib import Path
 
@@ -119,3 +120,68 @@ def test_project_service_backup_reports_exclusions(tmp_path):
     service.set_project(project)
     result = service.create_backup("svc")
     assert result["success"] and result["excluded_dirs"] == ["venv"]
+
+
+# ---- rotasyon -----------------------------------------------------------------------------------
+
+def markers(backups: Path):
+    return [json.loads((d / "backup.json").read_text(encoding="utf-8"))
+            for d in backups.iterdir() if (d / "backup.json").is_file()]
+
+
+class FakeTrash:
+    def __init__(self):
+        self.moved = []
+
+    def __call__(self, path):
+        import shutil
+        self.moved.append(Path(path).name)
+        shutil.rmtree(path)
+
+
+def test_rotation_keeps_newest_automatic_backups_of_the_same_project(tmp_path):
+    project, other = tmp_path / "app", tmp_path / "other"
+    write(project / "a.py")
+    write(other / "b.py")
+    backups, trash = tmp_path / "backups", FakeTrash()
+    service = BackupService(backups, max_backups=2, trash_func=trash)
+    service.create_backup(project, "elle_adlandirilmis")
+    legacy = backups / "eski_isaretsiz"
+    write(legacy / "eski_isaretsiz.zip", "zip")                          # kimlik dosyası yok: dokunulmaz
+    service.create_backup(other)
+    results = [service.create_backup(project) for _ in range(4)]
+    assert all(r["complete"] for r in results) and len(trash.moved) == 2  # aynı saniyede de ayrı klasör, 2'si fazla
+    projects = [(Path(m["project"]).name, m["automatic"]) for m in markers(backups)]
+    assert sorted(projects) == [("app", False), ("app", True), ("app", True), ("other", True)]   # en yeni iki otomatik
+    assert legacy.is_dir()                                                # işaretsiz eski yedek duruyor
+
+
+def test_rotation_reports_removed_backups_and_zero_means_unlimited(tmp_path):
+    write(tmp_path / "app" / "a.py")
+    trash = FakeTrash()
+    limited = BackupService(tmp_path / "b1", max_backups=1, trash_func=trash)
+    first = limited.create_backup(tmp_path / "app")
+    second = limited.create_backup(tmp_path / "app")
+    assert second["removed_backups"] == [first["backup_name"]] and second["rotation_errors"] == []
+    unlimited = BackupService(tmp_path / "b2", max_backups=0, trash_func=trash)
+    for _ in range(3):
+        assert unlimited.create_backup(tmp_path / "app")["removed_backups"] == []
+    assert len(list((tmp_path / "b2").iterdir())) == 3
+
+
+def test_incomplete_backup_does_not_rotate_older_full_backups(tmp_path, monkeypatch):
+    write(tmp_path / "app" / "a.py")
+    write(tmp_path / "app" / "b.py")
+    trash = FakeTrash()
+    service = BackupService(tmp_path / "backups", max_backups=1, trash_func=trash)
+    service.create_backup(tmp_path / "app")
+    original = zipfile.ZipFile.write
+
+    def failing(self, filename, *args, **kwargs):
+        if Path(filename).name == "b.py":
+            raise OSError("kilitli")
+        return original(self, filename, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile.ZipFile, "write", failing)
+    result = service.create_backup(tmp_path / "app")
+    assert result["success"] and not result["complete"] and trash.moved == []

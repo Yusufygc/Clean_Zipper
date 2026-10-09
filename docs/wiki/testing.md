@@ -30,6 +30,7 @@ Bağımlılıklar `requirements-dev.txt` ile kurulur. Ayarlar `pytest.ini` (`tes
 - Kayıt sayıları `test_registry.py` ve `test_project_doctor.py` içinde sabittir: yeni analizör eklenince güncellenir.
 - Git senaryoları geçici gerçek depoda kurulur (silinmiş `.env`, sıcak dosya, birlikte değişim); sahte çıktı kullanılmaz.
 - Güvenlik testleri sızıntıyı doğrudan sınar: sır değeri raporda geçmemelidir (`test_audit_report`).
+- Testler kullanıcının gerçek klasörlerine yazmaz: `tests/conftest.py` ayarları (`settings_path`), kullanıcı profillerini ve yedek kökünü (`backup_service.default_backup_root`) geçici klasöre yönlendirir. Yedek yalıtımı 2026-10-10'da eklendi: `test_archive_viewmodel` her çalışmada `~/.gitclean_backups/test_backup_qml` yazıyordu.
 - Kendi test fixture'ları kendi taramamıza takılabilir (örn. test dosyasındaki sahte anahtar); bu kasıtlı olarak testlerde DÜŞÜK öncelikli raporlanır ([[decisions]]).
 
 ## Bağımsız doğrulama (oracle) yöntemi

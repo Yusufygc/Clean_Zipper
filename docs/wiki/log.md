@@ -1,5 +1,17 @@
 # Değişiklik Günlüğü
 
+## [2026-10-10] [FIX] | Backend denetimi V2: kopya alt klasör hatası, çok satırlı SAST, BOM'suz UTF-16, yedek rotasyonu
+- **`copy_project` (gerçek veri kaybı riski):** hedef kaynağın alt klasöründeyse (`src/out/yedek`) hedefin kökteki ilk klasörü (`src`) tümden atlanıyordu; artık yalnızca hedef klasörün kendisi atlanır. Hata ilk denetimden önce de vardı (eski test yalnızca 1 seviye derinliği sınıyordu).
+- **SAST:** `py-yaml-load` ve `py-weak-hash` "güvenli biçim" istisnası çağrının parantezine bakar; çok satırlı güvenli çağrı artık bulgu değil. `C:\2UYGULAMALAR`: fark 0 (bu kalıpta çok satırlı çağrı yok), birim testleri eski desende kırmızı.
+- **BOM'suz UTF-16:** sezgi ([[decisions]]); disk taramasında 13/13 doğru, yanlış pozitif yok.
+- **Yedek rotasyonu (kullanıcı kararı):** `BackupService(max_backups=5)`, `backup.json` kimliği, Geri Dönüşüm Kutusu; ayar `max_backups`, arşiv sayfasında "Saklanan yedek" sayacı (hemen kaydedilir). Aynı saniyedeki otomatik yedekler artık üst üste yazılmaz. Yan düzeltme: arşiv sayfası yedek listesini sabit `~/.gitclean_backups` yerine servisin kökünden okur; yedek kartında açıklama satırı kaydırmalı (900 px'te kart dışına taşıyordu, ekransız çizimle doğrulandı).
+- **Dışlama adları harf duyarsız** (`Build`, `Dist`, `Bin`); gerçek etkisi 0, ucuz güvence.
+- **`class-size` metni** aşılan ölçüyü söyler. Denetimdeki "`and` mantık hatası" iddiası yanlış; iki yönü sınayan test eklendi.
+- **Reddedilen / kapsam dışı:** analiz iptali (kullanıcı kararı, bekleme bilinen sınır).
+- **Test yalıtımı (yan bulgu):** `test_archive_viewmodel` her çalışmada gerçek `~/.gitclean_backups/test_backup_qml` yazıyordu; `conftest.py` yedek kökünü geçici klasöre yönlendirir (tam test sonrası gerçek klasörün değişiklik zamanı aynı kaldı). Kullanıcının klasöründe eski `test_backup_qml` duruyor, silinmedi.
+- Dogfooding: `test_analyzers.py` 500 satırı geçtiği için iki karmaşıklık testi `test_quality_analyzers.py`'ye taşındı; önceden kalan `test_exclusions.py` kullanılmayan importu ve `backup_service.py` saat dilimsiz `datetime.now()` düzeltildi.
+- **Doğrulama:** 768 testten 779 teste; tüm `C:\2UYGULAMALAR` teşhisi 34,6 sn. **Elle kontrol gerekir:** arşiv sayfasında "Saklanan yedek" sayacı ve yedek alındıktan sonraki "eski yedek taşındı" durum metni.
+
 ## [2026-10-10] [FIX] | Backend denetimi Faz 3: pyproject.toml, test eşleme, UTF-16, iç içe boş klasör, dosya URL'leri
 - **`pyproject.toml`:** `PyprojectEcosystem` (`[project].dependencies`, `[tool.poetry.dependencies]`; geliştirme grupları atlanır, sabitleme denetlenmez). `tomli==2.5.0; python_version < "3.11"` `requirements.txt`'e eklendi (venv'de zaten pytest bağımlılığı olarak 2.5.0 kuruluydu). `pytest-*` eklentileri araç sayılır. Bağımsız kontrol (`C:\2UYGULAMALAR`, 3 pyproject): P002 `PyQt5` kullanılmıyor, grep ile doğrulandı (gerçek pozitif); P013 `pytest-qt` ilk sürümde yanlış pozitifti, eklenti kuralıyla giderildi.
 - **Test eşleme:** `module_keys` (ad + üst klasörle birleşik ad). **Yan bulgu (gerçek hata):** `test_service.py` gibi `test_s...` testleri `tests` öneki sanılıyordu (`ervice`), kaynağıyla hiç eşleşmiyordu; önek / sonek artık yalnızca ayraçta ya da büyük harf sınırında atılır. `C:\2UYGULAMALAR`: 19 modül artık testiyle eşleşiyor (kendi projemizde `scan_viewmodel`, `settings_viewmodel`, `security_rules`); listeye yeni giren 3 modül gerileme değil, 50'lik liste sınırı.

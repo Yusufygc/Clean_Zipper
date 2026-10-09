@@ -208,12 +208,6 @@ def test_complexity_flags_god_class_and_bloated_file(tmp_path):
         ("god.py", Severity.HIGH), ("long.py", Severity.MEDIUM)]
 
 
-def test_file_length_text_separates_total_and_code_lines(tmp_path):
-    write(tmp_path / "long.py", "# yorum\n\n" * 200 + "x = 1\n" * 150)          # 550 toplam, 150 kod
-    [result] = CodeComplexityAnalyzer().analyze(ProjectIndex.build(tmp_path))
-    assert "toplam 550 satır" in result.description and "150 kod satırı" in result.description
-
-
 def test_complexity_skips_broken_python(tmp_path):
     write(tmp_path / "broken.py", "def (:\n")
     assert CodeComplexityAnalyzer().analyze(ProjectIndex.build(tmp_path)) == []

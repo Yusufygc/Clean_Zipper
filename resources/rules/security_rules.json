@@ -48,7 +48,7 @@
     "python"
    ],
    "scope": "code",
-   "pattern": "\\byaml\\.(?:load|load_all)\\s*\\((?![^\\n]*Safe)",
+   "pattern": "\\byaml\\.(?:load|load_all)\\s*\\((?!(?:[^()]|\\([^()]*\\)){0,300}?Safe)",
    "flags": "",
    "cwe": "CWE-502",
    "advice": "yaml.safe_load kullanın."
@@ -87,7 +87,7 @@
     "python"
    ],
    "scope": "code",
-   "pattern": "\\bhashlib\\.(?:md5|sha1)\\s*\\((?![^\\n]*usedforsecurity\\s*=\\s*False)",
+   "pattern": "\\bhashlib\\.(?:md5|sha1)\\s*\\((?!(?:[^()]|\\([^()]*\\)){0,300}?usedforsecurity\\s*=\\s*False)",
    "flags": "",
    "cwe": "CWE-327",
    "advice": "Güvenlik amaçlıysa sha256 veya üstünü kullanın; yalnızca sağlama toplamıysa usedforsecurity=False ekleyin."

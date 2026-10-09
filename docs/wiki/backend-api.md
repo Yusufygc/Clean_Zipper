@@ -51,9 +51,9 @@ UI bunları kullanıcıya göstermelidir (sessiz kısmi sonuç yok):
 Üçü de aynı sözleşmeyi izler; tek dosya hatasında durmazlar.
 - Ortak: `success`, `complete` (`False` ise bazı dosyalar işlenemedi), `failed_files` (liste: `(yol, hata)`), `error`.
 - Arşiv: `total_files`, `added_files`, `skipped_files`; kopya: `copied_files`, `skipped_files`; arşiv ve kopya `profile_name` alır (`resources/profiles/*.json`, gitignore sözdizimi, `extends` ile kalıtım).
-- Yedek: `backup_name`, `size`, `excluded_dirs` (en çok 100) ve `excluded_dir_count`. Yedek `.gitignore` uygulamaz, yalnızca yeniden üretilebilir klasörleri dışlar ([[decisions]]).
+- Yedek: `backup_name`, `size`, `excluded_dirs` (en çok 100), `excluded_dir_count`, `removed_backups` (rotasyonla Geri Dönüşüm Kutusu'na taşınan eski yedek adları) ve `rotation_errors`. Rotasyon: `BackupService(max_backups=5)` (0 = sınırsız; ayar `max_backups`, arşiv sayfasındaki "Saklanan yedek"), yalnızca aynı projenin tam ve otomatik adlı yedekleri sayılır; elle adlandırılmış ve `backup.json` kimliği olmayan eski yedeklere dokunulmaz. Yedek `.gitignore` uygulamaz, yalnızca yeniden üretilebilir klasörleri dışlar ([[decisions]]).
 - Arşiv, `.gitignore` okunamıyorsa gizli dosyaları sızdırmamak için işlemi reddeder (`error` dolu, `success=False`).
-- Kopya, hedef kaynağın kendisi ya da üst klasörüyse hiçbir dosyaya dokunmadan reddeder (`error` dolu, `success=False`).
+- Kopya, hedef kaynağın kendisi ya da üst klasörüyse hiçbir dosyaya dokunmadan reddeder (`error` dolu, `success=False`). Hedef kaynağın içindeyse (`src/out/yedek`) yalnızca hedef klasörün kendisi atlanır, üst klasörleri kopyalanır.
 - UI `complete=False` ve `failed_files`'ı kullanıcıya göstermelidir.
 
 ## Temizlik
@@ -100,4 +100,4 @@ QML'den gelen dosya URL'leri (`file:///...`) `viewmodels/paths.local_path` ile y
 - Kullanıcı SAST kuralları: `~/.gitclean/rules/*.json`. Loglar: `~/.gitclean/logs/`. Yedekler: `~/.gitclean_backups/`.
 
 ## Bilinen UI sınırları
-Analiz iptal edilemiyor (iptal düğmesi yok); `read_text` 2 MB üstü dosyaları atlar; donmuş exe içinde analiz çalıştırılamadı (bkz. [[roadmap]]).
+Analiz iptal edilemiyor (iptal düğmesi yok; aynı anda tek teşhis çalıştığı için uzun bir teşhis sürerken başka proje açılırsa yeni teşhis öncekinin bitmesini bekler, [[decisions]]); `read_text` 2 MB üstü dosyaları atlar; donmuş exe içinde analiz çalıştırılamadı (bkz. [[roadmap]]).

@@ -70,7 +70,7 @@
 - **Felaket kurtarma odaklı dışlama:** `.git`, `venv`/`.venv` (ve `pyvenv.cfg` içeren her klasör), `node_modules`, `__pycache__`, `dist`, `build`, araç önbellekleri ve derleme çıktıları (`.next`, `target` + `Cargo.toml` gibi) yedeğe girmez. **`.gitignore` uygulanmaz**: `.env`, yerel veritabanları, model ve veri dosyaları genellikle ignore'dadır ve git'ten geri getirilemez, bu yüzden yedekte kalır (arşiv ise paylaşım içindir ve `.gitignore`'u uygular). Fark gerçek projelerde büyüktür: 30 depoda `.git` dışında her şey 36,1 GB, bu kural 3,8 GB, `.gitignore` de uygulansaydı 69 MB olurdu ve yaklaşık 0,9 GB veritabanı, 11 `.env` dosyası kaybolurdu.
 - **Sessiz dışlama yok:** sonuçta `excluded_dirs` (proje köküne göre, en çok 100) ve `excluded_dir_count` döner. Yedek klasörü proje içindeyse zip kendini içermez.
 - **Yedek listesi** görüntüleme
-- **Eski yedekleri temizleme** (son N adet saklama)
+- **Eski yedekleri temizleme:** proje başına en yeni 5 otomatik yedek saklanır (arşiv sayfasında "Saklanan yedek", 0 = sınırsız); fazlası Geri Dönüşüm Kutusu'na taşınır. Elle adlandırılmış yedeklere dokunulmaz.
 
 ### 📊 Görsel Dashboard
 - **Dairesel sağlık skoru** göstergesi

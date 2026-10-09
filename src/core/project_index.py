@@ -29,13 +29,39 @@ UNICODE_BOMS = ((b'\xff\xfe\x00\x00', 'utf-32'), (b'\x00\x00\xfe\xff', 'utf-32')
                 (b'\xff\xfe', 'utf-16'), (b'\xfe\xff', 'utf-16'))
 
 
+# BOM'suz UTF-16: NUL baytların en az bu kadarı tek (LE) ya da çift (BE) konumlarda, öbür konumlarda hiç NUL yok.
+# `C:\2UYGULAMALAR` taramasında NUL içeren ~152 bin BOM'suz dosyanın 13'ünü yakaladı, hepsi gerçek UTF-16 metindi.
+UTF16_NUL_RATIO = 0.9
+_MIN_UTF16_SNIFF = 8
+
+
 def _bom_encoding(data: bytes) -> Optional[str]:
     return next((encoding for bom, encoding in UNICODE_BOMS if data.startswith(bom)), None)
 
 
+def _bomless_utf16(chunk: bytes) -> Optional[str]:
+    """ASCII ağırlıklı BOM'suz UTF-16 metnin kodlaması ('utf-16-le' / 'utf-16-be'); değilse None."""
+    if len(chunk) < _MIN_UTF16_SNIFF:
+        return None
+    even, odd = chunk[0::2], chunk[1::2]
+    for encoding, zeros, others in (('utf-16-le', odd, even), ('utf-16-be', even, odd)):
+        if b'\x00' not in others and zeros.count(0) >= UTF16_NUL_RATIO * len(zeros):
+            try:
+                chunk[:len(chunk) - len(chunk) % 2].decode(encoding)
+            except UnicodeDecodeError:
+                continue
+            return encoding
+    return None
+
+
+def _unicode_encoding(data: bytes) -> Optional[str]:
+    """NUL içerebilen Unicode metin kodlaması: önce BOM, sonra BOM'suz UTF-16 sezgisi (ilk 8 KB)."""
+    return _bom_encoding(data) or _bomless_utf16(data[:BINARY_SNIFF_BYTES])
+
+
 def looks_binary(chunk: bytes) -> bool:
-    """NUL baytı içeren ve BOM'lu UTF-16/32 olmayan veri ikiliktir."""
-    return b'\x00' in chunk and _bom_encoding(chunk) is None
+    """NUL baytı içeren ve UTF-16/32 (BOM'lu ya da BOM'suz UTF-16) olmayan veri ikiliktir."""
+    return b'\x00' in chunk and _unicode_encoding(chunk) is None
 
 
 @dataclass(frozen=True)
@@ -269,9 +295,9 @@ class ProjectIndex:
 
     @staticmethod
     def _decode(data: bytes) -> str:
-        bom = _bom_encoding(data)
-        if bom is not None:
-            return data.decode(bom, errors='replace')     # BOM'u codec atar
+        unicode = _unicode_encoding(data)
+        if unicode is not None:
+            return data.decode(unicode, errors='replace')  # BOM'u codec atar; tek kalan son bayt '�' olur
         for encoding in TEXT_ENCODINGS[:-1]:
             try:
                 return data.decode(encoding)

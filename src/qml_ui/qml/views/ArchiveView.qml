@@ -380,7 +380,43 @@ Item {
                                     color: AppTheme.textSecondary
                                     font.family: AppTheme.fontFamily
                                     font.pixelSize: AppTheme.fontSizeSmall
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
                                     renderType: Text.NativeRendering
+                                }
+
+                                // Proje başına saklanan otomatik yedek (eskiler Geri Dönüşüm Kutusu'na; 0 = sınırsız)
+                                RowLayout {
+                                    objectName: "maxBackupsRow"
+                                    spacing: 4
+                                    Text {
+                                        text: AppStrings.keptBackups
+                                        color: AppTheme.textSecondary
+                                        font.family: AppTheme.fontFamily
+                                        font.pixelSize: AppTheme.fontSizeSmall
+                                        renderType: Text.NativeRendering
+                                    }
+                                    CustomButton {
+                                        text: "-"
+                                        variant: "secondary"
+                                        Layout.preferredWidth: 36
+                                        onClicked: settingsVM.adjustMaxBackups(-1)
+                                    }
+                                    Text {
+                                        text: settingsVM.maxBackups === 0 ? "∞" : settingsVM.maxBackups.toString()
+                                        color: AppTheme.accent
+                                        font.family: AppTheme.fontFamily
+                                        font.bold: true
+                                        Layout.preferredWidth: 32
+                                        horizontalAlignment: Text.AlignHCenter
+                                        renderType: Text.NativeRendering
+                                    }
+                                    CustomButton {
+                                        text: "+"
+                                        variant: "secondary"
+                                        Layout.preferredWidth: 36
+                                        onClicked: settingsVM.adjustMaxBackups(1)
+                                    }
                                 }
                             }
 

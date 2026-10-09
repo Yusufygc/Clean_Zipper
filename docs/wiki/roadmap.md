@@ -58,22 +58,34 @@ Kaynak: dış denetim raporu `BACKEND_ANALIZ_RAPORU.md` (depoya eklenmedi; 3 faz
 | - | Yalnızca ignore'lu dosya içeren klasör "boş" sayılmalı | Reddedildi ([[decisions]]) |
 | - | `GitignoreMatcher._tracked` harf duyarlılığı | Ertelendi: yalnızca harf git dışından değişirse; `normcase` POSIX yolunu bozar |
 
+## Backend denetimi V2 (2026-10-10)
+Kaynak: ikinci dış denetim raporu (`BACKEND_ANALIZ_RAPORU.md`, depoya eklenmedi). İddialar kodla ve deneyle doğrulandı.
+
+| Bulgu | Durum |
+|---|---|
+| `copy_project` hedef kaynağın alt klasöründeyse (`src/out/yedek`) tüm `src` atlanıyor (eski hata, Faz 1'den önce de vardı) | Tamamlandı |
+| `py-yaml-load` / `py-weak-hash` çok satırlı güvenli çağrıda yanlış pozitif | Tamamlandı |
+| BOM'suz UTF-16 metin ikilik sayılıyor | Tamamlandı (sezgi, [[decisions]]) |
+| README'deki yedek rotasyonunun kodda karşılığı yok | Tamamlandı (`max_backups`) |
+| Dışlama adları harf duyarlı (`Build`, `Dist`, `Bin`) | Tamamlandı (düşük öncelik: gerçek etkisi 0) |
+| God Object `and` yüzünden tek ölçüyü aşan sınıfı kaçırıyor | Reddedildi: koşul yalnızca iki ölçü de eşik içindeyse bulgu üretmez; test eklendi, metin aşılan ölçüyü söyler |
+| Analiz iptali yok | Kapsam dışı (kullanıcı kararı); bekleme bilinen sınır |
+| Test boşlukları (kilitli dosya, gerçek iş parçacığı, büyük proje) | Büyük ölçüde mevcut (`PermissionError` testleri, 8 iş parçacıklı servis testi, her fazda tüm `C:\2UYGULAMALAR` ölçümü); yan bulgu: bir test gerçek `~/.gitclean_backups`'a yazıyordu, yalıtıldı |
+
 ## Kararlar
 Tam liste ve gerekçeler: [[decisions]]. Özet: önce backend (UI sonradan sıfırdan), çok dilli analiz, CLI yok, silme kalıcı değil (Geri Dönüşüm Kutusu), kendi kodumuz kendi taramamızdan geçer.
 
 ## Açık notlar
-- Analiz iptal edilemiyor (UI'da iptal düğmesi yok).
+- Analiz iptal edilemiyor (UI'da iptal düğmesi yok); proje değişince yeni teşhis eskisini bekler ([[decisions]], kapsam dışı).
 - `read_text` 2 MB üstü dosyaları atlıyor: büyük kaynak dosyalar karmaşıklık ve sızıntı taramasına girmez (`skipped_files` ile görünür).
 - Java/Go yalnızca örnek kodla doğrulandı (diskte gerçek kod yoktu); C#, JS/TS ve Rust gerçek projelerde doğrulandı. Kotlin/PHP/Swift: yalnızca yeni bir `LanguageSpec` gerekir.
 - Donmuş exe içinde analiz çalıştırılamadı (Windows Uygulama Denetimi imzasız exe'yi engelliyor); paket içeriği doğrulandı.
 - UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı ([[backend-api]]).
 - Kendi taramamızın bilinçli bırakılan bulguları: 4 UI işlevi (yeniden yazılacak) ve `BaseAnalyzer._create_result` (7 parametreli genel API).
 - Geçişli bağımlılıklar için kilit dosyası (`pip freeze` türevi) üretilmedi; yalnızca doğrudan bağımlılıklar tam sabit.
-- README'deki "son N yedeği saklama" ifadesinin kodda karşılığı yok.
 
 ## Sonraki adaylar (onay bekliyor, öncelik sırasız)
 - `.gitignore` önerisi üretme (`tracked-artifacts` bulgusundan türetilmiş kural listesi).
 - Analiz iptali (`ProjectDoctor` döngüsünde iptal belirteci).
 - Yeni diller (Kotlin, PHP, Swift) için `LanguageSpec`.
-- Yedekte eski yedekleri temizleme (son N saklama) ya da README'den kaldırma.
 - Kayıtlı kullanıcı kural paketleri için örnek `~/.gitclean/rules` dosyası ve belge.

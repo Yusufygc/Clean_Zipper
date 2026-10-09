@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 EMPTY_RESULT: Dict[str, Any] = {
     "success": False, "complete": False, "mode": "", "error": "", "outputPath": "", "totalFiles": 0,
     "addedFiles": 0, "skippedFiles": 0, "failedFilesCount": 0, "failedFiles": [], "backupSizeMb": 0.0,
-    "excludedDirsCount": 0,
+    "excludedDirsCount": 0, "removedBackups": 0,
 }
 
 
@@ -230,7 +230,10 @@ class ArchiveViewModel(QObject):
             "failedFiles": [f"{p}: {e}" for p, e in result.get("failed_files", [])[:20]],
             "backupSizeMb": round(result.get("size", 0) / (1024 * 1024), 2),
             "excludedDirsCount": int(result.get("excluded_dir_count", 0)),
+            "removedBackups": len(result.get("removed_backups", [])),
         }
+        if formatted["removedBackups"]:
+            self._progress_text += f" ({formatted['removedBackups']} eski yedek Geri Dönüşüm Kutusu'na taşındı)"
         self._last_result = formatted
         self._has_result = True
         self.refreshBackupList()
@@ -250,7 +253,7 @@ class ArchiveViewModel(QObject):
     def refreshBackupList(self):
         """Mevcut yedekleri listeler."""
         try:
-            backup_root = Path.home() / ".gitclean_backups"
+            backup_root = self.service.backup_service.backup_root
             items = []
             if backup_root.exists():
                 for p in sorted(backup_root.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):

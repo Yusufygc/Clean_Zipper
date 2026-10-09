@@ -91,6 +91,24 @@ def test_bom_marked_utf16_and_utf32_are_text(tmp_path, encoding):
     assert index.read_text(e) == "x = 'şğü'\n"
 
 
+@pytest.mark.parametrize("encoding", ["utf-16-le", "utf-16-be"])
+def test_bomless_utf16_text_is_text(tmp_path, encoding):
+    """Bazı Windows araçları (ODBC, yerelleştirme, `Out-File -Encoding Unicode` olmadan yazan betikler) BOM yazmaz."""
+    text = "[2026-08-31] gecelik iş başladı\r\nadım 2\r\n" * 3
+    write(tmp_path / "a.log", text.encode(encoding), mode="wb")
+    index = ProjectIndex.build(tmp_path)
+    e = entry(index, "a.log")
+    assert not index.is_binary(e)
+    assert index.read_text(e) == text
+
+
+def test_binary_with_nul_pattern_stays_binary(tmp_path):
+    write(tmp_path / "x.bin", bytes([1, 0, 2, 0, 0, 0, 3, 0]) * 64 + b"\x00\x05" * 32, mode="wb")   # çift konumda NUL var
+    write(tmp_path / "y.bin", b"\x01\x00" * 10 + bytes(range(256)) * 4, mode="wb")                 # NUL oranı düşük
+    index = ProjectIndex.build(tmp_path)
+    assert index.is_binary(entry(index, "x.bin")) and index.is_binary(entry(index, "y.bin"))
+
+
 def test_binary_and_oversize_return_none(tmp_path):
     write(tmp_path / "img.bin", b"\x89PNG\x00\x00data", mode="wb")
     write(tmp_path / "big.txt", "a" * 100)

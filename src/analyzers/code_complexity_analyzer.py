@@ -89,12 +89,16 @@ class CodeComplexityAnalyzer(BaseAnalyzer):
     def _check_class(self, file_path: Path, cls: ClassInfo, extra: dict) -> List[AnalysisResult]:
         """Sınıf Bazlı Analiz (God Class / God Object)."""
         t = self.thresholds
-        if cls.method_count <= t.class_methods and cls.lines <= t.class_lines:
+        # Ölçülerden biri eşiği aşması yeter (ikisi de eşik içindeyse bulgu yok).
+        exceeded = [label for label, value, limit in (
+            (f"{cls.method_count} metot (eşik {t.class_methods})", cls.method_count, t.class_methods),
+            (f"yaklaşık {cls.lines} satır (eşik {t.class_lines})", cls.lines, t.class_lines)) if value > limit]
+        if not exceeded:
             return []
         return [self._create_result(
             title=f"Tanrı Sınıf (God Object) Riski: {cls.name}",
-            description=(f"'{cls.name}' sınıfı {cls.method_count} metoda (Eşik: {t.class_methods}) ve yaklaşık "
-                         f"{cls.lines} satır koda (Eşik: {t.class_lines}) sahip. Bu sınıf sistemde çok fazla sorumluluk üstleniyor."),
+            description=(f"'{cls.name}' sınıfı eşiği aşıyor: {' ve '.join(exceeded)}; {cls.method_count} metot, "
+                         f"{cls.lines} satır. Bu sınıf sistemde çok fazla sorumluluk üstleniyor."),
             severity=Severity.HIGH, file_path=file_path,
             recommendation="Sınıfı SOLID prensiplerine uygun olarak parçalayın. Sınıfın sadece tek bir aktöre veya amaca hizmet etmesini sağlayın.",
             rule='class-size', class_name=cls.name, start_line=cls.start_line, **extra)]

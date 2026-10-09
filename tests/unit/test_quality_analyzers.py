@@ -2,6 +2,7 @@ import dataclasses
 from pathlib import Path
 
 from src.analyzers.clone_analyzer import CloneAnalyzer
+from src.analyzers.code_complexity_analyzer import CodeComplexityAnalyzer
 from src.analyzers.dead_code_analyzer import DeadCodeAnalyzer
 from src.analyzers.magic_number_analyzer import MagicNumberAnalyzer
 from src.core.path_rules import is_test_path
@@ -194,3 +195,23 @@ def test_service_runs_new_analyzers_and_scores_their_categories(tmp_path):
 def test_thresholds_dataclass_has_new_fields():
     fields = {f.name for f in dataclasses.fields(QualityThresholds)}
     assert {"magic_numbers", "clone_lines", "clone_severe_lines"} <= fields
+
+
+# ---- sınıf ve dosya boyutu metinleri ----------------------------------------------------------
+
+def test_class_size_fires_on_either_metric_and_names_it(tmp_path):
+    """Denetimde iddia edildi: `and` yüzünden tek ölçüyü aşan sınıf kaçar. Kaçmıyor; iki yön de sınanır."""
+    long_body = "".join(f"        x{i} = {i}\n" for i in range(320))
+    write(tmp_path / "long_cls.py", f"class Long:\n    def a(self):\n{long_body}")                       # 1 metot, 322 satır
+    write(tmp_path / "many.py", "class Many:\n" + "".join(f"    def m{i}(self):\n        pass\n" for i in range(21)))
+    results = {r.metadata["class_name"]: r.description for r in run(CodeComplexityAnalyzer(), tmp_path)
+               if r.metadata["rule"] == "class-size"}
+    assert set(results) == {"Long", "Many"}
+    assert "satır (eşik 300)" in results["Long"] and "metot (eşik" not in results["Long"]
+    assert "21 metot (eşik 20)" in results["Many"] and "satır (eşik" not in results["Many"]
+
+
+def test_file_length_text_separates_total_and_code_lines(tmp_path):
+    write(tmp_path / "long.py", "# yorum\n\n" * 200 + "x = 1\n" * 150)          # 550 toplam, 150 kod
+    [result] = run(CodeComplexityAnalyzer(), tmp_path)
+    assert "toplam 550 satır" in result.description and "150 kod satırı" in result.description

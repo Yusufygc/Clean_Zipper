@@ -17,6 +17,14 @@ def isolated_user_profiles(tmp_path_factory, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def isolated_backup_root(tmp_path_factory, monkeypatch):
+    """Testler gerçek ~/.gitclean_backups klasörüne yedek yazmasın (rotasyon gerçek yedekleri çöpe taşıyabilirdi)."""
+    from src.services import backup_service
+    folder = tmp_path_factory.mktemp("yedekler")
+    monkeypatch.setattr(backup_service, "default_backup_root", lambda: folder)
+
+
+@pytest.fixture(autouse=True)
 def isolated_app_settings(tmp_path_factory, monkeypatch):
     """Testler gerçek ~/.gitclean/settings.json dosyasını okumasın / yazmasın."""
     from src.services import app_settings

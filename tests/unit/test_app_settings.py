@@ -80,3 +80,10 @@ def test_default_agent_dir_is_outside_the_project_and_sanitised(monkeypatch):
     assert target.parent.name == "agent-tasks" and target.name == "Benim_Proje_1"
     assert project not in target.parents
     assert default_agent_dir(None).name == "proje"
+
+
+def test_max_backups_is_clamped_and_defaults_on_bad_values():
+    assert AppSettings().max_backups == 5
+    assert settings_from_dict({"max_backups": 999}).max_backups == app_settings.MAX_KEPT_BACKUPS
+    assert settings_from_dict({"max_backups": -1}).max_backups == 0
+    assert settings_from_dict({"max_backups": "3"}).max_backups == 5

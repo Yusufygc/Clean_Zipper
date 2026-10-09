@@ -12,12 +12,14 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from src.core.thresholds import QualityThresholds
+from src.services.backup_service import DEFAULT_MAX_BACKUPS
 
 logger = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 1
 DEFAULT_BATCH_SIZE = 15
 MAX_BATCH_SIZE = 200
+MAX_KEPT_BACKUPS = 50                # proje başına saklanan otomatik yedek üst sınırı (0 = sınırsız)
 _DEFAULTS = QualityThresholds()
 
 # eşik adı -> (en küçük değer, arayüz adımı); varsayılanlar `QualityThresholds` içindedir (tek kaynak)
@@ -49,6 +51,7 @@ class AppSettings:
     thresholds: Dict[str, int] = field(default_factory=default_thresholds)
     agent_batch_size: int = DEFAULT_BATCH_SIZE
     agent_output_dir: str = ''                      # boş: `default_agent_dir`
+    max_backups: int = DEFAULT_MAX_BACKUPS          # proje başına otomatik yedek; 0 = sınırsız
 
     def quality_thresholds(self) -> QualityThresholds:
         return QualityThresholds(**self.thresholds)
@@ -83,13 +86,16 @@ def settings_from_dict(data) -> AppSettings:
     batch = data.get('agent_batch_size')
     batch = batch if isinstance(batch, int) and not isinstance(batch, bool) else DEFAULT_BATCH_SIZE
     output = data.get('agent_output_dir')
+    kept = data.get('max_backups')
+    kept = kept if isinstance(kept, int) and not isinstance(kept, bool) else DEFAULT_MAX_BACKUPS
     return AppSettings(
         respect_gitignore=data.get('respect_gitignore') is not False,
         disabled_analyzers=_clean_names(data.get('disabled_analyzers')),
         disabled_rules=_clean_names(data.get('disabled_rules')),
         thresholds=_clean_thresholds(data.get('thresholds')),
         agent_batch_size=min(max(batch, 1), MAX_BATCH_SIZE),
-        agent_output_dir=output if isinstance(output, str) else '')
+        agent_output_dir=output if isinstance(output, str) else '',
+        max_backups=min(max(kept, 0), MAX_KEPT_BACKUPS))
 
 
 def load_settings(path: Optional[Path] = None) -> AppSettings:
