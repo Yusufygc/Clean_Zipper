@@ -35,7 +35,7 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | - | BackupService dışlama kararı | `fdf8271` |
 
 ## Backend denetimi (2026-10-10)
-Kaynak: `BACKEND_ANALIZ_RAPORU.md` (işler bitince silinecek). İddialar kodla doğrulandı; reddedilenler gerekçesiyle [[decisions]] içinde.
+Kaynak: dış denetim raporu `BACKEND_ANALIZ_RAPORU.md` (depoya eklenmedi; 3 faz tamamlanınca 2026-10-10 silindi). İddialar kodla doğrulandı; reddedilenler gerekçesiyle [[decisions]] içinde.
 
 | Faz | Bulgu | Durum |
 |---|---|---|
