@@ -65,6 +65,20 @@ HTML `ReportService` kategori puanı kartlarını ve tüm bulguları gösterir; 
 
 Arayüz: bir "ajan görevleri olarak dışa aktar" düğmesi yalnızca `export_agent_tasks`'ı çağırır; ilerleme için `ProjectService` içinde ayrı bir `progress` yoktur (tarama `doctor.diagnose` ile yapılır, uzun sürebilir: bir `QThread` worker kullanın). "Doğrula" düğmesi `verify_agent_tasks`'ı çağırır.
 
+## Kalıcı ayarlar
+`src/services/app_settings.py`: `AppSettings` (`respect_gitignore`, `disabled_analyzers`, `disabled_rules`, 9 eşik, `agent_batch_size`, `agent_output_dir`) `~/.gitclean/settings.json` dosyasında saklanır (`load_settings`, `save_settings`, atomik yazım). Bozuk / eksik dosya, bilinmeyen anahtar ve sınır dışı değer güvenle varsayılana döner (uygulama açılışı bozulmaz). Eşik varsayılanları `QualityThresholds`'tan gelir (tek kaynak), en küçük değerler `THRESHOLD_LIMITS` içindedir. Ajan görevleri için varsayılan çıktı klasörü `~/.gitclean/agent-tasks/<proje>` (projenin **dışında**: analiz görev dosyalarını bulgu saymasın).
+
+`SettingsViewModel` açılışta kayıtlı ayarları `ProjectService.doctor`'a uygular; `applySettings` / `resetToDefaults` / `disableRule` / `enableRule` diske yazar. `disabled_rules` tüm analizörlerin `metadata['rule']` kimlikli bulgularını eler (`ProjectDoctor._without_disabled_rules`; skor da bunlarsız hesaplanır), yalnızca SAST kurallarını değil.
+
+## Arayüz (QML) ViewModel haritası
+| ViewModel | Arayüzde karşılığı |
+|---|---|
+| `appVM` | Proje açma, durum çubuğu (hatalar da buraya yazılır), `openPath` (klasörü Gezgin'de aç) |
+| `scanVM` | Gösterge paneli: skor, kategori puanları, dosya türü ve **dil dağılımı**, öneriler, analiz bütünlüğü (hata veren analizör, `.gitignore`, **atlanan dosya nedenleri**), HTML / denetim raporu |
+| `findingsVM` | Sorunlar: şiddet ve **kategori** süzgeci, arama, **göreli yol + satır**, **tembel kaynak kodu** (sırlarda hiç gösterilmez), **"Bu Kuralı Kapat"** |
+| `archiveVM`, `cleanupVM` | Arşiv / kopya / yedek, temizlik |
+| `settingsVM` | 9 eşik, analizör seçimi (tümünü aç / kapat), kapatılan kurallar, `.gitignore`, ajan görevleri (klasör seçimi, parti, dışa aktarma, **sayılı doğrulama sonucu**), varsayılana sıfırlama; kalıcı |
+
 ## Yapılandırma
 - `thresholds=QualityThresholds(...)`: eşikler ([[analyzers]]).
 - `disabled_analyzers=("CloneAnalyzer", ...)`: analizör adıyla kapatma.

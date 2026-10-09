@@ -21,6 +21,8 @@ Bağımlılıklar `requirements-dev.txt` ile kurulur. Ayarlar `pytest.ini` (`tes
 | Proje sağlığı | `test_testing_and_hygiene`, `test_git_history`, `test_health_checker`, `test_project_doctor` |
 | Servisler / raporlar | `test_archive_service`, `test_archive_profiles`, `test_cleanup_service`, `test_backup_service`, `test_report_service`, `test_audit_report` |
 | Ajan görevleri | `test_agent_tasks` (dalga / parmak izi / parti / dışa aktarma / sır sızıntısı / verify / `verify.py` uçtan uca) |
+| Ayarlar | `test_app_settings` (kalıcılık, bozuk dosya, sınır), `test_settings_viewmodel` (9 eşik, kural kapatma, kalıcılık, ajan dışa aktarma / doğrulama) |
+| QML yerleşim | `test_qml_layout` (kart boyutu / üst üste binme, arayüz veri köprüsü); ekran görüntüsü yöntemi aşağıda |
 | Wiki | `test_wiki` (kırık link, öksüz sayfa, indeks, `CLAUDE.md` giriş noktaları) |
 
 ## Test kuralları
@@ -54,6 +56,9 @@ Her aşamanın yeni kodu, aracın kendi `CodeComplexityAnalyzer` eşiklerinden (
 
 ## Performans bütçesi
 Tüm `C:\2UYGULAMALAR` (yaklaşık 5.900 dosya, 30 depo): hedef < 60 sn, ölçülen 30-35 sn. Tek bir analizör pahalıysa (örn. sağlayıcı sırları regex'i bir ara 70 sn'ye çıkmıştı) `analizör başına süre` ölçülür ve anchor + alt dizgi ipucuyla hızlandırılır (2,6 sn). Git tabanlı analizörler 29 depoda toplam 14,6 sn.
+
+## QML arayüzünü kodla görmek
+`QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QT_QPA_FONTDIR=C:/Windows/Fonts` ile `create_qml_app()` çalıştırılır, `appVM.setProjectPath(...)` ile proje yüklenir, `window.setProperty("currentTab", n)` ile sekme değiştirilir ve `window.screen().grabWindow(window.winId())` ile PNG alınır. Yerleşim bozuklukları (üst üste binme, taşma) bu görüntülerde ve `qInstallMessageHandler` ile toplanan QML uyarılarında (`Unable to assign [undefined] to ...`) görünür. Çevrimdışı çizimde SVG ikonlar görünmez; gerçek pencerede elle kontrol gerekir.
 
 ## Araç tuzakları (oturumlardan öğrenilenler)
 - Bash heredoc içindeki kaçış dizileri bozulur: `\n` gerçek satır sonuna, `\b` 0x08 karakterine, `'\\'` `'\'`ya dönüşebilir. Kod yazarken `Write`/`Edit` aracı ya da betik dosyası kullanılır; sonra kontrol karakteri taraması (`[\x00-\x08\x0b\x0c\x0e-\x1f]`) yapılır.

@@ -39,6 +39,18 @@ Her karar: ne seçildi, neden, nasıl uygulanır. Bulgu durumları için [[roadm
 - **Doğrulama dahil:** ajan kendi işini `verify.py` ile doğrular; ajanın yeni çıkardığı bulgular (`new_findings`) ayrıca raporlanır.
 - **Genel (ajan bağımsız) çıktı:** Claude Code için optimize edilmiş ama araç adı geçen ya da araca özgü bir biçim yok; Markdown + JSON.
 
+## Arayüz ve ayarlar (2026-10-09)
+- **Ayarlar kalıcıdır ve geneldir** (`~/.gitclean/settings.json`, proje başına değil). "Kaydet ve Uygula" gerçekten kaydeder; kural kapatma / açma anında kaydedilir ve analizi yeniler.
+- **Ajan görev klasörü varsayılanı projenin dışındadır** (`~/.gitclean/agent-tasks/<proje>`); aksi hâlde sonraki analiz görev dosyalarını (`verify.py`, `.md`) bulgu sayardı.
+- **Arayüze yalnızca verimli backend özellikleri eklendi:** dil dağılımı, atlanan dosya nedenleri, kategori süzgeci, göreli yol / satır / kaynak kodu, kural kapatma, 9 eşik (V2 tablosunun ayarlanabilir olanları), ajan doğrulama sayıları. **Eklenmeyenler (bilinçli):** denetim raporu önizlemesi, kalan 8 nadir eşik (test oranı, `print`, klon uzunluğu, sihirli sayı ...; `QualityThresholds` varsayılanları geçerli), analiz iptali.
+- **Arayüzden ulaşılamayan ViewModel üyeleri:** eski arayüzle ilgisiz olanlar arayüze bağlandı (kategori süzgeci, dil dağılımı, analizörleri toplu aç / kapat, varsayılana dön, ajan sonucu), işlevsizler silindi (`clearProject`, `errorMessage` sinyali, `scanVM.allIssues`, `findingsVM.searchQuery`, 29 kullanılmayan metin, 4 kullanılmayan tema sabiti). `src/ui` (eski arayüz) ayrıca durmaktadır, dokunulmadı.
+- **Kural kapatma güvenli:** sır içeren bulgularda "Bu Kuralı Kapat" ve kaynak gösterimi sunulmaz.
+- **ViewModel'ler Python'da referansla canlı tutulur:** QML context property'leri zayıf referanstır; aksi hâlde `archiveVM` / `cleanupVM` / `settingsVM` null kalır (test: `test_qml_layout`).
+
+- **Arayüz metni Türkçedir ve okunaklıdır:** koyu temada ikincil metin de parlak (en az `#CBD5E1`), en küçük yazı 12 px; arayüzde kural kimliği ve şiddet adı gösterilmez (`RULE_LABELS`, `ruleLabel`); yaygın teknik terimler (God Object, SOLID, Extract Method, Agent, LLM ...) İngilizce kalabilir (kullanıcı kararı).
+
+- **Sorunlar sayfasında süzgeç tek satırdadır:** şiddet bitişik seçenekler, kategori açılır liste (kategori sayısı arttıkça ekran kalabalıklaşmasın); gösterge panelinde her satır eşit sütunlu ve eşit yüksekliklidir.
+
 ## Depo ve build
 - **Satır sonu LF:** `.gitattributes` (`* text=auto eol=lf`; `.bat/.cmd/.ps1` CRLF) ve `.editorconfig`; kaynak dosyalarda UTF-8 BOM yok (testle zorunlu).
 - **Bağımlılıklar ayrık ve tam sabit:** `requirements.txt` yalnızca çalışma zamanı; `requirements-dev.txt` (pytest), `requirements-build.txt` (pyinstaller). Sürümler venv'de test edilen sürümlerdir. Kullanılmayan `pillow` kaldırıldı. Geçişli bağımlılıklar için kilit dosyası üretilmedi.
