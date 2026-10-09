@@ -48,13 +48,13 @@ Kaynak: `BACKEND_ANALIZ_RAPORU.md` (işler bitince silinecek). İddialar kodla d
 | 2 | Teşhis önbelleği yok (her sayfa yeniden tarıyor) | Tamamlandı |
 | 2 | Eşzamanlı işlemler için kilit / meşgul durumu yok | Tamamlandı |
 | 2 | `RecommendationEngine` 4 eski koşula bakıyor | Tamamlandı |
-| 3 | `pyproject.toml` bağımlılıkları okunmuyor (`tomli` eklenecek) | Planlandı |
-| 3 | `module_key` klasörü yok sayıyor | Planlandı |
-| 3 | UTF-16 dosyalar ikilik sayılıyor | Planlandı |
-| 3 | İç içe boş klasörler raporlanmıyor | Planlandı |
-| 3 | Karmaşıklık uyarısında "satır kod" yanlış ifade | Planlandı |
-| 3 | ViewModel'lerde `file:///` için `[8:]` kesmesi | Planlandı |
-| 3 | Metin önbelleği dolunca yeni dosya önbelleğe alınmıyor (LRU yok) | Planlandı |
+| 3 | `pyproject.toml` bağımlılıkları okunmuyor (`tomli` eklenecek) | Tamamlandı |
+| 3 | `module_key` klasörü yok sayıyor (yan bulgu: `test_s...` testleri hiç eşleşmiyordu) | Tamamlandı |
+| 3 | UTF-16 dosyalar ikilik sayılıyor | Tamamlandı |
+| 3 | İç içe boş klasörler raporlanmıyor | Tamamlandı |
+| 3 | Karmaşıklık uyarısında "satır kod" yanlış ifade | Tamamlandı |
+| 3 | ViewModel'lerde `file:///` için `[8:]` kesmesi | Tamamlandı |
+| 3 | Metin önbelleği dolunca yeni dosya önbelleğe alınmıyor (LRU yok) | Reddedildi: döngüsel okumada LRU daha az isabet eder ([[decisions]]) |
 | - | Yalnızca ignore'lu dosya içeren klasör "boş" sayılmalı | Reddedildi ([[decisions]]) |
 | - | `GitignoreMatcher._tracked` harf duyarlılığı | Ertelendi: yalnızca harf git dışından değişirse; `normcase` POSIX yolunu bozar |
 

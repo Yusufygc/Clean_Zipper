@@ -3,3 +3,4 @@
 PySide6-Essentials==6.6.1
 pathspec==1.1.1
 Send2Trash==2.1.0
+tomli==2.5.0; python_version < "3.11"

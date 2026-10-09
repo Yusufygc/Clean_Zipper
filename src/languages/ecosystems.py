@@ -1,13 +1,13 @@
 """Bağımlılık ekosistemleri: manifest dosyasını okur, bağımlılığın kodda kullanılıp kullanılmadığını söyler.
 
-Kapsam: Python (requirements.txt), npm (package.json), Go (go.mod), Rust (Cargo.toml).
+Kapsam: Python (requirements.txt, pyproject.toml), npm (package.json), Go (go.mod), Rust (Cargo.toml).
 Maven/NuGet bilerek yok: paket adı ile namespace arasında güvenilir eşleme olmadığından yanlış pozitif üretirdi.
 """
 import json
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Pattern, Set
+from typing import Dict, List, Optional, Pattern, Set
 
 
 @dataclass(frozen=True)
@@ -85,7 +85,13 @@ class PythonEcosystem(Ecosystem):
                 spec = line[match.end():].split(';', 1)[0].replace(' ', '')
                 spec = re.sub(r'^\[[^\]]*\]', '', spec)    # ekstralar: requests[security]==2.0
                 found.setdefault(match.group(1), spec)
-        return ParsedManifest([Dependency(n, dev=n.lower() in self.TOOLING, spec=spec) for n, spec in found.items()])
+        return ParsedManifest([Dependency(n, dev=self.is_tooling(n), spec=spec) for n, spec in found.items()])
+
+    @classmethod
+    def is_tooling(cls, name: str) -> bool:
+        """Test / paketleme aracı; pytest eklentileri (`pytest-qt`, `pytest-mock` ...) fikstürle kullanılır, import edilmez."""
+        name = name.lower()
+        return name in cls.TOOLING or name.startswith('pytest-')
 
     def is_unpinned(self, dep: Dependency) -> bool:
         return not dep.dev and dep.spec is not None and not self._EXACT.search(dep.spec)
@@ -99,6 +105,45 @@ class PythonEcosystem(Ecosystem):
             if any(imported == c or imported.startswith(c + '.') for c in candidates):
                 return True
         return False
+
+
+class PyprojectEcosystem(PythonEcosystem):
+    """`pyproject.toml`: PEP 621 `[project].dependencies` ve Poetry `[tool.poetry.dependencies]`.
+
+    Yalnızca çalışma zamanı bağımlılıkları okunur. Geliştirme grupları (`optional-dependencies`, Poetry grupları,
+    `dependency-groups`, `tool.pdm/uv` dev) bilinçli olarak atlanır: araçlar import edilmez, "kullanılmıyor" diye
+    raporlanırdı. Sürüm sabitleme denetlenmez: pyproject aralık bildirir, sabitleme kilit dosyasının işidir
+    (`missing-lockfile`).
+    """
+    manifest_names = ('pyproject.toml',)
+
+    def parse(self, text: str) -> ParsedManifest:
+        data = _load_toml(text)
+        unique = dict.fromkeys(self._pep621_names(data) + self._poetry_names(data))
+        return ParsedManifest([Dependency(n, dev=self.is_tooling(n)) for n in unique])
+
+    def _pep621_names(self, data: dict) -> List[str]:
+        """`[project].dependencies`: PEP 508 dizeleri (`requests[socks]>=2 ; python_version<'4'`)."""
+        requirements = (data.get('project') or {}).get('dependencies') or []
+        matches = (self._NAME.match(str(r).strip()) for r in requirements)
+        return [m.group(1) for m in matches if m]
+
+    @staticmethod
+    def _poetry_names(data: dict) -> List[str]:
+        poetry = ((data.get('tool') or {}).get('poetry') or {}).get('dependencies') or {}
+        return [name for name in poetry if name.lower() != 'python']
+
+    def is_unpinned(self, dep: Dependency) -> bool:
+        return False
+
+
+def _load_toml(text: str) -> dict:
+    """TOML ayrıştırma; hatalı belge `ValueError` (TOMLDecodeError) fırlatır."""
+    try:
+        import tomllib                                       # Python 3.11+
+    except ModuleNotFoundError:                              # Python 3.10: aynı API'li tomli
+        import tomli as tomllib
+    return tomllib.loads(text)
 
 
 # --------------------------------------------------------------------------- #
@@ -208,4 +253,4 @@ class RustEcosystem(Ecosystem):
         return scope.mentions(re.compile(r'\b' + re.escape(crate) + r'::'))
 
 
-ECOSYSTEMS: List[Ecosystem] = [PythonEcosystem(), NpmEcosystem(), GoEcosystem(), RustEcosystem()]
+ECOSYSTEMS: List[Ecosystem] = [PythonEcosystem(), PyprojectEcosystem(), NpmEcosystem(), GoEcosystem(), RustEcosystem()]

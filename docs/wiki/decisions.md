@@ -16,7 +16,7 @@ Her karar: ne seçildi, neden, nasıl uygulanır. Bulgu durumları için [[roadm
 - **Puanlanan kategori bulgudan da gelir** (2026-10-10): bir analizörün bulgusu başka kategoride puanlanıyorsa (`secret-in-history` -> `security`) o kategori, kendi analizörü çökse ya da kapalı olsa bile puanlanır.
 - **Boş klasör = diskte boş.** Yalnızca `.gitignore`'lu dosya içeren klasör boş sayılmaz (2026-10-10 denetiminde önerilen değişiklik reddedildi): "boş" denip silinmesi önerilirse yerel veri kaybolur.
 - **Klon tespiti yalnızca Tip-1** (birebir aynı satırlar). Dize ve sayıları normalleştiren sürüm sahte klon üretti, vazgeçildi.
-- **Test eşleme ada bakar.** Farklı adla yazılmış test "testsiz" görünür; bu yüzden `untested-modules` yalnızca BİLGİ.
+- **Test eşleme ada bakar** (2026-10-10'dan beri üst klasörle birleşik ada da). Farklı adla yazılmış test "testsiz" görünür; bu yüzden `untested-modules` yalnızca BİLGİ. 2026-10-10'a kadar `test_s...` ile başlayan testler (`test_service`) `tests` öneki sanılıp `ervice` anahtarına dönüşüyordu; düzeltildi (`C:\2UYGULAMALAR`: 19 modül artık testiyle eşleşiyor).
 - **Yorumla gerekçelendirilmiş hata yutma bulgu sayılmaz** (`swallowed-exception`); gerekçesiz yutma sayılır.
 - **Test dosyalarındaki genel `password = '...'` kalıpları DÜŞÜK**, sağlayıcı biçimli anahtarlar testte de aynı öncelikte (gerçek anahtar testte de sızıntıdır).
 - **`dist` / `build` adı belirsiz:** `tracked-artifacts` bunları `approximate=True` verir; `lib/`, `vendor/`, `third_party/` altındakiler üçüncü taraf paketi sayılır, bulgu olmaz.
@@ -25,6 +25,9 @@ Her karar: ne seçildi, neden, nasıl uygulanır. Bulgu durumları için [[roadm
 - **Teşhis önbelleği** (2026-10-10): Dashboard ve Sorunlar sayfası aynı teşhisi paylaşır; proje açılınca iki sayfa aynı anda istediğinde tek teşhis çalışır. Önceden iki tam teşhis paralel çalışıyor ve aynı analizör örneklerini paylaşıyordu. Dosya izleme yok: önbellek proje / ayar / yazma işlemiyle ya da kullanıcı "Tara" / "Yenile" dediğinde geçersizleşir. Raporlar ve görev dışa aktarımı son teşhisi kullanır (ekrandakiyle aynı sonuç); ajan doğrulaması her zaman yeniden tarar. "Yenile" sırası saatle değil sıra numarasıyla tutulur (Windows'ta `time.monotonic` ~16 ms adımlı, aynı adımdaki istek eski sonucu taze sanıyordu).
 - **Yazma işlemleri beklemez, reddedilir** (2026-10-10): ikinci temizlik / arşiv / kopya / yedek `OperationBusyError` alır. Neden: kuyruğa alınan bir silme, kullanıcının artık görmediği eski bir önizlemeye göre çalışırdı.
 - **Öneriler bulgudan türetilir** (2026-10-10): kural başına bir öneri, ORTA ve üstü, şiddet sonra bulgu sayısına göre. Eski motor yalnızca boyut, boş klasör, çift dosya ve sorun sayısına bakıyordu; sızıntı ve döngüsel bağımlılık öneri kartına çıkmıyordu. Öncelik metin etiketidir (`KRİTİK`/`YÜKSEK`/`ORTA`); eski sayısal öncelik arayüzde hiç renklenmiyordu.
+
+- **Metin önbelleği LRU değil, "dolunca dur"** (2026-10-10 denetiminde önerilen LRU reddedildi): analizörler dosyaları her geçişte aynı sırayla okur; döngüsel erişimde LRU bir sonraki geçişte lazım olanı atar. Gerçek okuma sırasıyla simülasyon (682 dosya, 2786 okuma): bütçe toplamın %25'i iken 922'ye karşı 158 isabet, %50'de 1848'e karşı 693, %75'te 2104'e karşı 1650.
+- **Boş klasör iç içe hesaplanır** (2026-10-10): yalnızca en üstteki raporlanır (`nested_empty` alt klasör sayısı); indekse girmeyen (dışlanan / ignore'lu) alt klasör boş sayılmaz.
 
 ## Güvenlik
 - **Sır değeri asla yazılmaz:** bulguda yalnızca maskeli önek ve uzunluk; denetim raporunda sır içerebilecek bulguların ve dosyaların (`.env`, `*.pem`, `*.key`, `id_rsa`) kaynak satırı gösterilmez. Test: 44 sır bulgusu, 0 sızıntı.
@@ -63,6 +66,7 @@ Her karar: ne seçildi, neden, nasıl uygulanır. Bulgu durumları için [[roadm
 
 ## Depo ve build
 - **Satır sonu LF:** `.gitattributes` (`* text=auto eol=lf`; `.bat/.cmd/.ps1` CRLF) ve `.editorconfig`; kaynak dosyalarda UTF-8 BOM yok (testle zorunlu).
+- **TOML için `tomli`** (2026-10-10): Python 3.10'da `tomllib` yok; `tomli==2.5.0; python_version < "3.11"` (aynı API, 3.11+ standart kitaplık kullanılır). Elle yazılmış ayrıştırıcı yerine seçildi: `pyproject.toml` iç içe tablo ve çok satırlı dizi içerir, regex hataya açık.
 - **Bağımlılıklar ayrık ve tam sabit:** `requirements.txt` yalnızca çalışma zamanı; `requirements-dev.txt` (pytest), `requirements-build.txt` (pyinstaller). Sürümler venv'de test edilen sürümlerdir. Kullanılmayan `pillow` kaldırıldı. Geçişli bağımlılıklar için kilit dosyası üretilmedi.
 - **Analizör dosyası `test_` ile başlamaz** (test sayılır, kurallardan muaf kalır); sınıf adı `Test...` ise `__test__ = False`.
 - **Python 3.10 hedefi;** donmuş exe içinde analiz doğrulanamadı (Windows Uygulama Denetimi imzasız exe'yi engelliyor), paket içeriği doğrulandı.

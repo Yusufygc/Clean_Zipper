@@ -1,5 +1,16 @@
 # Değişiklik Günlüğü
 
+## [2026-10-10] [FIX] | Backend denetimi Faz 3: pyproject.toml, test eşleme, UTF-16, iç içe boş klasör, dosya URL'leri
+- **`pyproject.toml`:** `PyprojectEcosystem` (`[project].dependencies`, `[tool.poetry.dependencies]`; geliştirme grupları atlanır, sabitleme denetlenmez). `tomli==2.5.0; python_version < "3.11"` `requirements.txt`'e eklendi (venv'de zaten pytest bağımlılığı olarak 2.5.0 kuruluydu). `pytest-*` eklentileri araç sayılır. Bağımsız kontrol (`C:\2UYGULAMALAR`, 3 pyproject): P002 `PyQt5` kullanılmıyor, grep ile doğrulandı (gerçek pozitif); P013 `pytest-qt` ilk sürümde yanlış pozitifti, eklenti kuralıyla giderildi.
+- **Test eşleme:** `module_keys` (ad + üst klasörle birleşik ad). **Yan bulgu (gerçek hata):** `test_service.py` gibi `test_s...` testleri `tests` öneki sanılıyordu (`ervice`), kaynağıyla hiç eşleşmiyordu; önek / sonek artık yalnızca ayraçta ya da büyük harf sınırında atılır. `C:\2UYGULAMALAR`: 19 modül artık testiyle eşleşiyor (kendi projemizde `scan_viewmodel`, `settings_viewmodel`, `security_rules`); listeye yeni giren 3 modül gerileme değil, 50'lik liste sınırı.
+- **UTF-16/32:** BOM'lu dosyalar ikilik sayılmaz, BOM'a göre çözülür (`looks_binary`).
+- **Boş klasör:** alttan üste hesap, yalnızca en üstteki raporlanır (`nested_empty`). Bağımsız: `os.walk` ile 17 bulgunun 17'si de diskte gerçekten boş.
+- **Karmaşıklık metni:** "toplam N satır (boş ve yorum dahil; M kod satırı)".
+- **Dosya URL'leri:** 6 `[8:]` kesmesi yerine `viewmodels/paths.local_path` (`QUrl.toLocalFile`); `%20` ve POSIX yolları artık doğru.
+- **Reddedilen:** metin önbelleği için LRU; gerçek okuma sırasıyla simülasyonda her bütçede daha az isabet ([[decisions]]).
+- Temizlik: `app_viewmodel.py` (`os`) ve `ecosystems.py` (`Iterable`) kullanılmayan importları; `PyprojectEcosystem.parse` dogfooding için bölündü.
+- **Doğrulama:** 755 testten 768 teste. **Elle kontrol gerekir:** arayüzde Türkçe karakterli / boşluklu klasöre arşiv ve rapor kaydetme.
+
 ## [2026-10-10] [FIX] | Backend denetimi Faz 2: teşhis önbelleği, eşzamanlılık kilidi, bulgu tabanlı öneriler
 - **Gerçek hata:** proje açılınca (ve ayarlar uygulanınca) Dashboard ile Sorunlar sayfası iki tam teşhisi **paralel** başlatıyordu; ikisi aynı analizör örneklerini paylaşıyordu. Artık `ProjectService.diagnose` tek kilitle çalışır, aynı anda gelen yenilemeler tek teşhiste birleşir (gerçek projede: ilk tarama 6,7 sn, ardından teşhis + denetim raporu 0,01 sn).
 - **Önbellek:** proje, ayar (`doctor` nesnesi), temizlik / zip / kopya ve `invalidate()` ile geçersizleşir; teşhis sürerken yazma olursa sonuç önbelleğe yazılmaz. Raporlar ve görev dışa aktarımı son teşhisi kullanır, ajan doğrulaması yeniden tarar.

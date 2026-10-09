@@ -80,6 +80,17 @@ def test_read_text_encodings(tmp_path):
     assert not index.is_binary(entry(index, "cp1254.txt"))
 
 
+@pytest.mark.parametrize("encoding", ["utf-16", "utf-16-be", "utf-32"])
+def test_bom_marked_utf16_and_utf32_are_text(tmp_path, encoding):
+    """PowerShell `>` çıktısı UTF-16 LE BOM'ludur; NUL baytları yüzünden ikilik sayılıp analizden düşüyordu."""
+    data = ("﻿" if encoding == "utf-16-be" else "") + "x = 'şğü'\n"
+    write(tmp_path / "a.ps1", data.encode(encoding), mode="wb")
+    index = ProjectIndex.build(tmp_path)
+    e = entry(index, "a.ps1")
+    assert not index.is_binary(e)
+    assert index.read_text(e) == "x = 'şğü'\n"
+
+
 def test_binary_and_oversize_return_none(tmp_path):
     write(tmp_path / "img.bin", b"\x89PNG\x00\x00data", mode="wb")
     write(tmp_path / "big.txt", "a" * 100)

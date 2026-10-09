@@ -3,7 +3,7 @@ from pathlib import Path
 
 from src.analyzers.dead_weight_analyzer import DeadWeightAnalyzer
 from src.core.project_index import ProjectIndex
-from src.languages.ecosystems import GoEcosystem, NpmEcosystem, PythonEcosystem, RustEcosystem
+from src.languages.ecosystems import GoEcosystem, NpmEcosystem, PyprojectEcosystem, PythonEcosystem, RustEcosystem
 from src.models.analysis_models import Severity
 
 
@@ -171,3 +171,48 @@ def test_unpinned_npm_finding(tmp_path):
     write(tmp_path / "a.js", "import 'react'; import 'left-pad';\n")
     (finding,) = unpinned_findings(tmp_path)
     assert finding.metadata["ecosystem"] == "npm" and "left-pad*" in finding.description
+
+
+# ---- pyproject.toml ---------------------------------------------------------------------
+
+PYPROJECT = """
+[project]
+name = "app"
+dependencies = ["requests>=2", "PyYAML[libyaml] ; python_version>'3.8'", "pytest", "pytest-qt"]
+
+[project.optional-dependencies]
+dev = ["black"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = "^1.26"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "*"
+
+[dependency-groups]
+test = ["coverage"]
+"""
+
+
+def test_pyproject_parsing_reads_runtime_dependencies_only():
+    parsed = PyprojectEcosystem().parse(PYPROJECT)
+    assert [(d.name, d.dev) for d in parsed.dependencies] == [
+        ("requests", False), ("PyYAML", False), ("pytest", True), ("pytest-qt", True), ("numpy", False)]
+    assert not any(PyprojectEcosystem().is_unpinned(d) for d in parsed.dependencies)
+
+
+def test_pyproject_unused_dependency_and_dev_tool_in_runtime(tmp_path):
+    write(tmp_path / "pyproject.toml", PYPROJECT)
+    write(tmp_path / "app.py", "import requests\nimport yaml\n")
+    results = DeadWeightAnalyzer().analyze(ProjectIndex.build(tmp_path))
+    assert unused(tmp_path) == [("python", "numpy")]
+    [dev] = [r for r in results if r.metadata["rule"] == "dev-dependency-in-runtime"]
+    assert dev.metadata["dependencies"] == ["pytest", "pytest-qt"]
+    assert not [r for r in results if r.metadata["rule"] == "unpinned-dependencies"]
+
+
+def test_broken_pyproject_is_skipped_not_fatal(tmp_path):
+    write(tmp_path / "pyproject.toml", "[project\ndependencies = [")
+    write(tmp_path / "app.py", "import os\n")
+    assert unused(tmp_path) == []

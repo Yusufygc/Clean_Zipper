@@ -139,7 +139,7 @@ gitclean-archiver-pro/
 │   │   ├── brace_headers.py      #    `{` öncesi başlık sınıflama (sınıf / fonksiyon / kontrol bloğu, parametre sayısı)
 │   │   ├── catalog.py            #    Dil tanımları (yeni dil = bir LanguageSpec)
 │   │   ├── registry.py           #    parse_file: önbellekli, üretilmiş/küçültülmüş dosyaları atlar
-│   │   └── ecosystems.py         #    requirements.txt, package.json, go.mod, Cargo.toml
+│   │   └── ecosystems.py         #    requirements.txt, pyproject.toml, package.json, go.mod, Cargo.toml
 │   │
 │   ├── doctors/                  # 🏥 Proje doktoru (FAZ 3)
 │   │   ├── project_doctor.py     #    Ana doktor koordinatörü
@@ -366,7 +366,7 @@ Analizörler için temel sınıf: standart sonuç oluşturma (`_create_result`),
 
 | Dil | Uzantılar | Çözümleme | Bağımlılık manifesti |
 |-----|-----------|-----------|----------------------|
-| Python | `.py` | `ast` (kesin) | `requirements.txt` |
+| Python | `.py` | `ast` (kesin) | `requirements.txt`, `pyproject.toml` |
 | JavaScript | `.js .jsx .mjs .cjs` | sözcük tabanlı (yaklaşık) | `package.json` |
 | TypeScript | `.ts .tsx .mts .cts` | sözcük tabanlı (yaklaşık) | `package.json` |
 | Java | `.java` | sözcük tabanlı (yaklaşık) | yok |

@@ -60,6 +60,20 @@ def test_empty_folder_finder(tmp_path):
     assert results[0].metadata["kind"] == "empty_dir"
 
 
+def test_nested_empty_folders_are_reported_once_at_the_top(tmp_path):
+    (tmp_path / "a" / "b" / "c").mkdir(parents=True)
+    (tmp_path / "a" / "d").mkdir()
+    (tmp_path / "mixed" / "empty").mkdir(parents=True)
+    write(tmp_path / "mixed" / "keep.txt")
+    write(tmp_path / "ignored" / "x.log")
+    write(tmp_path / ".gitignore", "*.log\n")
+    results = EmptyFolderFinder().analyze(ProjectIndex.build(tmp_path))
+    found = {r.file_path.relative_to(tmp_path).as_posix(): r.metadata["nested_empty"] for r in results}
+    # `a` (3 boş alt klasörüyle) tek bulgu; `mixed` dosyası olduğu için değil, içindeki `empty` raporlanır;
+    # yalnızca ignore'lu dosya içeren klasör diskte boş değildir
+    assert found == {"a": 3, "mixed/empty": 0}
+
+
 # ---- Duplicates -------------------------------------------------------------
 
 def test_duplicate_finder_groups_identical_content(tmp_path):
@@ -192,6 +206,12 @@ def test_complexity_flags_god_class_and_bloated_file(tmp_path):
     results = CodeComplexityAnalyzer().analyze(ProjectIndex.build(tmp_path))
     assert sorted((r.file_path.name, r.severity) for r in results) == [
         ("god.py", Severity.HIGH), ("long.py", Severity.MEDIUM)]
+
+
+def test_file_length_text_separates_total_and_code_lines(tmp_path):
+    write(tmp_path / "long.py", "# yorum\n\n" * 200 + "x = 1\n" * 150)          # 550 toplam, 150 kod
+    [result] = CodeComplexityAnalyzer().analyze(ProjectIndex.build(tmp_path))
+    assert "toplam 550 satır" in result.description and "150 kod satırı" in result.description
 
 
 def test_complexity_skips_broken_python(tmp_path):

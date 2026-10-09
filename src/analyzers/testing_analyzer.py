@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple
 
 from src.core.base_analyzer import BaseAnalyzer
-from src.core.path_rules import is_neutral_module, is_test_path, module_key
+from src.core.path_rules import is_neutral_module, is_test_path, module_keys
 from src.core.project_index import FileEntry, ProjectIndex
 from src.core.registry import register_analyzer
 from src.languages import parse_file, testing_patterns
@@ -91,7 +91,7 @@ class TestingAnalyzer(BaseAnalyzer):
         if is_neutral_module(entry.rel):
             return                                          # __init__.py / conftest.py test dosyası sayılmaz
         scan.test_files += 1
-        scan.test_keys.add(module_key(entry.rel, True))
+        scan.test_keys.update(module_keys(entry.rel, True))
         scan.skipped += testing_patterns.find_skipped(metrics.language, stripped.clean)
         sleeps = testing_patterns.find_sleeps(metrics.language, stripped.clean)
         if sleeps:
@@ -137,7 +137,7 @@ class TestingAnalyzer(BaseAnalyzer):
         untested = sorted(
             ((rel, lines) for rel, lines in scan.sources.items()
              if lines >= MIN_UNTESTED_LINES and not is_neutral_module(rel)
-             and module_key(rel, False) not in scan.test_keys),
+             and not module_keys(rel, False) & scan.test_keys),
             key=lambda item: (-item[1], item[0]))
         if not untested:
             return []

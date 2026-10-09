@@ -1,4 +1,3 @@
-import os
 import logging
 from pathlib import Path
 from typing import Optional
@@ -8,6 +7,7 @@ logger = logging.getLogger(__name__)
 from PySide6.QtCore import QObject, QUrl, Signal, Slot, Property
 from PySide6.QtGui import QDesktopServices
 from src.services.project_service import ProjectService
+from src.qml_ui.viewmodels.paths import local_path
 
 
 class AppViewModel(QObject):
@@ -53,13 +53,7 @@ class AppViewModel(QObject):
         if not path_str:
             return False
 
-        # QML fileUrl ("file:///C:/...") temizleme
-        if path_str.startswith("file:///"):
-            path_str = path_str[8:]
-        elif path_str.startswith("file://"):
-            path_str = path_str[7:]
-
-        clean_path = Path(path_str).resolve()
+        clean_path = Path(local_path(path_str)).resolve()
         if not clean_path.exists() or not clean_path.is_dir():
             self.setStatus(f"Hata: geçersiz proje dizini: {path_str}")
             return False

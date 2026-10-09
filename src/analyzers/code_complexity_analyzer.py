@@ -69,7 +69,7 @@ class CodeComplexityAnalyzer(BaseAnalyzer):
             severity = Severity.HIGH if t.is_severe(metrics.total_lines, t.file_lines) else Severity.MEDIUM
             results.append(self._create_result(
                 title=f"Aşırı Şişmiş Dosya: {file_path.name}",
-                description=f"Dosya toplamda {metrics.total_lines} satır kod içeriyor (Eşik: {t.file_lines}).",
+                description=f"Dosya toplam {metrics.total_lines} satır (boş ve yorum satırları dahil; {metrics.code_lines} kod satırı). Eşik: {t.file_lines} toplam satır.",
                 severity=severity, file_path=file_path,
                 recommendation="Bu dosyayı mantıksal olarak daha küçük, tek sorumluluğa (SRP) sahip modüllere veya alt sınıflara parçalayın.",
                 rule='file-length', **extra))

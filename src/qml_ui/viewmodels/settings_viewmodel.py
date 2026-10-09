@@ -9,6 +9,7 @@ from src.services import app_settings
 from src.services.app_settings import AppSettings, THRESHOLD_LIMITS, default_thresholds
 from src.services.audit_catalog import RULE_LABELS
 from src.services.project_service import ProjectService
+from src.qml_ui.viewmodels.paths import local_path
 
 logger = logging.getLogger(__name__)
 
@@ -195,8 +196,7 @@ class SettingsViewModel(QObject):
     @Slot(str)
     def setAgentOutputDir(self, path_str: str):
         """Boş metin varsayılan klasöre döner."""
-        if path_str.startswith("file:///"):
-            path_str = path_str[8:]
+        path_str = local_path(path_str)
         self._settings.agent_output_dir = str(Path(path_str)) if path_str else ""
         self.settingsChanged.emit()
 

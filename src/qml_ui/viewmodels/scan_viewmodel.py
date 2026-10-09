@@ -6,6 +6,7 @@ from PySide6.QtCore import QObject, QThread, Signal, Slot, Property
 from src.languages import default_languages
 from src.services.audit_catalog import SKIP_REASONS
 from src.services.project_service import ProjectService
+from src.qml_ui.viewmodels.paths import local_path
 
 logger = logging.getLogger(__name__)
 
@@ -231,9 +232,7 @@ class ScanViewModel(QObject):
     def exportHtmlReport(self, file_path_str: str) -> bool:
         """HTML sağlık analiz raporunu kaydeder."""
         try:
-            if file_path_str.startswith("file:///"):
-                file_path_str = file_path_str[8:]
-            target = Path(file_path_str).resolve()
+            target = Path(local_path(file_path_str)).resolve()
             return self.service.export_project_report(target)
         except Exception as e:
             logger.error("HTML rapor kaydedilemedi: %s", e, exc_info=True)
@@ -244,9 +243,7 @@ class ScanViewModel(QObject):
     def exportAuditReport(self, file_path_str: str) -> bool:
         """Markdown V2 denetim raporunu kaydeder."""
         try:
-            if file_path_str.startswith("file:///"):
-                file_path_str = file_path_str[8:]
-            target = Path(file_path_str).resolve()
+            target = Path(local_path(file_path_str)).resolve()
             return self.service.export_audit_report(target)
         except Exception as e:
             logger.error("Markdown denetim raporu kaydedilemedi: %s", e, exc_info=True)

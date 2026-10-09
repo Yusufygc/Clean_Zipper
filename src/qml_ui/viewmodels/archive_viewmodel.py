@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot, Property
 from src.services.project_service import ProjectService
+from src.qml_ui.viewmodels.paths import local_path
 
 logger = logging.getLogger(__name__)
 
@@ -160,9 +161,7 @@ class ArchiveViewModel(QObject):
             self.processError.emit("Arşivleme için önce bir proje seçilmelidir.")
             return
 
-        if target_path_str.startswith("file:///"):
-            target_path_str = target_path_str[8:]
-        target = Path(target_path_str).resolve()
+        target = Path(local_path(target_path_str)).resolve()
 
         self._start_worker(mode="zip", target=target, profile_name=self._selected_profile)
 
@@ -175,9 +174,7 @@ class ArchiveViewModel(QObject):
             self.processError.emit("Kopya için önce bir proje seçilmelidir.")
             return
 
-        if target_dir_str.startswith("file:///"):
-            target_dir_str = target_dir_str[8:]
-        target = Path(target_dir_str).resolve()
+        target = Path(local_path(target_dir_str)).resolve()
 
         self._start_worker(mode="copy", target=target, profile_name=self._selected_profile)
 

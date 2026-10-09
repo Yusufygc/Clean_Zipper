@@ -23,6 +23,19 @@ PROGRESS_EVERY_FILES = 1000
 
 # Sırayla denenir. cp1254 Türkçe Windows dosyaları içindir; latin-1 hiçbir zaman başarısız olmaz.
 TEXT_ENCODINGS = ('utf-8-sig', 'cp1254', 'latin-1')
+# BOM'lu UTF-16/32 metinde NUL baytı olağandır (ör. PowerShell `>` çıktısı, bazı Visual Studio dosyaları): ikilik sayılmaz.
+# UTF-32 önce denenir: UTF-32 LE BOM'u UTF-16 LE BOM'uyla başlar.
+UNICODE_BOMS = ((b'\xff\xfe\x00\x00', 'utf-32'), (b'\x00\x00\xfe\xff', 'utf-32'),
+                (b'\xff\xfe', 'utf-16'), (b'\xfe\xff', 'utf-16'))
+
+
+def _bom_encoding(data: bytes) -> Optional[str]:
+    return next((encoding for bom, encoding in UNICODE_BOMS if data.startswith(bom)), None)
+
+
+def looks_binary(chunk: bytes) -> bool:
+    """NUL baytı içeren ve BOM'lu UTF-16/32 olmayan veri ikiliktir."""
+    return b'\x00' in chunk and _bom_encoding(chunk) is None
 
 
 @dataclass(frozen=True)
@@ -209,7 +222,7 @@ class ProjectIndex:
     # ------------------------------------------------------------------ #
 
     def is_binary(self, entry: FileEntry) -> bool:
-        """İlk 8 KB içinde NUL baytı varsa ikilik sayılır. Okunamayan dosya da ikilik sayılır."""
+        """İlk 8 KB içinde NUL baytı varsa ikilik sayılır (BOM'lu UTF-16/32 hariç). Okunamayan dosya da ikilik sayılır."""
         cached = self._binary.get(entry.rel)
         if cached is not None:
             return cached
@@ -218,7 +231,7 @@ class ProjectIndex:
                 chunk = f.read(BINARY_SNIFF_BYTES)
         except OSError:
             chunk = b'\x00'
-        result = b'\x00' in chunk
+        result = looks_binary(chunk)
         self._binary[entry.rel] = result
         return result
 
@@ -243,7 +256,7 @@ class ProjectIndex:
         if len(data) > max_bytes:
             self.mark_skipped(entry, 'too_large')
             return None
-        binary = b'\x00' in data[:BINARY_SNIFF_BYTES]
+        binary = looks_binary(data[:BINARY_SNIFF_BYTES])
         self._binary[entry.rel] = binary
         if binary:
             return None
@@ -256,6 +269,9 @@ class ProjectIndex:
 
     @staticmethod
     def _decode(data: bytes) -> str:
+        bom = _bom_encoding(data)
+        if bom is not None:
+            return data.decode(bom, errors='replace')     # BOM'u codec atar
         for encoding in TEXT_ENCODINGS[:-1]:
             try:
                 return data.decode(encoding)

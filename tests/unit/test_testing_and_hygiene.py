@@ -4,7 +4,7 @@ from pathlib import Path
 
 from src.analyzers.project_hygiene_analyzer import ProjectHygieneAnalyzer
 from src.analyzers.testing_analyzer import TestingAnalyzer
-from src.core.path_rules import is_neutral_module, module_key
+from src.core.path_rules import is_neutral_module, module_key, module_keys
 from src.core.project_index import ProjectIndex
 from src.core.thresholds import QualityThresholds
 from src.languages import testing_patterns as tp
@@ -141,6 +141,22 @@ def test_untested_modules_are_matched_by_name(tmp_path):
     untested = found["untested-modules"]
     assert [m["path"] for m in untested.metadata["modules"]] == ["src/orders.py"]
     assert untested.severity == Severity.INFO
+
+
+def test_module_keys_include_parent_directory():
+    assert module_keys("app/auth/service.py", False) == {"service", "authservice"}
+    assert module_keys("tests/test_auth_service.py", True) == {"authservice"}
+    assert module_keys("tests/auth/test_service.py", True) == {"service", "authservice"}
+    assert module_keys("service.py", False) == {"service"}
+
+
+def test_same_named_modules_in_packages_match_package_qualified_tests(tmp_path):
+    """Önceden yalnızca ad eşleniyordu: `test_auth_service.py` `auth/service.py`'yi karşılamıyordu."""
+    write(tmp_path / "app" / "auth" / "service.py", lines(60))
+    write(tmp_path / "app" / "payment" / "service.py", lines(60, "p"))
+    write(tmp_path / "tests" / "test_auth_service.py", "def test_a():\n    pass\n")
+    untested = by_rule(run_tests(tmp_path))["untested-modules"]
+    assert [m["path"] for m in untested.metadata["modules"]] == ["app/payment/service.py"]
 
 
 def test_flaky_signals_in_test_files_only(tmp_path):

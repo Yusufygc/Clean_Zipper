@@ -1,7 +1,7 @@
 """Yol adından çıkarılan kurallar (test dosyası, hassas dosya tanıma gibi); I/O yapmaz."""
 import posixpath
 import re
-from typing import Optional, Tuple
+from typing import Optional, Set, Tuple
 
 _TEST_DIRS = frozenset({'test', 'tests', '__tests__', 'spec', 'specs', 'testing', 'e2e', 'integration_tests'})
 _TEST_NAME = re.compile(
@@ -16,7 +16,8 @@ def is_test_path(rel: str) -> bool:
 
 
 _NON_ALNUM = re.compile(r'[^a-z0-9]')
-_TEST_WORDS = ('tests', 'test', 'spec')
+_TEST_PREFIX = re.compile(r'^(?:(?i:tests?|spec)[_\-.]+|(?:Tests?|Spec)(?=[A-Z0-9]))')
+_TEST_SUFFIX = re.compile(r'(?:[_\-.]+(?i:tests?|spec)|(?<=[a-z0-9])(?:Tests?|Spec))$')
 _NEUTRAL_MODULES = frozenset({'__init__', '__main__', 'conftest', 'setup', 'manage', 'wsgi', 'asgi', 'index', 'mod'})
 
 
@@ -25,18 +26,32 @@ def module_key(rel: str, is_test: bool) -> str:
 
     Uzantılar ve (yalnızca test dosyasında) `test`/`tests`/`spec` önek-sonekleri atılır, harf-rakam dışı karakterler silinir.
     """
-    name = rel.replace('\\', '/').rsplit('/', 1)[-1].lower()
+    name = rel.replace('\\', '/').rsplit('/', 1)[-1]
     name = name.rsplit('.', 1)[0] if '.' in name else name
     if is_test:
-        name = re.sub(r'\.(?:test|spec)$', '', name)
-        key = _NON_ALNUM.sub('', name)
-        for word in _TEST_WORDS:
-            if key.startswith(word) and len(key) > len(word):
-                return key[len(word):]
-            if key.endswith(word) and len(key) > len(word):
-                return key[:-len(word)]
-        return key
-    return _NON_ALNUM.sub('', name)
+        name = re.sub(r'\.(?:test|spec)$', '', name, flags=re.IGNORECASE)
+        # Önek / sonek yalnızca ayraçta (`test_`, `_test`) ya da büyük harf sınırında (`TestFoo`, `FooTests`) atılır;
+        # aksi hâlde `test_service` -> `testservice` -> `ervice` olurdu (`tests` öneki).
+        stripped = _TEST_PREFIX.sub('', name, count=1)
+        if stripped == name:
+            stripped = _TEST_SUFFIX.sub('', name, count=1)
+        key = _NON_ALNUM.sub('', stripped.lower())
+        return key or _NON_ALNUM.sub('', name.lower())
+    return _NON_ALNUM.sub('', name.lower())
+
+
+def module_keys(rel: str, is_test: bool) -> Set[str]:
+    """Eşleme anahtarları: dosya adı (`module_key`) ve üst klasörle birleşik ad.
+
+    `auth/service.py` -> {`service`, `authservice`}: hem `test_service.py` hem `test_auth_service.py` hem de
+    `tests/auth/test_service.py` eşleşir. Test klasörü adı (`tests/`, `spec/`) birleşik anahtara girmez.
+    """
+    key = module_key(rel, is_test)
+    parts = rel.replace('\\', '/').lower().split('/')[:-1]
+    parent = next((p for p in reversed(parts) if p not in _TEST_DIRS), None)
+    if parent is None:
+        return {key}
+    return {key, _NON_ALNUM.sub('', parent) + key}
 
 
 def is_neutral_module(rel: str) -> bool:

@@ -90,6 +90,8 @@ Arayüz: bir "ajan görevleri olarak dışa aktar" düğmesi yalnızca `export_a
 | `archiveVM`, `cleanupVM` | Arşiv / kopya / yedek, temizlik |
 | `settingsVM` | 9 eşik, analizör seçimi (tümünü aç / kapat), kapatılan kurallar, `.gitignore`, ajan görevleri (klasör seçimi, parti, dışa aktarma, **sayılı doğrulama sonucu**), varsayılana sıfırlama; kalıcı |
 
+QML'den gelen dosya URL'leri (`file:///...`) `viewmodels/paths.local_path` ile yerel yola çevrilir (`QUrl.toLocalFile`: yüzde kodlaması, POSIX kök `/`, UNC); dize kesme kullanılmaz.
+
 ## Yapılandırma
 - `thresholds=QualityThresholds(...)`: eşikler ([[analyzers]]).
 - `disabled_analyzers=("CloneAnalyzer", ...)`: analizör adıyla kapatma.
