@@ -9,57 +9,90 @@ import "../components"
 Item {
     id: root
 
-    property string exportTargetDir: appVM.hasProject ? (appVM.projectPath + "/agent_tasks") : ""
     property string bannerMessage: ""
-    property string bannerType: "success"
+    property bool bannerIsError: false
     property bool bannerVisible: false
+
+    readonly property var agentResult: settingsVM.lastAgentResult
+    readonly property string agentKind: agentResult.kind || ""
+
+    function showBanner(message, isError) {
+        root.bannerMessage = message
+        root.bannerIsError = isError
+        root.bannerVisible = true
+    }
 
     FolderDialog {
         id: agentTaskFolderDialog
         title: "Ajan Görev Paketinin Kaydedileceği Dizini Seçin"
+        onAccepted: settingsVM.setAgentOutputDir(selectedFolder.toString())
     }
 
     Connections {
         target: settingsVM
-        function onTaskExportFinished(result) {
-            root.bannerMessage = "Ajan görevleri başarıyla üretildi."
-            root.bannerType = "success"
-            root.bannerVisible = true
-        }
-        function onTaskExportError(errMsg) {
-            root.bannerMessage = "Hata: " + errMsg
-            root.bannerType = "danger"
-            root.bannerVisible = true
-        }
+        function onSettingsApplied(message) { root.showBanner(message, message.indexOf("uygulanamadı") >= 0) }
+        function onTaskExportError(errMsg) { root.showBanner("Hata: " + errMsg, true) }
     }
 
     ScrollView {
         anchors.fill: parent
+        anchors.margins: 20
         contentWidth: availableWidth
         clip: true
+        // Uçlarda dur: içerik uçtan öteye sürüklenip bırakılınca geri sıçramasın
+        Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
 
         ColumnLayout {
             width: parent.width
-            spacing: 20
+            spacing: 16
 
-            // 1. Üst Başlık
+            // ── 1. Başlık ──
             RowLayout {
                 Layout.fillWidth: true
-                Text { text: AppStrings.tabSettings; font.bold: true }
+                spacing: 12
+
+                ColumnLayout {
+                    spacing: 2
+                    Text {
+                        text: AppStrings.tabSettings
+                        color: AppTheme.textPrimary
+                        font.family: AppTheme.fontFamily
+                        font.pixelSize: AppTheme.fontSizeLarge
+                        font.bold: true
+                        renderType: Text.NativeRendering
+                    }
+                    Text {
+                        text: AppStrings.thresholdSettingsDesc
+                        color: AppTheme.textSecondary
+                        font.family: AppTheme.fontFamily
+                        font.pixelSize: AppTheme.fontSizeSmall
+                        renderType: Text.NativeRendering
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+
+                CustomButton {
+                    text: AppStrings.resetDefaultsBtn
+                    variant: "secondary"
+                    onClicked: settingsVM.resetToDefaults()
+                }
+
                 CustomButton {
                     text: AppStrings.applySettingsBtn
+                    variant: "accent"
                     onClicked: settingsVM.applySettings()
                 }
             }
 
-            // Bildirim Çubuğu
+            // ── Bildirim çubuğu ──
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 38
                 radius: AppTheme.radiusSmall
                 visible: root.bannerVisible
-                color: root.bannerType === "danger" ? AppTheme.dangerBg : AppTheme.successBg
-                border.color: root.bannerType === "danger" ? AppTheme.danger : AppTheme.success
+                color: root.bannerIsError ? AppTheme.dangerBg : AppTheme.successBg
+                border.color: root.bannerIsError ? AppTheme.danger : AppTheme.success
                 border.width: 1
 
                 RowLayout {
@@ -69,33 +102,63 @@ Item {
                     spacing: 10
 
                     SvgIcon {
-                        source: root.bannerType === "danger" ? AppIcons.alert : AppIcons.check
+                        source: root.bannerIsError ? AppIcons.alert : AppIcons.check
                         size: 16
-                        color: root.bannerType === "danger" ? AppTheme.danger : AppTheme.success
+                        color: root.bannerIsError ? AppTheme.danger : AppTheme.success
                     }
 
                     Text {
                         text: root.bannerMessage
-                        color: root.bannerType === "danger" ? AppTheme.danger : AppTheme.success
+                        color: root.bannerIsError ? AppTheme.danger : AppTheme.success
                         font.family: AppTheme.fontFamily
                         font.pixelSize: AppTheme.fontSizeSmall
                         font.bold: true
                         Layout.fillWidth: true
                         elide: Text.ElideRight
+                        renderType: Text.NativeRendering
                     }
                 }
             }
 
-            // 2. Git Kartı
+            // ── 2. .gitignore ──
             CardFrame {
                 Layout.fillWidth: true
-                CheckBox {
-                    checked: settingsVM.respectGitignore
-                    onToggled: settingsVM.setRespectGitignore(checked)
+
+                RowLayout {
+                    width: parent.width
+                    spacing: 12
+
+                    AppCheckBox {
+                        checked: settingsVM.respectGitignore
+                        onToggled: settingsVM.setRespectGitignore(checked)
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        Text {
+                            text: AppStrings.respectGitignore
+                            color: AppTheme.textPrimary
+                            font.family: AppTheme.fontFamily
+                            font.pixelSize: AppTheme.fontSizeBase
+                            font.bold: true
+                            renderType: Text.NativeRendering
+                        }
+                        Text {
+                            text: AppStrings.respectGitignoreDesc + " Git'in izlediği dosyalar her zaman dahil edilir."
+                            color: AppTheme.textSecondary
+                            font.family: AppTheme.fontFamily
+                            font.pixelSize: AppTheme.fontSizeSmall
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                            renderType: Text.NativeRendering
+                        }
+                    }
                 }
             }
 
-            // 3. Eşikler Kartı
+            // ── 3. Eşikler (V2 tablosu, 9 değer) ──
             CardFrame {
                 Layout.fillWidth: true
 
@@ -109,209 +172,153 @@ Item {
                         font.family: AppTheme.fontFamily
                         font.pixelSize: AppTheme.fontSizeBase
                         font.bold: true
+                        renderType: Text.NativeRendering
                     }
 
                     GridLayout {
                         columns: 2
-                        rowSpacing: 12
+                        rowSpacing: 10
                         columnSpacing: 24
                         Layout.fillWidth: true
 
-                        // Cyclomatic
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Text {
-                                text: AppStrings.cyclomaticThreshold
-                                color: AppTheme.textPrimary
-                                font.family: AppTheme.fontFamily
-                                font.pixelSize: AppTheme.fontSizeSmall
-                                Layout.fillWidth: true
-                            }
-                            RowLayout {
-                                spacing: 4
-                                CustomButton {
-                                    text: "-"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setCyclomatic(settingsVM.cyclomatic - 1)
-                                }
-                                Text {
-                                    text: settingsVM.cyclomatic.toString()
-                                    color: AppTheme.accent
-                                    font.bold: true
-                                }
-                                CustomButton {
-                                    text: "+"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setCyclomatic(settingsVM.cyclomatic + 1)
-                                }
-                            }
-                        }
+                        Repeater {
+                            model: settingsVM.thresholds
 
-                        // Cognitive
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Text {
-                                text: AppStrings.cognitiveThreshold
-                                color: AppTheme.textPrimary
-                                font.family: AppTheme.fontFamily
-                                font.pixelSize: AppTheme.fontSizeSmall
-                                Layout.fillWidth: true
-                            }
                             RowLayout {
-                                spacing: 4
-                                CustomButton {
-                                    text: "-"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setCognitive(settingsVM.cognitive - 1)
-                                }
-                                Text {
-                                    text: settingsVM.cognitive.toString()
-                                    color: AppTheme.accent
-                                    font.bold: true
-                                }
-                                CustomButton {
-                                    text: "+"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setCognitive(settingsVM.cognitive + 1)
-                                }
-                            }
-                        }
+                                Layout.fillWidth: true
+                                spacing: 8
 
-                        // Function Lines
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Text {
-                                text: AppStrings.functionLinesThreshold
-                                color: AppTheme.textPrimary
-                                font.family: AppTheme.fontFamily
-                                font.pixelSize: AppTheme.fontSizeSmall
-                                Layout.fillWidth: true
-                            }
-                            RowLayout {
-                                spacing: 4
-                                CustomButton {
-                                    text: "-"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setFunctionLines(settingsVM.functionLines - 5)
-                                }
-                                Text {
-                                    text: settingsVM.functionLines.toString()
-                                    color: AppTheme.accent
-                                    font.bold: true
-                                }
-                                CustomButton {
-                                    text: "+"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setFunctionLines(settingsVM.functionLines + 5)
-                                }
-                            }
-                        }
+                                // Etiket sabit genişlikte: eksi / artı düğmeleri etiketin hemen yanında durur
+                                ColumnLayout {
+                                    objectName: "thresholdLabel"
+                                    Layout.preferredWidth: 190
+                                    Layout.alignment: Qt.AlignVCenter
+                                    spacing: 0
 
-                        // Class Lines
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Text {
-                                text: AppStrings.classLinesThreshold
-                                color: AppTheme.textPrimary
-                                font.family: AppTheme.fontFamily
-                                font.pixelSize: AppTheme.fontSizeSmall
-                                Layout.fillWidth: true
-                            }
-                            RowLayout {
-                                spacing: 4
-                                CustomButton {
-                                    text: "-"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setClassLines(settingsVM.classLines - 25)
+                                    Text {
+                                        text: modelData.label
+                                        color: AppTheme.textPrimary
+                                        font.family: AppTheme.fontFamily
+                                        font.pixelSize: AppTheme.fontSizeSmall
+                                        renderType: Text.NativeRendering
+                                    }
+                                    Text {
+                                        text: "varsayılan " + modelData.default
+                                        color: AppTheme.textMuted
+                                        font.family: AppTheme.fontFamily
+                                        font.pixelSize: 12
+                                        visible: modelData.value !== modelData.default
+                                        renderType: Text.NativeRendering
+                                    }
                                 }
-                                Text {
-                                    text: settingsVM.classLines.toString()
-                                    color: AppTheme.accent
-                                    font.bold: true
-                                }
-                                CustomButton {
-                                    text: "+"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setClassLines(settingsVM.classLines + 25)
-                                }
-                            }
-                        }
 
-                        // File Lines
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Text {
-                                text: AppStrings.fileLinesThreshold
-                                color: AppTheme.textPrimary
-                                font.family: AppTheme.fontFamily
-                                font.pixelSize: AppTheme.fontSizeSmall
-                                Layout.fillWidth: true
-                            }
-                            RowLayout {
-                                spacing: 4
                                 CustomButton {
+                                    objectName: "thresholdMinus"
                                     text: "-"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setFileLines(settingsVM.fileLines - 50)
+                                    variant: "secondary"
+                                    Layout.preferredWidth: 36
+                                    onClicked: settingsVM.adjustThreshold(modelData.key, -modelData.step)
                                 }
                                 Text {
-                                    text: settingsVM.fileLines.toString()
-                                    color: AppTheme.accent
+                                    text: modelData.value.toString()
+                                    color: modelData.value !== modelData.default ? AppTheme.warning : AppTheme.accent
+                                    font.family: AppTheme.fontFamily
                                     font.bold: true
+                                    Layout.preferredWidth: 44
+                                    horizontalAlignment: Text.AlignHCenter
+                                    renderType: Text.NativeRendering
                                 }
                                 CustomButton {
                                     text: "+"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setFileLines(settingsVM.fileLines + 50)
+                                    variant: "secondary"
+                                    Layout.preferredWidth: 36
+                                    onClicked: settingsVM.adjustThreshold(modelData.key, modelData.step)
                                 }
+
+                                Item { Layout.fillWidth: true }
                             }
                         }
                     }
                 }
             }
 
-            // 4. Analizörler
+            // ── 4. Analizörler ──
             CardFrame {
                 Layout.fillWidth: true
-                GridLayout {
-                    columns: 2
-                    rowSpacing: 12
-                    columnSpacing: 16
-                    Layout.fillWidth: true
 
-                    Repeater {
-                        model: settingsVM.analyzersList
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 12
 
-                        Rectangle {
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 64
-                            radius: AppTheme.radiusSmall
-                            color: modelData.enabled ? AppTheme.surfaceHover : AppTheme.surface
-                            border.color: modelData.enabled ? AppTheme.border : AppTheme.borderSubtle
-                            border.width: 1
+                            Layout.maximumWidth: 100000
+                            spacing: 2
+                            Text {
+                                text: AppStrings.activeAnalyzers
+                                color: AppTheme.textPrimary
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSizeBase
+                                font.bold: true
+                                renderType: Text.NativeRendering
+                            }
+                            Text {
+                                text: AppStrings.activeAnalyzersDesc
+                                color: AppTheme.textSecondary
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSizeSmall
+                                renderType: Text.NativeRendering
+                            }
+                        }
 
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 12
-                                anchors.rightMargin: 12
-                                spacing: 10
+                        CustomButton {
+                            text: "Tümünü Aç"
+                            variant: "secondary"
+                            onClicked: settingsVM.enableAllAnalyzers()
+                        }
+                        CustomButton {
+                            text: "Tümünü Kapat"
+                            variant: "secondary"
+                            onClicked: settingsVM.disableAllAnalyzers()
+                        }
+                    }
 
-                                CheckBox {
-                                    checked: modelData.enabled
-                                    onToggled: settingsVM.toggleAnalyzer(modelData.id, checked)
-                                }
+                    GridLayout {
+                        columns: 2
+                        rowSpacing: 12
+                        columnSpacing: 16
+                        Layout.fillWidth: true
 
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 2
+                        Repeater {
+                            model: settingsVM.analyzersList
 
-                                    RowLayout {
-                                        spacing: 8
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 64
+                                radius: AppTheme.radiusSmall
+                                color: modelData.enabled ? AppTheme.surfaceHover : AppTheme.surface
+                                border.color: modelData.enabled ? AppTheme.border : AppTheme.borderSubtle
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 12
+                                    anchors.rightMargin: 12
+                                    spacing: 10
+
+                                    AppCheckBox {
+                                        checked: modelData.enabled
+                                        onToggled: settingsVM.toggleAnalyzer(modelData.id, checked)
+                                    }
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 2
+
                                         Text {
                                             text: modelData.name
                                             color: modelData.enabled ? AppTheme.textPrimary : AppTheme.textMuted
@@ -320,22 +327,16 @@ Item {
                                             font.bold: true
                                             renderType: Text.NativeRendering
                                         }
-                                        Badge {
-                                            text: modelData.id
-                                            badgeColor: AppTheme.surfaceHover
-                                            textColor: AppTheme.textMuted
-                                            fontSize: 10
-                                        }
-                                    }
 
-                                    Text {
-                                        text: modelData.description
-                                        color: AppTheme.textSecondary
-                                        font.family: AppTheme.fontFamily
-                                        font.pixelSize: 11
-                                        elide: Text.ElideRight
-                                        Layout.fillWidth: true
-                                        renderType: Text.NativeRendering
+                                        Text {
+                                            text: modelData.description
+                                            color: AppTheme.textSecondary
+                                            font.family: AppTheme.fontFamily
+                                            font.pixelSize: 12
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
+                                        }
                                     }
                                 }
                             }
@@ -344,7 +345,51 @@ Item {
                 }
             }
 
-            // 5. Yapay Zeka (AI Agent) Görev Dağıtımı
+            // ── 5. Kapatılan kurallar ──
+            CardFrame {
+                Layout.fillWidth: true
+                visible: settingsVM.disabledRules.length > 0
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 10
+
+                    Text {
+                        text: "Kapatılan Kurallar (" + settingsVM.disabledRules.length + ")"
+                        color: AppTheme.textPrimary
+                        font.family: AppTheme.fontFamily
+                        font.pixelSize: AppTheme.fontSizeBase
+                        font.bold: true
+                        renderType: Text.NativeRendering
+                    }
+                    Text {
+                        text: "Bu kurallar analizde yok sayılır (Sorunlar sayfasından kapatılanlar). Geri açmak için kurala tıklayın."
+                        color: AppTheme.textSecondary
+                        font.family: AppTheme.fontFamily
+                        font.pixelSize: AppTheme.fontSizeSmall
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                        renderType: Text.NativeRendering
+                    }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Repeater {
+                            model: settingsVM.disabledRules
+
+                            CustomButton {
+                                text: modelData.title + "  ×"
+                                variant: "secondary"
+                                onClicked: settingsVM.enableRule(modelData.id)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── 6. Yapay zeka ajan görevleri ──
             CardFrame {
                 Layout.fillWidth: true
 
@@ -365,14 +410,18 @@ Item {
                             font.family: AppTheme.fontFamily
                             font.pixelSize: AppTheme.fontSizeBase
                             font.bold: true
+                            renderType: Text.NativeRendering
                         }
                     }
 
                     Text {
-                        text: AppStrings.agentTaskExportDesc
+                        text: AppStrings.agentTaskExportDesc + " Dalga sırası: sırlar (insan) → güvenlik → güvenilirlik → temizlik → hijyen → test → refactor."
                         color: AppTheme.textSecondary
                         font.family: AppTheme.fontFamily
                         font.pixelSize: AppTheme.fontSizeSmall
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true
+                        renderType: Text.NativeRendering
                     }
 
                     Rectangle {
@@ -385,16 +434,16 @@ Item {
                         Layout.fillWidth: true
                         spacing: 16
 
-                        // Hedef Dizin
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 4
                             Text {
-                                text: "Hedef Çıktı Dizini"
+                                text: "Çıktı Dizini" + (settingsVM.agentOutputDirIsCustom ? "" : " (varsayılan: proje dışında)")
                                 color: AppTheme.textPrimary
                                 font.family: AppTheme.fontFamily
                                 font.pixelSize: AppTheme.fontSizeSmall
                                 font.bold: true
+                                renderType: Text.NativeRendering
                             }
 
                             RowLayout {
@@ -414,24 +463,31 @@ Item {
                                         anchors.leftMargin: 10
                                         anchors.rightMargin: 10
                                         verticalAlignment: Text.AlignVCenter
-                                        text: root.exportTargetDir !== "" ? root.exportTargetDir : "Hedef dizin belirtilmedi..."
-                                        color: root.exportTargetDir !== "" ? AppTheme.textPrimary : AppTheme.textMuted
+                                        text: settingsVM.agentOutputDir
+                                        color: AppTheme.textPrimary
                                         font.family: AppTheme.fontFamily
                                         font.pixelSize: AppTheme.fontSizeSmall
                                         elide: Text.ElideMiddle
+                                        renderType: Text.NativeRendering
                                     }
                                 }
 
                                 CustomButton {
                                     text: AppStrings.selectFolder
                                     iconSource: AppIcons.folder
-                                    variant: "outline"
+                                    variant: "secondary"
                                     onClicked: agentTaskFolderDialog.open()
+                                }
+
+                                CustomButton {
+                                    text: "Varsayılan"
+                                    variant: "secondary"
+                                    visible: settingsVM.agentOutputDirIsCustom
+                                    onClicked: settingsVM.setAgentOutputDir("")
                                 }
                             }
                         }
 
-                        // Batch Size
                         ColumnLayout {
                             spacing: 4
                             Text {
@@ -440,24 +496,31 @@ Item {
                                 font.family: AppTheme.fontFamily
                                 font.pixelSize: AppTheme.fontSizeSmall
                                 font.bold: true
+                                renderType: Text.NativeRendering
                             }
 
                             RowLayout {
                                 spacing: 4
                                 CustomButton {
                                     text: "-"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setAgentBatchSize(settingsVM.agentBatchSize - 5)
+                                    variant: "secondary"
+                                    Layout.preferredWidth: 36
+                                    onClicked: settingsVM.adjustAgentBatchSize(-5)
                                 }
                                 Text {
                                     text: settingsVM.agentBatchSize.toString()
                                     color: AppTheme.accent
+                                    font.family: AppTheme.fontFamily
                                     font.bold: true
+                                    Layout.preferredWidth: 44
+                                    horizontalAlignment: Text.AlignHCenter
+                                    renderType: Text.NativeRendering
                                 }
                                 CustomButton {
                                     text: "+"
-                                    variant: "outline"
-                                    onClicked: settingsVM.setAgentBatchSize(settingsVM.agentBatchSize + 5)
+                                    variant: "secondary"
+                                    Layout.preferredWidth: 36
+                                    onClicked: settingsVM.adjustAgentBatchSize(5)
                                 }
                             }
                         }
@@ -471,16 +534,87 @@ Item {
                             text: AppStrings.exportAgentTasksBtn
                             iconSource: AppIcons.download
                             variant: "primary"
-                            enabled: appVM.hasProject && root.exportTargetDir !== ""
-                            onClicked: settingsVM.exportAgentTasks(root.exportTargetDir)
+                            enabled: appVM.hasProject
+                            onClicked: settingsVM.exportAgentTasks()
                         }
 
                         CustomButton {
                             text: AppStrings.verifyAgentTasksBtn
                             iconSource: AppIcons.shield
                             variant: "secondary"
-                            enabled: appVM.hasProject && root.exportTargetDir !== ""
-                            onClicked: settingsVM.verifyAgentTasks(root.exportTargetDir)
+                            enabled: appVM.hasProject
+                            onClicked: settingsVM.verifyAgentTasks()
+                        }
+                    }
+
+                    // Son işlem sonucu
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: resultLayout.implicitHeight + 24
+                        radius: AppTheme.radiusSmall
+                        color: AppTheme.bgSecondary
+                        border.color: AppTheme.border
+                        border.width: 1
+                        visible: root.agentKind !== ""
+
+                        ColumnLayout {
+                            id: resultLayout
+                            anchors.fill: parent
+                            anchors.margins: 12
+                            spacing: 6
+
+                            Text {
+                                text: root.agentKind === "export"
+                                      ? ("Görevler oluşturuldu: " + root.agentResult.totalTasks + " görev, " + root.agentResult.totalItems + " öğe")
+                                      : ("Doğrulama: " + root.agentResult.closed + " öğe kapandı, "
+                                         + root.agentResult.reduced + " azaldı, " + root.agentResult.open + " açık ("
+                                         + root.agentResult.total + " öğeden)")
+                                color: AppTheme.textPrimary
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSizeSmall
+                                font.bold: true
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                renderType: Text.NativeRendering
+                            }
+
+                            Text {
+                                visible: root.agentKind === "verify" && root.agentResult.newCount > 0
+                                text: "Değişikliklerin yeni çıkardığı bulgu: " + root.agentResult.newCount
+                                color: AppTheme.warning
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSizeSmall
+                                renderType: Text.NativeRendering
+                            }
+
+                            Text {
+                                visible: root.agentKind === "verify" && (root.agentResult.warning || "") !== ""
+                                text: root.agentResult.warning || ""
+                                color: AppTheme.warning
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSizeSmall
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                renderType: Text.NativeRendering
+                            }
+
+                            Text {
+                                visible: root.agentKind === "export"
+                                text: "Ajana README.md dosyasını verin; Dalga 0 görevleri insan aksiyonudur (sır yenileme, lisans kararı)."
+                                color: AppTheme.textSecondary
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSizeSmall
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                renderType: Text.NativeRendering
+                            }
+
+                            CustomButton {
+                                text: "Klasörü Aç"
+                                iconSource: AppIcons.folder
+                                variant: "secondary"
+                                onClicked: appVM.openPath(root.agentResult.outputDir || "")
+                            }
                         }
                     }
                 }

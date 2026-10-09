@@ -23,12 +23,11 @@ QtObject {
     // Kenarlıklar
     readonly property color border: isDark ? "#2E3B4E" : "#E2E8F0"
     readonly property color borderSubtle: isDark ? "#1E293B" : "#F1F5F9"
-    readonly property color borderFocus: isDark ? "#38BDF8" : "#0284C7"
 
-    // Metin Renkleri
-    readonly property color textPrimary: isDark ? "#F8FAFC" : "#0F172A"
-    readonly property color textSecondary: isDark ? "#94A3B8" : "#475569"
-    readonly property color textMuted: isDark ? "#64748B" : "#94A3B8"
+    // Metin Renkleri: koyu temada soluk gri yok; ikincil metin de parlak ve okunaklı (WCAG AA üstü kontrast)
+    readonly property color textPrimary: isDark ? "#FFFFFF" : "#0F172A"
+    readonly property color textSecondary: isDark ? "#E2E8F0" : "#334155"
+    readonly property color textMuted: isDark ? "#CBD5E1" : "#475569"
     readonly property color textInverse: isDark ? "#0F172A" : "#FFFFFF"
 
     // Durum ve Vurgu Renkleri
@@ -41,23 +40,20 @@ QtObject {
     readonly property color successBg: isDark ? "#064E3B" : "#ECFDF5"
     
     readonly property color warning: isDark ? "#F59E0B" : "#D97706"
-    readonly property color warningBg: isDark ? "#78350F" : "#FFFBEB"
     
     readonly property color danger: isDark ? "#EF4444" : "#DC2626"
     readonly property color dangerBg: isDark ? "#7F1D1D" : "#FEF2F2"
     
     readonly property color info: isDark ? "#6366F1" : "#4F46E5"
-    readonly property color infoBg: isDark ? "#312E81" : "#EEF2FF"
 
     // Geometri & Yuvarlaklık
     readonly property int radiusSmall: 4
     readonly property int radiusBase: 8
     readonly property int radiusCard: 12
-    readonly property int radiusLarge: 16
 
     // Tipografi
     readonly property string fontFamily: "Segoe UI"
-    readonly property int fontSizeSmall: 11
+    readonly property int fontSizeSmall: 12
     readonly property int fontSizeBase: 13
     readonly property int fontSizeMedium: 15
     readonly property int fontSizeLarge: 18

@@ -130,7 +130,7 @@ Item {
             padding: 16
 
             ColumnLayout {
-                anchors.fill: parent
+                width: parent.width
                 spacing: 12
 
                 RowLayout {
@@ -159,7 +159,7 @@ Item {
                     // 1. Python Önbelleği
                     RowLayout {
                         spacing: 10
-                        CheckBox {
+                        AppCheckBox {
                             checked: cleanupVM.categoryPythonCache
                             onToggled: cleanupVM.setCategory("python_cache", checked)
                         }
@@ -177,7 +177,7 @@ Item {
                                 text: "Derlenmiş Python baytkod dosyalarını ve önbellek klasörlerini temizler."
                                 color: AppTheme.textSecondary
                                 font.family: AppTheme.fontFamily
-                                font.pixelSize: 11
+                                font.pixelSize: 12
                                 renderType: Text.NativeRendering
                             }
                         }
@@ -186,7 +186,7 @@ Item {
                     // 2. Geçici Dosyalar
                     RowLayout {
                         spacing: 10
-                        CheckBox {
+                        AppCheckBox {
                             checked: cleanupVM.categoryTempFiles
                             onToggled: cleanupVM.setCategory("temp_files", checked)
                         }
@@ -204,7 +204,7 @@ Item {
                                 text: "Editörlerin veya araçların bıraktığı artık geçici dosyaları temizler."
                                 color: AppTheme.textSecondary
                                 font.family: AppTheme.fontFamily
-                                font.pixelSize: 11
+                                font.pixelSize: 12
                                 renderType: Text.NativeRendering
                             }
                         }
@@ -213,7 +213,7 @@ Item {
                     // 3. Log Dosyaları
                     RowLayout {
                         spacing: 10
-                        CheckBox {
+                        AppCheckBox {
                             checked: cleanupVM.categoryLogs
                             onToggled: cleanupVM.setCategory("logs", checked)
                         }
@@ -231,7 +231,7 @@ Item {
                                 text: "Çalışma zamanı günlük dosyaları (kullanıcı verisi içerebilir)."
                                 color: AppTheme.warning
                                 font.family: AppTheme.fontFamily
-                                font.pixelSize: 11
+                                font.pixelSize: 12
                                 renderType: Text.NativeRendering
                             }
                         }
@@ -240,7 +240,7 @@ Item {
                     // 4. Yedek Dosyaları
                     RowLayout {
                         spacing: 10
-                        CheckBox {
+                        AppCheckBox {
                             checked: cleanupVM.categoryBackups
                             onToggled: cleanupVM.setCategory("backups", checked)
                         }
@@ -258,7 +258,7 @@ Item {
                                 text: "Eski yedek kalıntıları (kullanıcı verisi içerebilir)."
                                 color: AppTheme.warning
                                 font.family: AppTheme.fontFamily
-                                font.pixelSize: 11
+                                font.pixelSize: 12
                                 renderType: Text.NativeRendering
                             }
                         }
@@ -294,7 +294,7 @@ Item {
                     text: AppStrings.cleanupNotice
                     color: AppTheme.textSecondary
                     font.family: AppTheme.fontFamily
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     font.bold: true
                     renderType: Text.NativeRendering
                 }
@@ -310,7 +310,9 @@ Item {
             padding: 16
 
             ColumnLayout {
-                anchors.fill: parent
+                // Yükseklik kartın iç alanı kadar: aksi hâlde liste ve boş durum 0 px yükseklikte kalır (görünmez)
+                width: parent.width
+                height: parent.height
                 spacing: 12
 
                 // Başlık & Özet Rozetler
@@ -388,6 +390,8 @@ Item {
                 // Önizleme Dosya Listesi
                 ListView {
                     id: cleanListView
+                    objectName: "cleanList"
+                    boundsBehavior: Flickable.StopAtBounds
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
@@ -430,24 +434,24 @@ Item {
                                 text: modelData.path
                                 color: AppTheme.textMuted
                                 font.family: AppTheme.fontFamily
-                                font.pixelSize: 11
+                                font.pixelSize: 12
                                 elide: Text.ElideMiddle
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering
                             }
 
                             Badge {
-                                text: modelData.category
+                                text: modelData.categoryName
                                 textColor: AppTheme.accent
                                 badgeColor: AppTheme.surfaceActive
-                                fontSize: 10
+                                fontSize: 12
                             }
 
                             Badge {
                                 text: modelData.sizeKb + " KB"
                                 textColor: AppTheme.textSecondary
                                 badgeColor: AppTheme.surfaceActive
-                                fontSize: 10
+                                fontSize: 12
                             }
                         }
                     }

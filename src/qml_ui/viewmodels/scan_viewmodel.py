@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot, Property
+from src.languages import default_languages
+from src.services.audit_catalog import SKIP_REASONS
 from src.services.project_service import ProjectService
 
 logger = logging.getLogger(__name__)
@@ -62,7 +64,6 @@ class ScanViewModel(QObject):
         self._skipped_files: Dict[str, int] = {}
         self._gitignore_applied = True
         self._ignored_by_gitignore = 0
-        self._all_issues: List[Dict] = []
 
     # ── Properties ──
 
@@ -115,8 +116,21 @@ class ScanViewModel(QObject):
         return self._file_type_dist
 
     @Property("QVariantMap", notify=dataChanged)
-    def languageStats(self) -> Dict[str, Dict]:
-        return self._language_stats
+    def languageLines(self) -> Dict[str, int]:
+        """Dil -> kod satırı sayısı (dil dağılımı kartı için)."""
+        return {self._language_name(lang): int(stats.get("code_lines", 0)) for lang, stats in self._language_stats.items()
+                if int(stats.get("code_lines", 0)) > 0}
+
+    @staticmethod
+    def _language_name(language_id: str) -> str:
+        spec = default_languages.get(language_id)
+        return spec.display_name if spec else language_id
+
+    @Property("QVariantList", notify=dataChanged)
+    def skippedDetail(self) -> List[Dict[str, Any]]:
+        """Analize girmeyen dosyaların neden -> sayı dökümü (okunur etiketlerle)."""
+        return [{"reason": reason, "label": SKIP_REASONS.get(reason, reason), "count": int(count)}
+                for reason, count in sorted(self._skipped_files.items(), key=lambda item: -item[1])]
 
     @Property("QVariantList", notify=dataChanged)
     def topRecommendations(self) -> List[Dict]:
@@ -137,10 +151,6 @@ class ScanViewModel(QObject):
     @Property(int, notify=dataChanged)
     def ignoredByGitignore(self) -> int:
         return self._ignored_by_gitignore
-
-    @Property("QVariantList", notify=dataChanged)
-    def allIssues(self) -> List[Dict]:
-        return self._all_issues
 
     # ── Slots ──
 
@@ -199,22 +209,10 @@ class ScanViewModel(QObject):
         self._failed_analyzers = list(data.get("failed_analyzers", []))
         self._skipped_files = dict(data.get("skipped_files", {}))
         self._gitignore_applied = bool(data.get("gitignore_applied", True))
-        self._ignored_by_gitignore = int(data.get("ignored_by_gitignore", 0))
-
-        # all_issues listesini QML dostu sözlüklere dönüştür
-        issues_list = []
-        for issue in data.get("all_issues", []):
-            sev = issue.severity.name if hasattr(issue.severity, "name") else str(issue.severity)
-            issues_list.append({
-                "title": getattr(issue, "title", ""),
-                "description": getattr(issue, "description", ""),
-                "severity": sev,
-                "filePath": str(issue.file_path.name) if getattr(issue, "file_path", None) else "",
-                "line": getattr(issue, "line", 0) or 0,
-                "suggestion": getattr(issue, "suggestion", "") or "",
-                "rule": getattr(issue, "rule", "") or ""
-            })
-        self._all_issues = issues_list
+        ignored = data.get("ignored_by_gitignore", 0)
+        # servis {'files': n, 'dirs': m} sözlüğü döner; arayüz tek sayı gösterir
+        self._ignored_by_gitignore = (sum(int(v) for v in ignored.values()) if isinstance(ignored, dict)
+                                      else int(ignored or 0))
 
         self._progress_percent = 100
         self._progress_text = "Analiz tamamlandı"

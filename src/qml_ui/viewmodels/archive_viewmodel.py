@@ -7,6 +7,13 @@ from src.services.project_service import ProjectService
 
 logger = logging.getLogger(__name__)
 
+# İşlem çalışmadan önce de `lastResult` bu anahtarları taşır; QML bağlamaları `undefined` görmesin.
+EMPTY_RESULT: Dict[str, Any] = {
+    "success": False, "complete": False, "mode": "", "error": "", "outputPath": "", "totalFiles": 0,
+    "addedFiles": 0, "skippedFiles": 0, "failedFilesCount": 0, "failedFiles": [], "backupSizeMb": 0.0,
+    "excludedDirsCount": 0,
+}
+
 
 class ArchiveWorker(QThread):
     """Arşivleme, kopyalama veya yedekleme işlemini yürüten iş parçacığı."""
@@ -84,7 +91,8 @@ class ArchiveViewModel(QObject):
 
         profs_keys = list(self.service.archive_service.PROFILES.keys())
         self._selected_profile = profs_keys[0] if profs_keys else ""
-        self._last_result: Dict[str, Any] = {}
+        self._last_result: Dict[str, Any] = dict(EMPTY_RESULT)
+        self._has_result = False
         self._backup_list: List[Dict[str, Any]] = []
 
         self._load_profiles()
@@ -132,6 +140,11 @@ class ArchiveViewModel(QObject):
     @Property("QVariantMap", notify=stateChanged)
     def lastResult(self) -> Dict[str, Any]:
         return self._last_result
+
+    @Property(bool, notify=stateChanged)
+    def hasResult(self) -> bool:
+        """Henüz hiçbir işlem çalışmadıysa False: arayüz boş sonuç kartı göstermesin."""
+        return self._has_result
 
     @Property("QVariantList", notify=stateChanged)
     def backupList(self) -> List[Dict[str, Any]]:
@@ -228,6 +241,7 @@ class ArchiveViewModel(QObject):
             "excludedDirsCount": int(result.get("excluded_dir_count", 0)),
         }
         self._last_result = formatted
+        self._has_result = True
         self.refreshBackupList()
 
         self.processProgress.emit(100, self._progress_text)

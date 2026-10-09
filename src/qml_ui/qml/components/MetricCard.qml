@@ -67,7 +67,7 @@ CardFrame {
                 text: root.subtitle
                 color: AppTheme.textMuted
                 font.family: AppTheme.fontFamily
-                font.pixelSize: 10
+                font.pixelSize: 12
                 visible: root.subtitle !== ""
                 elide: Text.ElideRight
                 Layout.fillWidth: true

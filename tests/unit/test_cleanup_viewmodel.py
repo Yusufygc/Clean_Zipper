@@ -58,6 +58,7 @@ def test_cleanup_viewmodel_preview(qapp, tmp_path):
     assert vm.isProcessing is False
     assert vm.previewCount >= 2
     assert len(vm.previewFiles) >= 2
+    assert {f["categoryName"] for f in vm.previewFiles} == {"Python önbelleği", "Geçici dosya"}   # kimlik değil, Türkçe ad
 
 
 def test_cleanup_viewmodel_execution(qapp, tmp_path, monkeypatch):

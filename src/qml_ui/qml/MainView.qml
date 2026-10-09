@@ -9,10 +9,11 @@ import "views"
 
 ApplicationWindow {
     id: window
+    // Açılış boyutu ekrana göre belirlenir (Component.onCompleted); bu değerler yedektir
     width: 1280
     height: 820
-    minimumWidth: 1050
-    minimumHeight: 720
+    minimumWidth: Math.min(900, Screen.desktopAvailableWidth)       // küçük ekranda ekrandan büyük asgari boyut olmaz
+    minimumHeight: Math.min(600, Screen.desktopAvailableHeight)
     visible: true
     title: AppStrings.appTitle + "  " + AppStrings.appVersion
     color: AppTheme.bg
@@ -21,6 +22,19 @@ ApplicationWindow {
     Behavior on color { ColorAnimation { duration: AppTheme.animNormal } }
 
     property int currentTab: 0
+
+    // Duyarlı başlık: pencere daraldıkça önce başlık metni ve sürüm rozeti, sonra pasif sekme yazıları gizlenir;
+    // sekmeler, proje düğmesi ve tema düğmesi hiçbir genişlikte pencere dışına taşmaz.
+    readonly property bool compactHeader: width < 1400       // başlık metni + sürüm rozeti gizli
+    readonly property bool iconOnlyTabs: width < 1120        // yalnızca etkin sekmenin yazısı görünür
+
+    Component.onCompleted: {
+        // Açılış boyutu: kullanılabilir ekran alanının %85'i, makul sınırlar içinde; ekranın ortasında
+        width = Math.round(Math.min(Math.max(Screen.desktopAvailableWidth * 0.85, minimumWidth), 1600, Screen.desktopAvailableWidth))
+        height = Math.round(Math.min(Math.max(Screen.desktopAvailableHeight * 0.85, minimumHeight), 1000, Screen.desktopAvailableHeight))
+        x = Math.round((Screen.desktopAvailableWidth - width) / 2)
+        y = Math.round((Screen.desktopAvailableHeight - height) / 2)
+    }
 
     // Klasör Seçim Diyaloğu
     FolderDialog {
@@ -53,7 +67,7 @@ ApplicationWindow {
                 anchors.fill: parent
                 anchors.leftMargin: 20
                 anchors.rightMargin: 20
-                spacing: 24
+                spacing: window.iconOnlyTabs ? 6 : (window.compactHeader ? 10 : 24)
 
                 // Sol: Logo ve Başlık
                 RowLayout {
@@ -66,6 +80,7 @@ ApplicationWindow {
                     }
 
                     Text {
+                        visible: !window.compactHeader
                         text: AppStrings.appTitle
                         color: AppTheme.textPrimary
                         font.family: AppTheme.fontFamily
@@ -75,6 +90,7 @@ ApplicationWindow {
                     }
 
                     Badge {
+                        visible: !window.compactHeader
                         text: AppStrings.appVersion
                         textColor: AppTheme.accent
                         badgeColor: AppTheme.surfaceActive
@@ -83,8 +99,9 @@ ApplicationWindow {
 
                 // Orta: Sekme Menüsü (Segmented Nav)
                 RowLayout {
+                    objectName: "tabNav"
                     Layout.alignment: Qt.AlignHCenter
-                    spacing: 4
+                    spacing: window.compactHeader ? 2 : 4
 
                     Repeater {
                         model: [
@@ -100,7 +117,7 @@ ApplicationWindow {
                             readonly property bool isActive: window.currentTab === modelData.idx
                             readonly property bool isHovered: tabMouse.containsMouse
 
-                            implicitWidth: tabRow.implicitWidth + 24
+                            implicitWidth: tabRow.implicitWidth
                             implicitHeight: 34
                             radius: AppTheme.radiusBase
 
@@ -118,6 +135,9 @@ ApplicationWindow {
                                 anchors.centerIn: parent
                                 spacing: 8
 
+                                // İç boşluk satırın kendi içinde: sekme genişliği düzey değişiminden bağımsız hesaplanır
+                                Item { Layout.preferredWidth: window.iconOnlyTabs ? 0 : (window.compactHeader ? 2 : 4) }
+
                                 SvgIcon {
                                     source: modelData.icon
                                     size: 16
@@ -127,6 +147,7 @@ ApplicationWindow {
                                 }
 
                                 Text {
+                                    visible: tabBtn.isActive || !window.iconOnlyTabs
                                     text: modelData.title
                                     color: tabBtn.isActive 
                                            ? AppTheme.textPrimary 
@@ -136,6 +157,8 @@ ApplicationWindow {
                                     font.bold: tabBtn.isActive
                                     renderType: Text.NativeRendering
                                 }
+
+                                Item { Layout.preferredWidth: window.iconOnlyTabs ? 0 : (window.compactHeader ? 2 : 4) }
                             }
 
                             MouseArea {
@@ -157,7 +180,11 @@ ApplicationWindow {
 
                     // Proje Seçim Butonu
                     CustomButton {
-                        text: appVM.hasProject ? appVM.projectName : AppStrings.openProject
+                        objectName: "projectButton"
+                        // Uzun proje adı başlığı taşırmasın
+                        text: appVM.hasProject
+                              ? (appVM.projectName.length > 22 ? appVM.projectName.slice(0, 21) + "…" : appVM.projectName)
+                              : AppStrings.openProject
                         iconSource: AppIcons.folder
                         variant: appVM.hasProject ? "secondary" : "primary"
                         onClicked: projectFolderDialog.open()
@@ -165,6 +192,7 @@ ApplicationWindow {
 
                     // Canlı Tema Değiştirme Butonu
                     IconButton {
+                        objectName: "themeButton"
                         iconSource: AppTheme.isDark ? AppIcons.sun : AppIcons.moon
                         iconColor: AppTheme.accent
                         onClicked: AppTheme.toggleTheme()

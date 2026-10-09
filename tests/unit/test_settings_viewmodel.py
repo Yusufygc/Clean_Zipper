@@ -1,10 +1,13 @@
-"""SettingsViewModel için birim testleri."""
+"""SettingsViewModel: kalıcı ayarlar, eşikler, kural kapatma ve ajan görevleri köprüsü."""
+import json
 from pathlib import Path
+
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from src.services.project_service import ProjectService
 from src.qml_ui.viewmodels.settings_viewmodel import SettingsViewModel
+from src.services import app_settings
+from src.services.project_service import ProjectService
 
 
 @pytest.fixture(scope="session")
@@ -15,145 +18,178 @@ def qapp():
     return app
 
 
-def test_settings_viewmodel_defaults(qapp):
+def make(qapp):
     service = ProjectService()
-    vm = SettingsViewModel(service)
-
-    assert vm.respectGitignore is True
-    assert vm.cyclomatic == 10
-    assert vm.cognitive == 15
-    assert vm.functionLines == 50
-    assert vm.classLines == 300
-    assert vm.fileLines == 500
-    assert vm.agentBatchSize == 15
-
-    analyzers = vm.analyzersList
-    assert len(analyzers) == 18
-    assert all(a["enabled"] for a in analyzers)
-    # Türkçeleştirilmiş meta verileri doğrula
-    first = analyzers[0]
-    assert "name" in first
-    assert "description" in first
-    assert "id" in first
+    return service, SettingsViewModel(service)
 
 
-def test_settings_viewmodel_setters_and_clamping(qapp):
-    service = ProjectService()
-    vm = SettingsViewModel(service)
+def thresholds(vm):
+    return {t["key"]: t for t in vm.thresholds}
 
-    signal_received = []
-    vm.settingsChanged.connect(lambda: signal_received.append(True))
 
+def test_defaults(qapp):
+    _, vm = make(qapp)
+    assert vm.respectGitignore is True and vm.agentBatchSize == 15
+    values = thresholds(vm)
+    assert len(values) == 9 and values["cyclomatic"]["value"] == 10 and values["parameters"]["default"] == 5
+    assert len(vm.analyzersList) == 18 and all(a["enabled"] for a in vm.analyzersList)
+    assert vm.disabledRules == [] and vm.lastAgentResult == {}
+    first = vm.analyzersList[0]
+    assert {"id", "name", "description", "enabled"} <= set(first)
+
+
+def test_every_threshold_can_be_adjusted_and_is_clamped(qapp):
+    _, vm = make(qapp)
+    vm.adjustThreshold("cyclomatic", 5)
+    vm.adjustThreshold("function_lines", -100)
+    vm.adjustThreshold("nesting", -50)
+    vm.adjustThreshold("yok", 3)                                 # bilinmeyen anahtar yok sayılır
+    values = thresholds(vm)
+    assert values["cyclomatic"]["value"] == 15
+    assert values["function_lines"]["value"] == 5 and values["nesting"]["value"] == 1       # alt sınır
+    assert set(values) == set(app_settings.THRESHOLD_LIMITS)
+
+
+def test_apply_reaches_the_doctor_with_all_nine_thresholds_and_gitignore(qapp):
+    service, vm = make(qapp)
     vm.setRespectGitignore(False)
-    assert vm.respectGitignore is False
-
-    vm.setCyclomatic(25)
-    assert vm.cyclomatic == 25
-    vm.setCyclomatic(-5)
-    assert vm.cyclomatic == 1  # max(val, 1)
-
-    vm.setCognitive(30)
-    assert vm.cognitive == 30
-    vm.setCognitive(0)
-    assert vm.cognitive == 1
-
-    vm.setFunctionLines(120)
-    assert vm.functionLines == 120
-    vm.setFunctionLines(1)
-    assert vm.functionLines == 5
-
-    vm.setClassLines(500)
-    assert vm.classLines == 500
-    vm.setClassLines(5)
-    assert vm.classLines == 20
-
-    vm.setFileLines(1200)
-    assert vm.fileLines == 1200
-    vm.setFileLines(10)
-    assert vm.fileLines == 50
-
-    vm.setAgentBatchSize(30)
-    assert vm.agentBatchSize == 30
-    vm.setAgentBatchSize(0)
-    assert vm.agentBatchSize == 1
-
-    assert len(signal_received) >= 8
-
-
-def test_settings_analyzer_toggles(qapp):
-    service = ProjectService()
-    vm = SettingsViewModel(service)
-
-    # CloneAnalyzer kapat
-    vm.toggleAnalyzer("CloneAnalyzer", False)
-    analyzers = {a["id"]: a["enabled"] for a in vm.analyzersList}
-    assert analyzers["CloneAnalyzer"] is False
-    assert analyzers["ArchitectureAnalyzer"] is True
-
-    # Tümünü kapat
-    vm.disableAllAnalyzers()
-    analyzers = {a["id"]: a["enabled"] for a in vm.analyzersList}
-    assert all(not val for val in analyzers.values())
-
-    # Tümünü aç
-    vm.enableAllAnalyzers()
-    analyzers = {a["id"]: a["enabled"] for a in vm.analyzersList}
-    assert all(val for val in analyzers.values())
-
-
-def test_settings_apply_and_reset(qapp):
-    service = ProjectService()
-    vm = SettingsViewModel(service)
-
-    vm.setCyclomatic(18)
-    vm.setRespectGitignore(False)
+    vm.adjustThreshold("parameters", 3)
+    vm.adjustThreshold("module_imports", 10)
     vm.toggleAnalyzer("DeadCodeAnalyzer", False)
+    messages = []
+    vm.settingsApplied.connect(messages.append)
     vm.applySettings()
-
     doctor = service.doctor
     assert doctor.respect_gitignore is False
-    assert doctor.thresholds.cyclomatic == 18
-    # DeadCodeAnalyzer oluşturulmamış olmalı
-    analyzer_names = [type(a).__name__ for a in doctor._analyzers]
-    assert "DeadCodeAnalyzer" not in analyzer_names
-    assert "ArchitectureAnalyzer" in analyzer_names
+    assert doctor.thresholds.parameters == 8 and doctor.thresholds.module_imports == 35
+    assert "DeadCodeAnalyzer" not in [type(a).__name__ for a in doctor._analyzers]
+    assert messages and "kaydedildi" in messages[0]
 
-    # Varsayılanlara dön
+
+def test_settings_are_persisted_and_restored_on_the_next_start(qapp):
+    _, vm = make(qapp)
+    vm.adjustThreshold("cognitive", 5)
+    vm.toggleAnalyzer("CloneAnalyzer", False)
+    vm.disableRule("magic-numbers")
+    vm.adjustAgentBatchSize(10)
+    saved = json.loads(app_settings.settings_path().read_text(encoding="utf-8"))
+    assert saved["thresholds"]["cognitive"] == 20 and saved["disabled_rules"] == ["magic-numbers"]
+
+    service, again = make(qapp)                                  # uygulama yeniden açılıyor
+    assert thresholds(again)["cognitive"]["value"] == 20
+    assert again.agentBatchSize == 15                            # batch yalnızca uygulayınca kaydedilir: bu testte disableRule kaydetti
+    assert [a["enabled"] for a in again.analyzersList if a["id"] == "CloneAnalyzer"] == [False]
+    assert service.doctor.thresholds.cognitive == 20             # kayıtlı ayar açılışta doctor'a da uygulandı
+    assert "CloneAnalyzer" not in [type(a).__name__ for a in service.doctor._analyzers]
+    assert service.doctor.disabled_rules == frozenset({"magic-numbers"})
+
+
+def test_analyzer_enable_disable_all(qapp):
+    _, vm = make(qapp)
+    vm.toggleAnalyzer("CloneAnalyzer", False)
+    assert {a["id"]: a["enabled"] for a in vm.analyzersList}["CloneAnalyzer"] is False
+    vm.disableAllAnalyzers()
+    assert not any(a["enabled"] for a in vm.analyzersList)
+    vm.enableAllAnalyzers()
+    assert all(a["enabled"] for a in vm.analyzersList)
+
+
+def test_disable_and_enable_rule_apply_immediately_and_signal_a_refresh(qapp):
+    service, vm = make(qapp)
+    refreshes = []
+    vm.rulesChanged.connect(lambda: refreshes.append(True))
+    vm.disableRule("unused-import")
+    vm.disableRule("unused-import")                              # ikinci kez etkisiz
+    assert service.doctor.disabled_rules == frozenset({"unused-import"}) and len(refreshes) == 1
+    assert vm.disabledRules == [{"id": "unused-import", "title": "Kullanılmayan import"}]
+    vm.enableRule("unused-import")
+    assert service.doctor.disabled_rules == frozenset() and len(refreshes) == 2 and vm.disabledRules == []
+
+
+def test_a_disabled_rule_really_disappears_from_the_analysis(qapp, tmp_path):
+    (tmp_path / "a.py").write_text("import os\nx = 1\n", encoding="utf-8")
+    service, vm = make(qapp)
+    service.set_project(tmp_path)
+    rules = lambda: {f.metadata.get("rule") for f in service.doctor.diagnose(tmp_path).all_findings}
+    assert "unused-import" in rules()
+    vm.disableRule("unused-import")
+    assert "unused-import" not in rules()
+
+
+def test_reset_restores_everything_and_persists_defaults(qapp):
+    service, vm = make(qapp)
+    vm.adjustThreshold("cyclomatic", 9)
+    vm.disableRule("magic-numbers")
+    vm.setRespectGitignore(False)
     vm.resetToDefaults()
-    assert vm.cyclomatic == 10
-    assert vm.respectGitignore is True
-    assert "DeadCodeAnalyzer" in [type(a).__name__ for a in service.doctor._analyzers]
+    assert thresholds(vm)["cyclomatic"]["value"] == 10 and vm.respectGitignore is True and vm.disabledRules == []
+    assert service.doctor.thresholds.cyclomatic == 10 and service.doctor.respect_gitignore is True
+    assert json.loads(app_settings.settings_path().read_text(encoding="utf-8"))["disabled_rules"] == []
 
 
-def test_agent_task_export_and_verify(qapp, tmp_path):
-    service = ProjectService()
-    vm = SettingsViewModel(service)
+def test_default_agent_dir_is_outside_the_project_and_follows_the_project(qapp, tmp_path):
+    service, vm = make(qapp)
+    project = tmp_path / "benim_proje"
+    project.mkdir()
+    service.set_project(project)
+    changes = []
+    vm.settingsChanged.connect(lambda: changes.append(True))
+    vm.onProjectChanged()
+    assert changes and vm.agentOutputDirIsCustom is False
+    assert Path(vm.agentOutputDir).name == "benim_proje" and project.resolve() not in Path(vm.agentOutputDir).parents
+    vm.setAgentOutputDir("file:///" + str(tmp_path / "ozel").replace("\\", "/"))
+    assert vm.agentOutputDirIsCustom is True and Path(vm.agentOutputDir) == tmp_path / "ozel"
+    vm.setAgentOutputDir("")
+    assert vm.agentOutputDirIsCustom is False
 
-    # 1. Proje seçilmeden hata testi
+
+def test_batch_size_is_bounded(qapp):
+    _, vm = make(qapp)
+    vm.adjustAgentBatchSize(-100)
+    assert vm.agentBatchSize == 1
+    vm.adjustAgentBatchSize(10_000)
+    assert vm.agentBatchSize == app_settings.MAX_BATCH_SIZE
+
+
+def test_agent_tasks_require_a_project(qapp):
+    _, vm = make(qapp)
     errors = []
-    vm.taskExportError.connect(lambda err: errors.append(err))
-    vm.exportAgentTasks(str(tmp_path))
-    assert len(errors) == 1
+    vm.taskExportError.connect(errors.append)
+    vm.exportAgentTasks()
+    vm.verifyAgentTasks()
+    assert len(errors) == 2
 
-    # 2. Proje seçilip dışa aktarım testi
-    project_dir = tmp_path / "mock_project"
-    project_dir.mkdir()
-    py_file = project_dir / "app.py"
-    py_file.write_text("x = 1\n", encoding="utf-8")
 
-    service.set_project(project_dir)
-    export_dir = tmp_path / "tasks_output"
-
+def test_export_then_verify_reports_real_counts(qapp, tmp_path):
+    project = tmp_path / "proj"
+    project.mkdir()
+    (project / "a.py").write_text("import os\nimport sys\nx = 1\n", encoding="utf-8")
+    service, vm = make(qapp)
+    service.set_project(project)
+    vm.setAgentOutputDir(str(tmp_path / "gorevler"))
     results = []
-    vm.taskExportFinished.connect(lambda res: results.append(res))
-    vm.exportAgentTasks(str(export_dir))
+    vm.taskExportFinished.connect(results.append)
 
-    assert len(results) == 1
-    assert results[0]["success"] is True
-    assert (export_dir / "tasks.json").exists()
-    assert (export_dir / "README.md").exists()
+    vm.exportAgentTasks()
+    export = results[0]
+    assert export["kind"] == "export" and export["totalItems"] == 2 and export["totalTasks"] == 1
+    assert (tmp_path / "gorevler" / "tasks.json").is_file() and export["waves"][0]["wave"] == 3
 
-    # 3. Doğrulama testi
-    vm.verifyAgentTasks(str(export_dir))
-    assert len(results) == 2
-    assert results[1]["verified"] is True
+    (project / "a.py").write_text("x = 1\n", encoding="utf-8")   # iki import silindi
+    vm.verifyAgentTasks()
+    verify = results[1]
+    assert verify["kind"] == "verify" and verify["closed"] == 2 and verify["open"] == 0 and verify["total"] == 2
+    assert verify["newCount"] == 0 and vm.lastAgentResult == verify
+
+
+def test_verify_without_exported_tasks_reports_an_error(qapp, tmp_path):
+    project = tmp_path / "proj"
+    project.mkdir()
+    (project / "a.py").write_text("x = 1\n", encoding="utf-8")
+    service, vm = make(qapp)
+    service.set_project(project)
+    vm.setAgentOutputDir(str(tmp_path / "yok"))
+    errors = []
+    vm.taskExportError.connect(errors.append)
+    vm.verifyAgentTasks()
+    assert errors and "Doğrulama yapılamadı" in errors[0]

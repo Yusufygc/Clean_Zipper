@@ -7,13 +7,14 @@ CardFrame {
 
     property var failedAnalyzers: []
     property var skippedFiles: ({})
+    property var skippedDetail: []
     property int ignoredGitignore: 0
     property bool gitignoreApplied: true
 
     padding: 16
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 12
 
         // Başlık
@@ -58,7 +59,7 @@ CardFrame {
                 Text {
                     text: root.failedAnalyzers.length > 0 
                           ? ("Eksik Sonuç: " + root.failedAnalyzers.join(", ") + " hata verdi")
-                          : "Tüm analizörler (18/18) eksiksiz çalıştı"
+                          : "Çalışan tüm analizörler eksiksiz tamamlandı"
                     color: root.failedAnalyzers.length > 0 ? AppTheme.danger : AppTheme.success
                     font.family: AppTheme.fontFamily
                     font.pixelSize: AppTheme.fontSizeSmall
@@ -115,11 +116,32 @@ CardFrame {
             }
         }
 
+        // Atlanan dosyaların nedenleri
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 2
+            visible: root.skippedDetail.length > 0
+
+            Repeater {
+                model: root.skippedDetail
+
+                Text {
+                    text: "• " + modelData.label + ": " + modelData.count
+                    color: AppTheme.textSecondary
+                    font.family: AppTheme.fontFamily
+                    font.pixelSize: 12
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                    renderType: Text.NativeRendering
+                }
+            }
+        }
+
         Text {
             text: "Python dışı diller (JS/TS, C#, Rust, Go vb.) sözlüksel yaklaşım ile taranır."
             color: AppTheme.textMuted
             font.family: AppTheme.fontFamily
-            font.pixelSize: 10
+            font.pixelSize: 12
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
             renderType: Text.NativeRendering

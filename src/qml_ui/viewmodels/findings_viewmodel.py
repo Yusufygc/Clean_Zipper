@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -7,8 +8,9 @@ from PySide6.QtCore import (
     QAbstractListModel, QModelIndex, Qt, QByteArray
 )
 from src.models.analysis_models import AnalysisResult, ProjectAnalysis, Severity
+from src.services import audit_evidence as source_evidence
 from src.services.project_service import ProjectService
-from src.services.audit_catalog import RULE_EFFORT, DEFAULT_EFFORT, CATEGORY_NAMES
+from src.services.audit_catalog import RULE_EFFORT, DEFAULT_EFFORT, CATEGORY_NAMES, RULE_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,39 @@ def get_finding_effort(finding: AnalysisResult) -> str:
     return DEFAULT_EFFORT.get(finding.severity, "M")
 
 
+def finding_item(f: AnalysisResult, project: Path) -> Dict[str, Any]:
+    """Bulguyu QML modelinin satırına çevirir. Sır içerebilecek bulguda satır ve ayrıntı maskelenir."""
+    secret = is_sensitive_finding(f)
+    description = ("Hassas sır bilgisi tespit edildi. Güvenlik nedeniyle kaynak satır maskelendi."
+                   if secret else f.description)
+    return {
+        "title": f.title,
+        "description": description,
+        "severity": f.severity.name if hasattr(f.severity, "name") else str(f.severity),
+        "category": f.category,
+        "categoryName": CATEGORY_NAMES.get(f.category, f.category),
+        "fileName": f.file_path.name if f.file_path else "Proje Geneli",
+        "filePath": str(f.file_path) if f.file_path else "",
+        "relPath": source_evidence.relative(project, f.file_path) if f.file_path else "",
+        "line": 0 if secret else (source_evidence.line_of(f) or 0),
+        "suggestion": f.recommendation or "",
+        "rule": f.metadata.get("rule", ""),
+        "ruleLabel": RULE_LABELS.get(f.metadata.get("rule", ""), f.metadata.get("rule", "")),
+        "effort": get_finding_effort(f),
+        "isSecret": secret,
+        "approximate": bool(f.metadata.get("approximate", False)),
+    }
+
+
+def category_summary(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Kategori -> bulgu sayısı; en çok bulgusu olan başta."""
+    counts: Dict[str, Dict[str, Any]] = {}
+    for item in items:
+        entry = counts.setdefault(item["category"], {"key": item["category"], "name": item["categoryName"], "count": 0})
+        entry["count"] += 1
+    return sorted(counts.values(), key=lambda e: (-e["count"], e["name"]))
+
+
 class FindingsListModel(QAbstractListModel):
     """QML ListView için filtrelenebilir yüksek performanslı bulgu modeli."""
 
@@ -51,6 +86,8 @@ class FindingsListModel(QAbstractListModel):
     EffortRole = Qt.UserRole + 11
     IsSecretRole = Qt.UserRole + 12
     ApproximateRole = Qt.UserRole + 13
+    RelPathRole = Qt.UserRole + 14
+    RuleLabelRole = Qt.UserRole + 15
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -75,6 +112,8 @@ class FindingsListModel(QAbstractListModel):
             self.EffortRole: QByteArray(b"effort"),
             self.IsSecretRole: QByteArray(b"isSecret"),
             self.ApproximateRole: QByteArray(b"approximate"),
+            self.RelPathRole: QByteArray(b"relPath"),
+            self.RuleLabelRole: QByteArray(b"ruleLabel"),
         }
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
@@ -85,34 +124,18 @@ class FindingsListModel(QAbstractListModel):
     def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Any:
         if not index.isValid() or not (0 <= index.row() < len(self._filtered_items)):
             return None
-        item = self._filtered_items[index.row()]
-        if role == self.TitleRole:
-            return item["title"]
-        elif role == self.DescriptionRole:
-            return item["description"]
-        elif role == self.SeverityRole:
-            return item["severity"]
-        elif role == self.CategoryRole:
-            return item["category"]
-        elif role == self.CategoryNameRole:
-            return item["categoryName"]
-        elif role == self.FileNameRole:
-            return item["fileName"]
-        elif role == self.FilePathRole:
-            return item["filePath"]
-        elif role == self.LineRole:
-            return item["line"]
-        elif role == self.SuggestionRole:
-            return item["suggestion"]
-        elif role == self.RuleRole:
-            return item["rule"]
-        elif role == self.EffortRole:
-            return item["effort"]
-        elif role == self.IsSecretRole:
-            return item["isSecret"]
-        elif role == self.ApproximateRole:
-            return item["approximate"]
-        return None
+        key = self._role_keys().get(role)
+        return self._filtered_items[index.row()][key] if key else None
+
+    @classmethod
+    def _role_keys(cls) -> Dict[int, str]:
+        """Rol numarası -> öğe sözlüğündeki anahtar."""
+        return {cls.TitleRole: "title", cls.DescriptionRole: "description", cls.SeverityRole: "severity",
+                cls.CategoryRole: "category", cls.CategoryNameRole: "categoryName", cls.FileNameRole: "fileName",
+                cls.FilePathRole: "filePath", cls.LineRole: "line", cls.SuggestionRole: "suggestion",
+                cls.RuleRole: "rule", cls.EffortRole: "effort", cls.IsSecretRole: "isSecret",
+                cls.ApproximateRole: "approximate", cls.RelPathRole: "relPath",
+                cls.RuleLabelRole: "ruleLabel"}
 
     def set_items(self, items: List[Dict[str, Any]]):
         self._all_items = items
@@ -179,11 +202,13 @@ class FindingsViewModel(QObject):
     """QML Sorunlar & Bulgular Gezgini köprüsü."""
 
     diagnosisStarted = Signal()
+    diagnosingChanged = Signal()                  # `isDiagnosing` değişince (başlangıç, bitiş, hata)
     diagnosisProgress = Signal(int, str)
     diagnosisFinished = Signal()
     diagnosisError = Signal(str)
     countsChanged = Signal()
     filterChanged = Signal()
+    categoriesChanged = Signal()
 
     def __init__(self, project_service: ProjectService, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -204,7 +229,7 @@ class FindingsViewModel(QObject):
 
         self._selected_severity = "ALL"
         self._selected_category = "ALL"
-        self._search_query = ""
+        self._categories: List[Dict[str, Any]] = []
 
     # ── Properties ──
 
@@ -212,7 +237,7 @@ class FindingsViewModel(QObject):
     def model(self) -> FindingsListModel:
         return self._model
 
-    @Property(bool, notify=diagnosisStarted)
+    @Property(bool, notify=diagnosingChanged)
     def isDiagnosing(self) -> bool:
         return self._is_diagnosing
 
@@ -256,9 +281,10 @@ class FindingsViewModel(QObject):
     def selectedCategory(self) -> str:
         return self._selected_category
 
-    @Property(str, notify=filterChanged)
-    def searchQuery(self) -> str:
-        return self._search_query
+    @Property("QVariantList", notify=categoriesChanged)
+    def categories(self) -> List[Dict[str, Any]]:
+        """Bulguların bulunduğu kategoriler ve sayıları (en çok bulgusu olandan başlayarak)."""
+        return self._categories
 
     # ── Slots ──
 
@@ -274,6 +300,7 @@ class FindingsViewModel(QObject):
         self._is_diagnosing = True
         self._progress_pct = 5
         self._progress_text = "Derin teşhis başlatılıyor..."
+        self.diagnosingChanged.emit()
         self.diagnosisStarted.emit()
         self.diagnosisProgress.emit(self._progress_pct, self._progress_text)
 
@@ -290,64 +317,34 @@ class FindingsViewModel(QObject):
 
     def _on_finished(self, analysis: ProjectAnalysis):
         self._is_diagnosing = False
-        self._populate_findings(analysis.all_findings)
+        self._populate_findings(analysis.all_findings, analysis.project_path)
         self._progress_pct = 100
         self._progress_text = "Derin teşhis tamamlandı"
+        self.diagnosingChanged.emit()
         self.diagnosisProgress.emit(100, self._progress_text)
         self.diagnosisFinished.emit()
 
     def _on_error(self, err_msg: str):
         self._is_diagnosing = False
         self._progress_text = f"Hata: {err_msg}"
+        self.diagnosingChanged.emit()
         self.diagnosisProgress.emit(0, self._progress_text)
         self.diagnosisError.emit(err_msg)
 
-    def _populate_findings(self, findings: List[AnalysisResult]):
+    def _populate_findings(self, findings: List[AnalysisResult], project: Path):
         """Bulguları dönüştürür ve modele yükler."""
-        items = []
-        c_crit = c_high = c_med = c_low = c_info = 0
-
-        for f in findings:
-            sev_name = f.severity.name if hasattr(f.severity, "name") else str(f.severity)
-            if sev_name == "CRITICAL": c_crit += 1
-            elif sev_name == "HIGH": c_high += 1
-            elif sev_name == "MEDIUM": c_med += 1
-            elif sev_name == "LOW": c_low += 1
-            elif sev_name == "INFO": c_info += 1
-
-            secret = is_sensitive_finding(f)
-            effort = get_finding_effort(f)
-            cat_name = CATEGORY_NAMES.get(f.category, f.category)
-
-            # Sır ise satır ve yol bilgilerini maskele
-            file_name = f.file_path.name if f.file_path else "Proje Geneli"
-            file_path_str = str(f.file_path) if f.file_path else ""
-            line_num = 0 if secret else (f.metadata.get("line") or 0)
-            desc = "Hassas sır bilgisi tespit edildi. Güvenlik nedeniyle kaynak satır maskelendi." if secret else f.description
-
-            items.append({
-                "title": f.title,
-                "description": desc,
-                "severity": sev_name,
-                "category": f.category,
-                "categoryName": cat_name,
-                "fileName": file_name,
-                "filePath": file_path_str,
-                "line": line_num,
-                "suggestion": f.recommendation or "",
-                "rule": f.metadata.get("rule", ""),
-                "effort": effort,
-                "isSecret": secret,
-                "approximate": bool(f.metadata.get("approximate", False))
-            })
-
+        items = [finding_item(f, project) for f in findings]
+        counts = Counter(item["severity"] for item in items)
         self._total_count = len(items)
-        self._critical_count = c_crit
-        self._high_count = c_high
-        self._medium_count = c_med
-        self._low_count = c_low
-        self._info_count = c_info
+        self._critical_count = counts["CRITICAL"]
+        self._high_count = counts["HIGH"]
+        self._medium_count = counts["MEDIUM"]
+        self._low_count = counts["LOW"]
+        self._info_count = counts["INFO"]
         self.countsChanged.emit()
+
+        self._categories = category_summary(items)
+        self.categoriesChanged.emit()
 
         self._model.set_items(items)
 
@@ -365,6 +362,15 @@ class FindingsViewModel(QObject):
 
     @Slot(str)
     def setSearchQuery(self, query: str):
-        self._search_query = query
         self._model.set_search_query(query)
         self.filterChanged.emit()
+
+    @Slot(str, int, bool, result=str)
+    def evidenceFor(self, file_path: str, line: int, is_secret: bool) -> str:
+        """Bulgunun kaynak satırları (tembel: kart açılınca okunur). Sır içerebilecek bulgularda her zaman boş döner."""
+        if is_secret or not file_path or line < 1:
+            return ""
+        path = Path(file_path)
+        if not path.is_absolute():
+            return ""
+        return source_evidence.snippet(path, line) or ""

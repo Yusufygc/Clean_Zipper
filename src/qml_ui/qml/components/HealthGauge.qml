@@ -85,7 +85,7 @@ Item {
             text: "SKOR / 100"
             color: AppTheme.textMuted
             font.family: AppTheme.fontFamily
-            font.pixelSize: 10
+            font.pixelSize: 12
             font.bold: true
             font.letterSpacing: 1
             renderType: Text.NativeRendering

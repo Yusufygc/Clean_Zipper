@@ -10,7 +10,7 @@ CardFrame {
     padding: 16
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 12
 
         RowLayout {
@@ -95,7 +95,7 @@ CardFrame {
                                 text: modelData.description || ""
                                 color: AppTheme.textSecondary
                                 font.family: AppTheme.fontFamily
-                                font.pixelSize: 11
+                                font.pixelSize: 12
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering

@@ -190,6 +190,8 @@ Item {
             Layout.fillHeight: true
             clip: true
             contentWidth: availableWidth
+            // Uçlarda dur: içerik uçtan öteye sürüklenip bırakılınca geri sıçramasın
+            Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
 
             ColumnLayout {
                 width: parent.width
@@ -207,7 +209,7 @@ Item {
                         padding: 16
 
                         ColumnLayout {
-                            anchors.fill: parent
+                            width: parent.width
                             spacing: 12
 
                             RowLayout {
@@ -273,7 +275,7 @@ Item {
                                                 text: modelData.description
                                                 color: AppTheme.textSecondary
                                                 font.family: AppTheme.fontFamily
-                                                font.pixelSize: 11
+                                                font.pixelSize: 12
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
                                                 renderType: Text.NativeRendering
@@ -304,6 +306,7 @@ Item {
 
                             ColumnLayout {
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: 100000
                                 spacing: 4
 
                                 Text {
@@ -358,6 +361,7 @@ Item {
 
                             ColumnLayout {
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: 100000
                                 spacing: 4
 
                                 Text {
@@ -393,7 +397,7 @@ Item {
                         padding: 16
 
                         ColumnLayout {
-                            anchors.fill: parent
+                            width: parent.width
                             spacing: 12
 
                             RowLayout {
@@ -478,10 +482,10 @@ Item {
                 CardFrame {
                     Layout.fillWidth: true
                     padding: 16
-                    visible: archiveVM.lastResult.success !== undefined || archiveVM.lastResult.error
+                    visible: archiveVM.hasResult
 
                     ColumnLayout {
-                        anchors.fill: parent
+                        width: parent.width
                         spacing: 12
 
                         // Durum Başlığı
@@ -539,26 +543,30 @@ Item {
                             visible: !archiveVM.lastResult.error
 
                             Text {
-                                text: "İşlenen / Eklenen Dosya:"
+                                text: archiveVM.lastResult.mode === "backup" ? "Yedek Boyutu:" : "İşlenen / Eklenen Dosya:"
                                 color: AppTheme.textSecondary
                                 font.family: AppTheme.fontFamily
                                 font.pixelSize: AppTheme.fontSizeSmall
                             }
                             Badge {
-                                text: archiveVM.lastResult.addedFiles + " dosya"
+                                text: archiveVM.lastResult.mode === "backup"
+                                      ? (archiveVM.lastResult.backupSizeMb + " MB")
+                                      : (archiveVM.lastResult.addedFiles + " dosya")
                                 textColor: AppTheme.success
                                 badgeColor: AppTheme.surfaceActive
                             }
                             Item { Layout.fillWidth: true }
 
                             Text {
-                                text: "Atlanan Dosya (Filtre Dışı):"
+                                text: archiveVM.lastResult.mode === "backup" ? "Dışlanan Klasör (yeniden üretilebilir):" : "Atlanan Dosya (Filtre Dışı):"
                                 color: AppTheme.textSecondary
                                 font.family: AppTheme.fontFamily
                                 font.pixelSize: AppTheme.fontSizeSmall
                             }
                             Badge {
-                                text: archiveVM.lastResult.skippedFiles + " dosya"
+                                text: archiveVM.lastResult.mode === "backup"
+                                      ? (archiveVM.lastResult.excludedDirsCount + " klasör")
+                                      : (archiveVM.lastResult.skippedFiles + " dosya")
                                 textColor: AppTheme.textSecondary
                                 badgeColor: AppTheme.surfaceActive
                             }
@@ -604,7 +612,7 @@ Item {
                                     text: "- " + modelData
                                     color: AppTheme.textSecondary
                                     font.family: AppTheme.fontFamily
-                                    font.pixelSize: 11
+                                    font.pixelSize: 12
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering

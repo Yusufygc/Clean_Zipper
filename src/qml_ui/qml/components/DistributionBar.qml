@@ -11,7 +11,7 @@ CardFrame {
     padding: 16
 
     ColumnLayout {
-        anchors.fill: parent
+        width: parent.width
         spacing: 10
 
         Text {
@@ -52,8 +52,8 @@ CardFrame {
                         text: modelData.ext
                         textColor: AppTheme.accent
                         badgeColor: AppTheme.surfaceActive
-                        fontSize: 11
-                        Layout.preferredWidth: 64
+                        fontSize: 12
+                        Layout.preferredWidth: 84
                     }
 
                     Rectangle {

@@ -8,6 +8,9 @@ from src.services.cleanup_service import CleanupService
 
 logger = logging.getLogger(__name__)
 
+# Önizleme satırındaki kategori rozeti için kısa Türkçe adlar
+CATEGORY_NAMES = {"python_cache": "Python önbelleği", "temp_files": "Geçici dosya", "logs": "Log", "backups": "Yedek"}
+
 
 class CleanupWorker(QThread):
     """Önizleme veya temizlik işlemini yürüten arka plan iş parçacığı."""
@@ -204,6 +207,7 @@ class CleanupViewModel(QObject):
                     "path": str(p),
                     "sizeKb": round(item["size"] / 1024, 1),
                     "category": item["category"],
+                    "categoryName": CATEGORY_NAMES.get(item["category"], item["category"]),
                     "isDir": bool(item.get("is_dir", False))
                 })
             self._preview_files = formatted

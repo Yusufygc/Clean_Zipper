@@ -8,6 +8,15 @@ import "../components"
 Item {
     id: root
 
+    readonly property bool filtersActive: findingsVM.selectedSeverity !== "ALL" || findingsVM.selectedCategory !== "ALL"
+                                          || searchInput.text !== ""
+
+    function clearFilters() {
+        searchInput.text = ""
+        findingsVM.setSeverityFilter("ALL")
+        findingsVM.setCategoryFilter("ALL")
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 20
@@ -171,67 +180,61 @@ Item {
         }
 
         // ══════════════════════════════════════════════════════════
-        // 3. ŞİDDET FİLTRELEME ŞERİDİ (SEVERITY FILTER PILLS)
+        // 3. SÜZGEÇ ÇUBUĞU: şiddet (bitişik seçenekler) + kategori (açılır liste) + sonuç sayısı
         // ══════════════════════════════════════════════════════════
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: 12
 
-            SeverityFilterPill {
-                label: "Tümü"
-                count: findingsVM.totalCount
-                severityKey: "ALL"
-                isActive: findingsVM.selectedSeverity === "ALL"
-                activeColor: AppTheme.accent
-                onClicked: findingsVM.setSeverityFilter("ALL")
+            SegmentedFilter {
+                objectName: "severityFilter"
+                current: findingsVM.selectedSeverity
+                options: [
+                    { key: "ALL", label: "Tümü", count: findingsVM.totalCount, color: AppTheme.accent },
+                    { key: "CRITICAL", label: "Kritik", count: findingsVM.criticalCount, color: AppTheme.danger },
+                    { key: "HIGH", label: "Yüksek", count: findingsVM.highCount, color: "#EA580C" },
+                    { key: "MEDIUM", label: "Orta", count: findingsVM.mediumCount, color: AppTheme.warning },
+                    { key: "LOW", label: "Düşük", count: findingsVM.lowCount, color: AppTheme.primary },
+                    { key: "INFO", label: "Bilgi", count: findingsVM.infoCount, color: AppTheme.success }
+                ]
+                onSelected: function(key) { findingsVM.setSeverityFilter(key) }
             }
 
-            SeverityFilterPill {
-                label: "Kritik"
-                count: findingsVM.criticalCount
-                severityKey: "CRITICAL"
-                isActive: findingsVM.selectedSeverity === "CRITICAL"
-                activeColor: AppTheme.danger
-                onClicked: findingsVM.setSeverityFilter("CRITICAL")
-            }
-
-            SeverityFilterPill {
-                label: "Yüksek"
-                count: findingsVM.highCount
-                severityKey: "HIGH"
-                isActive: findingsVM.selectedSeverity === "HIGH"
-                activeColor: "#EA580C"
-                onClicked: findingsVM.setSeverityFilter("HIGH")
-            }
-
-            SeverityFilterPill {
-                label: "Orta (Uyarı)"
-                count: findingsVM.mediumCount
-                severityKey: "MEDIUM"
-                isActive: findingsVM.selectedSeverity === "MEDIUM"
-                activeColor: AppTheme.warning
-                onClicked: findingsVM.setSeverityFilter("MEDIUM")
-            }
-
-            SeverityFilterPill {
-                label: "Düşük"
-                count: findingsVM.lowCount
-                severityKey: "LOW"
-                isActive: findingsVM.selectedSeverity === "LOW"
-                activeColor: AppTheme.primary
-                onClicked: findingsVM.setSeverityFilter("LOW")
-            }
-
-            SeverityFilterPill {
-                label: "Bilgi"
-                count: findingsVM.infoCount
-                severityKey: "INFO"
-                isActive: findingsVM.selectedSeverity === "INFO"
-                activeColor: AppTheme.success
-                onClicked: findingsVM.setSeverityFilter("INFO")
+            FilterComboBox {
+                objectName: "categoryFilter"
+                caption: "Kategori:"
+                implicitWidth: 250
+                current: findingsVM.selectedCategory
+                enabled: findingsVM.categories.length > 0
+                model: {
+                    var items = [{ key: "ALL", label: "Tümü", count: findingsVM.totalCount }]
+                    for (var i = 0; i < findingsVM.categories.length; i++) {
+                        var c = findingsVM.categories[i]
+                        items.push({ key: c.key, label: c.name, count: c.count })
+                    }
+                    return items
+                }
+                onPicked: function(key) { findingsVM.setCategoryFilter(key) }
             }
 
             Item { Layout.fillWidth: true }
+
+            Text {
+                objectName: "resultCount"
+                text: findingsList.count + " sonuç"
+                color: AppTheme.textSecondary
+                font.family: AppTheme.fontFamily
+                font.pixelSize: AppTheme.fontSizeSmall
+                renderType: Text.NativeRendering
+            }
+
+            CustomButton {
+                objectName: "clearFilters"
+                text: "Süzgeçleri Temizle"
+                variant: "secondary"
+                visible: root.filtersActive
+                onClicked: root.clearFilters()
+            }
         }
 
         // ══════════════════════════════════════════════════════════
@@ -281,6 +284,7 @@ Item {
             // Liste
             ListView {
                 id: findingsList
+                boundsBehavior: Flickable.StopAtBounds
                 anchors.fill: parent
                 clip: true
                 spacing: 10
@@ -295,12 +299,15 @@ Item {
                     categoryName: model.categoryName
                     fileName: model.fileName
                     filePath: model.filePath
+                    relPath: model.relPath
                     line: model.line
                     suggestion: model.suggestion
                     rule: model.rule
+                    ruleLabel: model.ruleLabel
                     effort: model.effort
                     isSecret: model.isSecret
                     approximate: model.approximate
+                    onDisableRuleRequested: function(ruleId) { settingsVM.disableRule(ruleId) }
                 }
 
                 ScrollBar.vertical: ScrollBar {

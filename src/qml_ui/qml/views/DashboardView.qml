@@ -171,24 +171,79 @@ Item {
             Layout.fillHeight: true
             clip: true
             contentWidth: availableWidth
+            // Uçlarda dur: içerik uçtan öteye sürüklenip bırakılınca geri sıçramasın
+            Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
 
             ColumnLayout {
                 width: parent.width
                 spacing: 16
 
-                // SATIR 1: SAĞLIK GAUGE & METRİK KARTLARI
+                // Düzen: her satır eşit genişlikli sütunlardır (Layout.preferredWidth: 1 + fillWidth) ve
+                // aynı satırdaki kartlar en yüksek kartın boyuna uzar (Layout.fillHeight); böylece sayfa simetrik kalır.
+
+                // SATIR 1: 4 metrik kartı (dar pencerede 2 x 2)
+                GridLayout {
+                    objectName: "metricGrid"
+                    Layout.fillWidth: true
+                    columns: root.width < 1100 ? 2 : 4
+                    rowSpacing: 16
+                    columnSpacing: 16
+
+                    MetricCard {
+                        title: AppStrings.totalFiles
+                        value: scanVM.totalFiles.toString()
+                        iconSource: AppIcons.document
+                        iconColor: AppTheme.accent
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                    }
+
+                    MetricCard {
+                        title: AppStrings.projectSize
+                        value: scanVM.totalSizeMb.toFixed(1) + " MB"
+                        subtitle: scanVM.potentialSavingsMb > 0
+                                  ? (scanVM.potentialSavingsMb.toFixed(1) + " MB potansiyel tasarruf")
+                                  : ""
+                        iconSource: AppIcons.archive
+                        iconColor: AppTheme.primary
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                    }
+
+                    MetricCard {
+                        title: AppStrings.totalFolders
+                        value: scanVM.totalDirs.toString()
+                        iconSource: AppIcons.folder
+                        iconColor: AppTheme.info
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                    }
+
+                    MetricCard {
+                        title: AppStrings.detectedIssues
+                        value: scanVM.issuesCount.toString()
+                        iconSource: AppIcons.alert
+                        iconColor: scanVM.issuesCount > 0 ? AppTheme.warning : AppTheme.success
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1
+                    }
+                }
+
+                // SATIR 2: sağlık skoru | kategori puanları
                 RowLayout {
+                    objectName: "healthRow"
                     Layout.fillWidth: true
                     spacing: 16
 
-                    // Sol: Sağlık Göstergesi Kartı
                     CardFrame {
-                        Layout.preferredWidth: 230
+                        Layout.fillWidth: true
                         Layout.fillHeight: true
+                        Layout.preferredWidth: 1
                         padding: 16
 
                         ColumnLayout {
-                            anchors.fill: parent
+                            width: parent.width
+                            height: parent.height
                             spacing: 8
 
                             Text {
@@ -201,72 +256,27 @@ Item {
                                 renderType: Text.NativeRendering
                             }
 
+                            Item { Layout.fillHeight: true }
+
                             HealthGauge {
                                 score: scanVM.healthScore
                                 status: scanVM.healthStatus
-                                gaugeSize: 160
+                                gaugeSize: 260
                                 Layout.alignment: Qt.AlignHCenter
                             }
+
+                            Item { Layout.fillHeight: true }
                         }
                     }
 
-                    // Sağ: 4'lü Metrik Kartı Grid'i
-                    GridLayout {
-                        Layout.fillWidth: true
-                        columns: 2
-                        rowSpacing: 12
-                        columnSpacing: 12
-
-                        MetricCard {
-                            title: AppStrings.totalFiles
-                            value: scanVM.totalFiles.toString()
-                            iconSource: AppIcons.document
-                            iconColor: AppTheme.accent
-                            Layout.fillWidth: true
-                        }
-
-                        MetricCard {
-                            title: AppStrings.projectSize
-                            value: scanVM.totalSizeMb.toFixed(1) + " MB"
-                            subtitle: scanVM.potentialSavingsMb > 0 
-                                      ? (scanVM.potentialSavingsMb.toFixed(1) + " MB potansiyel tasarruf") 
-                                      : ""
-                            iconSource: AppIcons.archive
-                            iconColor: AppTheme.primary
-                            Layout.fillWidth: true
-                        }
-
-                        MetricCard {
-                            title: AppStrings.totalFolders
-                            value: scanVM.totalDirs.toString()
-                            iconSource: AppIcons.folder
-                            iconColor: AppTheme.info
-                            Layout.fillWidth: true
-                        }
-
-                        MetricCard {
-                            title: AppStrings.detectedIssues
-                            value: scanVM.issuesCount.toString()
-                            iconSource: AppIcons.alert
-                            iconColor: scanVM.issuesCount > 0 ? AppTheme.warning : AppTheme.success
-                            Layout.fillWidth: true
-                        }
-                    }
-                }
-
-                // SATIR 2: 11 KATEGORİ SAĞLIK DAĞILIMI & DOSYA TÜRLERİ
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 16
-
-                    // Sol: 11 Kategori Sağlık Dağılımı
                     CardFrame {
                         Layout.fillWidth: true
-                        Layout.preferredWidth: 600
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
                         padding: 16
 
                         ColumnLayout {
-                            anchors.fill: parent
+                            width: parent.width
                             spacing: 8
 
                             RowLayout {
@@ -286,11 +296,9 @@ Item {
                                 }
                             }
 
-                            GridLayout {
-                                columns: 2
-                                rowSpacing: 4
-                                columnSpacing: 20
+                            ColumnLayout {
                                 Layout.fillWidth: true
+                                spacing: 4
 
                                 property var catLabels: ({
                                     "security": "Güvenlik",
@@ -315,8 +323,8 @@ Item {
 
                                     CategoryBar {
                                         title: parent.catLabels[modelData] || modelData
-                                        score: scanVM.categoryScores[modelData] !== undefined 
-                                               ? scanVM.categoryScores[modelData] 
+                                        score: scanVM.categoryScores[modelData] !== undefined
+                                               ? scanVM.categoryScores[modelData]
                                                : 100
                                         Layout.fillWidth: true
                                     }
@@ -324,35 +332,51 @@ Item {
                             }
                         }
                     }
-
-                    // Sağ: Dosya Türü Dağılımı
-                    DistributionBar {
-                        Layout.fillWidth: true
-                        Layout.preferredWidth: 400
-                        Layout.fillHeight: true
-                        title: AppStrings.fileDistribution
-                        dataMap: scanVM.fileTypeDistribution
-                    }
                 }
 
-                // SATIR 3: ÖNERİLER & BÜTÜNLÜK GÖSTERGELERİ
+                // SATIR 3: dosya türü dağılımı | programlama dilleri dağılımı
                 RowLayout {
+                    objectName: "distributionRow"
                     Layout.fillWidth: true
                     spacing: 16
 
-                    // Sol: Öncelikli Sistem Önerileri
+                    DistributionBar {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
+                        title: AppStrings.fileDistribution
+                        dataMap: scanVM.fileTypeDistribution
+                    }
+
+                    DistributionBar {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
+                        title: AppStrings.languageDistribution + " (satır)"
+                        dataMap: scanVM.languageLines
+                    }
+                }
+
+                // SATIR 4: öncelikli öneriler | analiz bütünlüğü
+                RowLayout {
+                    objectName: "insightRow"
+                    Layout.fillWidth: true
+                    spacing: 16
+
                     RecommendationList {
                         Layout.fillWidth: true
-                        Layout.preferredWidth: 500
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
                         recommendations: scanVM.topRecommendations
                     }
 
-                    // Sağ: Analiz Bütünlüğü & Kapsamı
                     IntegrityCard {
                         Layout.fillWidth: true
-                        Layout.preferredWidth: 500
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 1
                         failedAnalyzers: scanVM.failedAnalyzers
                         skippedFiles: scanVM.skippedFiles
+                        skippedDetail: scanVM.skippedDetail
                         ignoredGitignore: scanVM.ignoredByGitignore
                         gitignoreApplied: scanVM.gitignoreApplied
                     }

@@ -5,7 +5,8 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from PySide6.QtCore import QObject, Signal, Slot, Property
+from PySide6.QtCore import QObject, QUrl, Signal, Slot, Property
+from PySide6.QtGui import QDesktopServices
 from src.services.project_service import ProjectService
 
 
@@ -18,7 +19,6 @@ class AppViewModel(QObject):
 
     projectChanged = Signal()
     statusChanged = Signal(str)
-    errorMessage = Signal(str)
 
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
@@ -61,7 +61,7 @@ class AppViewModel(QObject):
 
         clean_path = Path(path_str).resolve()
         if not clean_path.exists() or not clean_path.is_dir():
-            self.errorMessage.emit(f"Geçersiz proje dizini: {path_str}")
+            self.setStatus(f"Hata: geçersiz proje dizini: {path_str}")
             return False
 
         try:
@@ -74,7 +74,7 @@ class AppViewModel(QObject):
             return True
         except Exception as e:
             logger.error("Proje yüklenirken hata: %s", e, exc_info=True)
-            self.errorMessage.emit(f"Proje yüklenirken hata: {e}")
+            self.setStatus(f"Hata: proje yüklenemedi: {e}")
             return False
 
     @Slot(str)
@@ -82,10 +82,10 @@ class AppViewModel(QObject):
         self._status_text = text
         self.statusChanged.emit(text)
 
-    @Slot()
-    def clearProject(self):
-        self._current_path = ""
-        self._current_name = ""
-        self._status_text = "Hazır"
-        self.projectChanged.emit()
-        self.statusChanged.emit(self._status_text)
+    @Slot(str, result=bool)
+    def openPath(self, path_str: str) -> bool:
+        """Klasörü / dosyayı sistemin varsayılan uygulamasıyla (Gezgin) açar."""
+        if not path_str or not Path(path_str).exists():
+            self.setStatus(f"Hata: yol bulunamadı: {path_str}")
+            return False
+        return QDesktopServices.openUrl(QUrl.fromLocalFile(path_str))
