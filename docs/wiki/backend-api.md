@@ -11,22 +11,32 @@ service.set_project(path)
 ```
 | Yöntem | Ne yapar | Dönüş |
 |---|---|---|
-| `analyze_project(progress=None)` | Hızlı tarama (UI panosu için) | `dict` (aşağıda) |
-| `create_archive(output, archive_type='zip')` | Profil tabanlı zip ya da kopya | sonuç sözlüğü |
+| `diagnose(progress=None, refresh=False)` | Tüm bulgularla teşhis (önbellekli, aşağıda) | `ProjectAnalysis` |
+| `analyze_project(progress=None, refresh=True)` | Dashboard özeti (yeniden tarar) | `dict` (aşağıda) |
+| `create_zip(output, profile_name, progress)` / `copy_project(hedef, profile_name, progress)` | Profil tabanlı zip / kopya; `progress(işlenen, toplam)` | sonuç sözlüğü |
+| `create_archive(output, archive_type='zip')` | Varsayılan profille zip ya da kopya | sonuç sözlüğü |
 | `create_backup(name=None)` | Zip yedeği | sonuç sözlüğü |
+| `preview_cleanup(categories)` / `cleanup(categories, dry_run=True)` | Temizlik önizleme / Geri Dönüşüm Kutusu'na taşıma | `dict` |
+| `invalidate()` | Teşhis önbelleğini boşaltır (dışarıdan bilinen değişiklik) | - |
+| `busy_operation` | Süren yazma işleminin adı (`temizlik`, `arşiv`, `kopya`, `yedek`), yoksa boş | `str` |
 | `export_project_report(path)` | HTML rapor | `bool` |
 | `export_audit_report(path)` | V2 formatında Markdown denetim raporu | `bool` |
 | `export_agent_tasks(klasör, batch_size=15)` | Bulguları yapay zeka ajanı için görev dosyalarına yazar | özet sözlüğü (aşağıda) |
 | `verify_agent_tasks(klasör, only=None)` | Görevlerin kapanışını doğrular | sözlük (aşağıda) |
-| `service.doctor.diagnose(path, progress)` | Tüm bulgularla `ProjectAnalysis` | `ProjectAnalysis` |
-| `service.cleanup_service.preview_cleanup / cleanup` | Temizlik önizleme / Geri Dönüşüm Kutusu'na taşıma | `dict` |
 
-Proje seçilmeden çağrılırsa `ProjectNotSelectedError` (`ValueError` türevi). `progress(yüzde, metin)` çağrıları iş parçacığından gelir; UI'da sinyalle taşıyın (`QThread` worker).
+Proje seçilmeden çağrılırsa `ProjectNotSelectedError` (`ValueError` türevi). `progress(yüzde, metin)` çağrıları iş parçacığından gelir; UI'da sinyalle taşıyın (`QThread` worker). Arayüz `service.doctor`, `archive_service`, `cleanup_service` alt servislerini doğrudan çağırmamalıdır: kilit ve önbellek yalnızca `ProjectService` yöntemlerinde işler.
+
+## Teşhis önbelleği ve eşzamanlılık
+- **Aynı anda tek teşhis** (analizör örnekleri paylaşılır). Ardışık istekler sıraya girer.
+- **Önbellek:** `diagnose()` geçerli sonucu yeniden kullanır. Geçersizleşme: `set_project`, ayar değişikliği (`service.doctor` yeni nesne), temizlik (`dry_run=False`), zip, kopya, `invalidate()`. Yedek ve önizleme geçersiz kılmaz.
+- **`refresh=True`:** bu çağrıdan sonra başlamış bir teşhis ister. Aynı anda gelen yenilemeler birleşir: proje açılınca Dashboard ve Sorunlar sayfası tek teşhis paylaşır. Kullanıcı "Tara" / "Yenile" dediğinde, `verify_agent_tasks` ve Sorunlar sayfası yeniler; HTML / denetim raporu ve görev dışa aktarımı son teşhisi kullanır.
+- **Yazma işlemleri** (temizlik, zip, kopya, yedek) aynı anda yalnızca bir tane: ikincisi beklemez, `OperationBusyError` (`GitCleanError`) alır; metin süren işlemi adlandırır. Teşhis sürerken yazma yapılırsa o teşhisin sonucu önbelleğe yazılmaz.
 
 ## `analyze_project` sözlüğü
 `health_score` (0-100), `health_status` (A+...F), `category_scores` (kategori -> puan), `failed_analyzers`, `total_size_mb`, `total_files`, `total_dirs`, `issues_count`, `potential_savings_mb`, `file_type_distribution`, `language_stats`, `skipped_files`, `gitignore_applied`, `ignored_by_gitignore`, `top_recommendations`, `project_path`, `all_issues`.
 
-- **`all_issues` yalnızca KRİTİK, YÜKSEK ve ORTA bulguları içerir.** DÜŞÜK ve BİLGİ bulgular (hijyen özeti, test özeti, sıcak noktalar, bağımlılık grafiği) için `service.doctor.diagnose()` çağırıp `analysis.all_findings` kullanın.
+- **`all_issues` yalnızca KRİTİK, YÜKSEK ve ORTA bulguları içerir.** DÜŞÜK ve BİLGİ bulgular (hijyen özeti, test özeti, sıcak noktalar, bağımlılık grafiği) için `service.diagnose()` çağırıp `analysis.all_findings` kullanın.
+- **`top_recommendations`:** en çok 5 `(başlık, açıklama, öncelik)`; kural başına bir öneri, yalnızca ORTA ve üstü, sıra: en yüksek şiddet, sonra bulgu sayısı. Öncelik `KRİTİK` / `YÜKSEK` / `ORTA`; açıklama `N bulgu (dosya1, dosya2 …). <analizörün düzeltme önerisi>`.
 - `analysis.issues` (KRİTİK + YÜKSEK), `analysis.warnings` (ORTA), `analysis.suggestions` (DÜŞÜK + BİLGİ).
 - `category_scores` yalnızca çalışan analizörlerin kategorilerini içerir; `git` ve `type` kategorileri puanlanmaz ve burada görünmez.
 
@@ -47,7 +57,7 @@ UI bunları kullanıcıya göstermelidir (sessiz kısmi sonuç yok):
 - UI `complete=False` ve `failed_files`'ı kullanıcıya göstermelidir.
 
 ## Temizlik
-`CleanupService.scan / preview_cleanup / cleanup(dry_run=True)`: kategoriler `python_cache`, `temp_files` (varsayılan açık), `logs`, `backups` (varsayılan kapalı). Dışlanan klasörlerin içine girilmez; kural analizle aynıdır (`is_excluded_dir`: `venv`, `node_modules`, adı ne olursa olsun `pyvenv.cfg` içeren sanal ortam, derleme dosyası yanındaki `target` / `bin` / `obj`). Silme kalıcı değildir: Geri Dönüşüm Kutusu (`send2trash`). `cleanup` varsayılanı `dry_run=True`.
+`ProjectService.preview_cleanup / cleanup(dry_run=True)` (altta `CleanupService`): kategoriler `python_cache`, `temp_files` (varsayılan açık), `logs`, `backups` (varsayılan kapalı). Dışlanan klasörlerin içine girilmez; kural analizle aynıdır (`is_excluded_dir`: `venv`, `node_modules`, adı ne olursa olsun `pyvenv.cfg` içeren sanal ortam, derleme dosyası yanındaki `target` / `bin` / `obj`). Silme kalıcı değildir: Geri Dönüşüm Kutusu (`send2trash`). `cleanup` varsayılanı `dry_run=True`.
 
 ## Denetim raporu
 `AuditReportService` (Markdown) bölümleri: A yönetici özeti, B iyi pratikler, C incelenmedi, D ayrıntılı bulgular, E aksiyon planı, F sonraki adım. Kurallar:

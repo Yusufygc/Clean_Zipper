@@ -47,12 +47,12 @@ class IHealthChecker(ABC):
 
 class IRecommendationEngine(ABC):
     @abstractmethod
-    def generate_recommendations(self, analysis: ProjectAnalysis) -> List[Tuple[str, str, int]]:
-        pass
-    
+    def generate_recommendations(self, analysis: ProjectAnalysis) -> List[Tuple[str, str, str]]:
+        """(başlık, açıklama, öncelik etiketi) listesi, önemliden önemsize."""
+
     @abstractmethod
-    def prioritize_recommendations(self, recommendations) -> List[Tuple[str, str, int]]:
-        pass
+    def prioritize_recommendations(self, groups) -> list:
+        """Öneri adaylarını önem sırasına dizer."""
 
 
 class IReporter(ABC):

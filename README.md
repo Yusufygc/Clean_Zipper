@@ -449,7 +449,7 @@ service = ProjectService()
 # Proje ayarla
 service.set_project(Path("/proje/yolu"))
 
-# Analiz et
+# Analiz et (yeniden tarar; diagnose() son teşhisi önbellekten verir)
 analysis = service.analyze_project()
 # Dönen değer: {
 #     'health_score': float,
@@ -457,7 +457,7 @@ analysis = service.analyze_project()
 #     'total_files': int,
 #     'total_size_mb': float,
 #     'issues_count': int,
-#     'top_recommendations': list,
+#     'top_recommendations': list,   # (başlık, açıklama, 'KRİTİK' | 'YÜKSEK' | 'ORTA'), en çok 5
 #     'file_type_distribution': dict
 # }
 

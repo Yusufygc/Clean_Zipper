@@ -43,17 +43,11 @@ class ArchiveWorker(QThread):
                 self.progress.emit(pct, f"{done} / {total} dosya işlendi")
 
             if self.mode == "zip":
-                result = self.service.archive_service.create_zip(
-                    project_path, self.target, profile_name=self.profile_name,
-                    progress_callback=on_progress
-                )
+                result = self.service.create_zip(self.target, profile_name=self.profile_name, progress=on_progress)
                 result["output_path"] = str(self.target)
                 result["mode"] = "zip"
             elif self.mode == "copy":
-                result = self.service.archive_service.copy_project(
-                    project_path, self.target, profile_name=self.profile_name,
-                    progress_callback=on_progress
-                )
+                result = self.service.copy_project(self.target, profile_name=self.profile_name, progress=on_progress)
                 result["output_path"] = str(self.target)
                 result["mode"] = "copy"
             elif self.mode == "backup":

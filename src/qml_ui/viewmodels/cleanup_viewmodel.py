@@ -34,11 +34,11 @@ class CleanupWorker(QThread):
 
             if self.is_preview:
                 self.progress.emit(30, "Geçici dosyalar taranıyor...")
-                result = self.service.cleanup_service.preview_cleanup(project_path, categories=self.categories)
+                result = self.service.preview_cleanup(categories=self.categories)
                 result["action"] = "preview"
             else:
                 self.progress.emit(30, "Geri Dönüşüm Kutusu'na taşınıyor...")
-                result = self.service.cleanup_service.cleanup(project_path, categories=self.categories, dry_run=False)
+                result = self.service.cleanup(categories=self.categories, dry_run=False)
                 result["action"] = "cleanup"
 
             self.finished.emit(result)

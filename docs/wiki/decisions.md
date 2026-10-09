@@ -21,6 +21,11 @@ Her karar: ne seçildi, neden, nasıl uygulanır. Bulgu durumları için [[roadm
 - **Test dosyalarındaki genel `password = '...'` kalıpları DÜŞÜK**, sağlayıcı biçimli anahtarlar testte de aynı öncelikte (gerçek anahtar testte de sızıntıdır).
 - **`dist` / `build` adı belirsiz:** `tracked-artifacts` bunları `approximate=True` verir; `lib/`, `vendor/`, `third_party/` altındakiler üçüncü taraf paketi sayılır, bulgu olmaz.
 
+## Teşhis, eşzamanlılık ve öneriler
+- **Teşhis önbelleği** (2026-10-10): Dashboard ve Sorunlar sayfası aynı teşhisi paylaşır; proje açılınca iki sayfa aynı anda istediğinde tek teşhis çalışır. Önceden iki tam teşhis paralel çalışıyor ve aynı analizör örneklerini paylaşıyordu. Dosya izleme yok: önbellek proje / ayar / yazma işlemiyle ya da kullanıcı "Tara" / "Yenile" dediğinde geçersizleşir. Raporlar ve görev dışa aktarımı son teşhisi kullanır (ekrandakiyle aynı sonuç); ajan doğrulaması her zaman yeniden tarar. "Yenile" sırası saatle değil sıra numarasıyla tutulur (Windows'ta `time.monotonic` ~16 ms adımlı, aynı adımdaki istek eski sonucu taze sanıyordu).
+- **Yazma işlemleri beklemez, reddedilir** (2026-10-10): ikinci temizlik / arşiv / kopya / yedek `OperationBusyError` alır. Neden: kuyruğa alınan bir silme, kullanıcının artık görmediği eski bir önizlemeye göre çalışırdı.
+- **Öneriler bulgudan türetilir** (2026-10-10): kural başına bir öneri, ORTA ve üstü, şiddet sonra bulgu sayısına göre. Eski motor yalnızca boyut, boş klasör, çift dosya ve sorun sayısına bakıyordu; sızıntı ve döngüsel bağımlılık öneri kartına çıkmıyordu. Öncelik metin etiketidir (`KRİTİK`/`YÜKSEK`/`ORTA`); eski sayısal öncelik arayüzde hiç renklenmiyordu.
+
 ## Güvenlik
 - **Sır değeri asla yazılmaz:** bulguda yalnızca maskeli önek ve uzunluk; denetim raporunda sır içerebilecek bulguların ve dosyaların (`.env`, `*.pem`, `*.key`, `id_rsa`) kaynak satırı gösterilmez. Test: 44 sır bulgusu, 0 sızıntı.
 - **Silme kalıcı değil:** temizlik Geri Dönüşüm Kutusu'na taşır (`send2trash`); `venv`, `node_modules` gibi klasörlerin içine girilmez; `cleanup` varsayılanı `dry_run=True`.

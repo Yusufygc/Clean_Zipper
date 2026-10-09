@@ -116,8 +116,10 @@ class ProjectDoctor:
         return [r for r in results if r.metadata.get('rule') not in self.disabled_rules]
 
     def quick_scan(self, project_path: Path, progress: Optional[ProgressCallback] = None) -> Dict:
-        analysis = self.diagnose(project_path, progress)
+        return self.summarize(self.diagnose(project_path, progress))
 
+    def summarize(self, analysis: ProjectAnalysis) -> Dict:
+        """Dashboard özeti (teşhisi yeniden çalıştırmaz)."""
         # Sadece gerçek kod kalitesi sorunları ve uyarıları sayılıyor (INFO düzeyindeki loglar hariç)
         actual_issues_count = len(analysis.issues) + len(analysis.warnings)
 
@@ -137,7 +139,7 @@ class ProjectDoctor:
             'gitignore_applied': analysis.gitignore_applied,
             'ignored_by_gitignore': analysis.ignored_by_gitignore,
             'top_recommendations': self._recommendation_engine.get_top_recommendations(analysis),
-            'project_path': str(project_path),
+            'project_path': str(analysis.project_path),
             'all_issues': analysis.issues + analysis.warnings # Sadece gerçek hatalar ve uyarılar listeleniyor
         }
 

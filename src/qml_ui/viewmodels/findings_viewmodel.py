@@ -191,7 +191,8 @@ class DiagnoseWorker(QThread):
 
     def run(self):
         try:
-            analysis = self.service.doctor.diagnose(self.project_path, progress=self.progress.emit)
+            # Dashboard'un aynı anda başlattığı taramayla birleşir (tek teşhis, ortak sonuç).
+            analysis = self.service.diagnose(progress=self.progress.emit, refresh=True)
             self.finished.emit(analysis)
         except Exception as e:
             logger.error("DiagnoseWorker çalışırken hata: %s", e, exc_info=True)

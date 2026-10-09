@@ -1,5 +1,13 @@
 # Değişiklik Günlüğü
 
+## [2026-10-10] [FIX] | Backend denetimi Faz 2: teşhis önbelleği, eşzamanlılık kilidi, bulgu tabanlı öneriler
+- **Gerçek hata:** proje açılınca (ve ayarlar uygulanınca) Dashboard ile Sorunlar sayfası iki tam teşhisi **paralel** başlatıyordu; ikisi aynı analizör örneklerini paylaşıyordu. Artık `ProjectService.diagnose` tek kilitle çalışır, aynı anda gelen yenilemeler tek teşhiste birleşir (gerçek projede: ilk tarama 6,7 sn, ardından teşhis + denetim raporu 0,01 sn).
+- **Önbellek:** proje, ayar (`doctor` nesnesi), temizlik / zip / kopya ve `invalidate()` ile geçersizleşir; teşhis sürerken yazma olursa sonuç önbelleğe yazılmaz. Raporlar ve görev dışa aktarımı son teşhisi kullanır, ajan doğrulaması yeniden tarar.
+- **Yazma kilidi:** temizlik, zip, kopya, yedek aynı anda bir tane; ikincisi `OperationBusyError`. ViewModel'ler artık alt servisleri değil `ProjectService` yöntemlerini çağırır (`create_zip`, `copy_project`, `preview_cleanup`, `cleanup`, `diagnose`).
+- **`ProjectDoctor.summarize(analysis)`:** Dashboard özeti teşhisi yeniden çalıştırmadan üretilir (`quick_scan` = `summarize(diagnose())`).
+- **Öneriler:** `RecommendationEngine` kural başına bir öneri üretir (ORTA ve üstü, şiddet sonra sayı), öncelik `KRİTİK`/`YÜKSEK`/`ORTA`. Yan bulgu: eski sayısal öncelik `RecommendationList.qml` içinde hiç eşleşmiyordu, tüm öneriler aynı renkteydi; QML `KRİTİK`'i de kırmızı gösterir.
+- **Doğrulama:** 744 testten 755 teste (8 servis, 3 öneri). Eşzamanlılık testleri 10 tekrarda kararlı. Sıra numarası yerine saat kullanılan ilk sürüm Windows'ta testte kırmızıydı (bkz. [[decisions]]). Kendi taramamız: değişen dosyalarda yeni bulgu yok (`archive_viewmodel.py` klonları önceden vardı). **Elle kontrol gerekir:** proje açılınca iki sayfanın ilerleme çubuğu (ikinci sayfa ilk teşhis bitene kadar %5'te bekler), meşgul uyarısının arayüzde görünmesi, öneri renkleri.
+
 ## [2026-10-10] [FIX] | Backend denetimi Faz 1: kural kimlikleri, temizlik dışlaması, hassas dosyalar, puan, sır deseni, kopya hedefi
 - **Kural kimliği:** `large-file`, `project-size`, `duplicate-files`, `empty-folder`, `sensitive-file`, `deep-structure`, `missing-manifest` eklendi; bu bulgular artık Ayarlar'dan kapatılabilir ve `disabled_rules` ile elenir. `agent_tasks.KIND_RULES` geri dönüşü gereksiz kaldı, silindi. Etiket / efor `audit_catalog.py`'de. Görev parmak izi değişen tek yer: yapı ve eksik manifest görevleri (önceden kategori adıyla anahtarlanıyordu).
 - **Temizlik:** `CleanupService._collect_dirs` `is_excluded_dir` kullanır (`pyvenv.cfg` içeren her klasör, bağlamsal `target`/`bin`/`obj`).

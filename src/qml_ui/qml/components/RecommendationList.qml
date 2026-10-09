@@ -70,8 +70,8 @@ CardFrame {
                             radius: 2
                             color: {
                                 var prio = (modelData.priority || "").toUpperCase()
-                                if (prio.indexOf("YÜKSEK") !== -1 || prio.indexOf("HIGH") !== -1) return AppTheme.danger
-                                if (prio.indexOf("ORTA") !== -1 || prio.indexOf("MEDIUM") !== -1) return AppTheme.warning
+                                if (prio.indexOf("KRİTİK") !== -1 || prio.indexOf("YÜKSEK") !== -1) return AppTheme.danger
+                                if (prio.indexOf("ORTA") !== -1) return AppTheme.warning
                                 return AppTheme.accent
                             }
                         }

@@ -45,9 +45,9 @@ Kaynak: `BACKEND_ANALIZ_RAPORU.md` (işler bitince silinecek). İddialar kodla d
 | 1 | Güvenlik analizörü çökerse `secret-in-history` puana yansımıyor | Tamamlandı |
 | 1 | Genel sır deseni özel karakterli parolaları kaçırıyor | Tamamlandı |
 | 1 | `copy_project` hedefi kaynağın kendisi / üst klasörü olabiliyor | Tamamlandı |
-| 2 | Teşhis önbelleği yok (her sayfa yeniden tarıyor) | Planlandı |
-| 2 | Eşzamanlı işlemler için kilit / meşgul durumu yok | Planlandı |
-| 2 | `RecommendationEngine` 4 eski koşula bakıyor | Planlandı |
+| 2 | Teşhis önbelleği yok (her sayfa yeniden tarıyor) | Tamamlandı |
+| 2 | Eşzamanlı işlemler için kilit / meşgul durumu yok | Tamamlandı |
+| 2 | `RecommendationEngine` 4 eski koşula bakıyor | Tamamlandı |
 | 3 | `pyproject.toml` bağımlılıkları okunmuyor (`tomli` eklenecek) | Planlandı |
 | 3 | `module_key` klasörü yok sayıyor | Planlandı |
 | 3 | UTF-16 dosyalar ikilik sayılıyor | Planlandı |
