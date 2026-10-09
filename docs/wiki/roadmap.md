@@ -59,7 +59,7 @@ Kaynak: dış denetim raporu `BACKEND_ANALIZ_RAPORU.md` (depoya eklenmedi; 3 faz
 | - | `GitignoreMatcher._tracked` harf duyarlılığı | Ertelendi: yalnızca harf git dışından değişirse; `normcase` POSIX yolunu bozar |
 
 ## Backend denetimi V2 (2026-10-10)
-Kaynak: ikinci dış denetim raporu (`BACKEND_ANALIZ_RAPORU.md`, depoya eklenmedi). İddialar kodla ve deneyle doğrulandı.
+Kaynak: ikinci dış denetim raporu (`BACKEND_ANALIZ_RAPORU.md`, depoya eklenmedi; düzeltmeler tamamlanınca 2026-10-10 silindi). İddialar kodla ve deneyle doğrulandı.
 
 | Bulgu | Durum |
 |---|---|

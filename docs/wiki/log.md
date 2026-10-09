@@ -8,7 +8,7 @@
 - **Dışlama adları harf duyarsız** (`Build`, `Dist`, `Bin`); gerçek etkisi 0, ucuz güvence.
 - **`class-size` metni** aşılan ölçüyü söyler. Denetimdeki "`and` mantık hatası" iddiası yanlış; iki yönü sınayan test eklendi.
 - **Reddedilen / kapsam dışı:** analiz iptali (kullanıcı kararı, bekleme bilinen sınır).
-- **Test yalıtımı (yan bulgu):** `test_archive_viewmodel` her çalışmada gerçek `~/.gitclean_backups/test_backup_qml` yazıyordu; `conftest.py` yedek kökünü geçici klasöre yönlendirir (tam test sonrası gerçek klasörün değişiklik zamanı aynı kaldı). Kullanıcının klasöründe eski `test_backup_qml` duruyor, silinmedi.
+- **Test yalıtımı (yan bulgu):** `test_archive_viewmodel` her çalışmada gerçek `~/.gitclean_backups/test_backup_qml` yazıyordu; `conftest.py` yedek kökünü geçici klasöre yönlendirir (tam test sonrası gerçek klasörün değişiklik zamanı aynı kaldı). Kullanıcının klasöründe kalan eski `test_backup_qml` kullanıcı isteğiyle Geri Dönüşüm Kutusu'na taşındı.
 - Dogfooding: `test_analyzers.py` 500 satırı geçtiği için iki karmaşıklık testi `test_quality_analyzers.py`'ye taşındı; önceden kalan `test_exclusions.py` kullanılmayan importu ve `backup_service.py` saat dilimsiz `datetime.now()` düzeltildi.
 - **Doğrulama:** 768 testten 779 teste; tüm `C:\2UYGULAMALAR` teşhisi 34,6 sn. **Elle kontrol gerekir:** arşiv sayfasında "Saklanan yedek" sayacı ve yedek alındıktan sonraki "eski yedek taşındı" durum metni.
 
