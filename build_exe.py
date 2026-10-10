@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+import importlib.util
 import subprocess
 from pathlib import Path
 
@@ -13,10 +14,9 @@ def pyinstaller_requirement(root_dir: Path):
 
 def ensure_pyinstaller(root_dir: Path):
     """PyInstaller yoksa pip ile kurar; kurulamazsa çıkar."""
-    try:
-        import PyInstaller
+    if importlib.util.find_spec("PyInstaller") is not None:
         print("[OK] PyInstaller is ready.")
-    except ImportError:
+    else:
         print("[!] PyInstaller not found. Installing...")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", *pyinstaller_requirement(root_dir)])
@@ -48,23 +48,23 @@ def clean_build_artifacts(root_dir: Path):
             print(f"  - Warning cleaning .spec file: {e}")
 
 
+# (kaynak, paketteki hedef): QML arayüzü dosyaları, arayüz simgeleri ve uygulama kaynakları (kurallar, profiller, simge).
+DATA_DIRS = (
+    ("src/qml_ui/qml", "src/qml_ui/qml"),
+    ("src/qml_ui/resources", "src/qml_ui/resources"),
+    ("resources", "resources"),
+)
+
+
 def data_file_args(root_dir: Path):
-    """Pakete eklenecek stil dosyası ve resources klasörü için --add-data argümanları."""
-    sep = os.pathsep
-    style_qss_source = root_dir / "src" / "ui" / "themes" / "style.qss"
-    style_qss_dest = "src/ui/themes"
-
+    """Pakete eklenecek veri klasörleri için --add-data argümanları; eksik klasör derlemeyi durdurur."""
     add_data_args = []
-    if style_qss_source.exists():
-        add_data_args.extend(["--add-data", f"{style_qss_source}{sep}{style_qss_dest}"])
-        print(f"[OK] Added stylesheet to package: {style_qss_source.name}")
-    else:
-        print("[!] WARNING: style.qss not found! Styles may be missing in built app.")
-
-    resources_source = root_dir / "resources"
-    if resources_source.exists():
-        add_data_args.extend(["--add-data", f"{resources_source}{sep}resources"])
-        print(f"[OK] Added resources directory to package.")
+    for source, destination in DATA_DIRS:
+        source_path = root_dir / source
+        if not source_path.is_dir():
+            raise FileNotFoundError(f"Pakete eklenecek klasör yok: {source_path}")
+        add_data_args.extend(["--add-data", f"{source_path}{os.pathsep}{destination}"])
+        print(f"[OK] Pakete eklendi: {source}")
     return add_data_args
 
 

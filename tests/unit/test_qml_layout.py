@@ -168,7 +168,7 @@ VIEW_MODELS = ("appVM", "scanVM", "findingsVM", "archiveVM", "cleanupVM", "setti
 
 
 def test_every_view_model_survives_garbage_collection_after_app_creation(qapp, monkeypatch):
-    """`main_qml.py` çalışırken `archiveVM` / `cleanupVM` / `settingsVM` null kalıyordu: yalnızca yerel değişkende tutuluyorlardı."""
+    """Uygulama (`main.py`) çalışırken `archiveVM` / `cleanupVM` / `settingsVM` null kalıyordu: yalnızca yerel değişkende tutuluyorlardı."""
     import gc
     from src.qml_ui import app as qml_app
     monkeypatch.setattr(qml_app, "setup_logging", lambda: None)
@@ -252,7 +252,6 @@ def test_findings_without_a_line_or_rule_hide_the_matching_actions(qapp):
 
 def header_edges(window, width: int):
     from PySide6.QtCore import QPointF
-    from PySide6.QtQuick import QQuickItem
     window.setWidth(width)
     window.setHeight(700)
     for _ in range(30):
@@ -297,7 +296,6 @@ def all_items(item):
 
 def test_no_page_scrolls_past_its_ends_and_snaps_back(qapp, monkeypatch):
     """Kullanıcı: sayfa uçtan öteye sürüklenebiliyor, bırakınca geri sıçrıyor. Tüm kaydırma alanları uçta durmalı."""
-    from PySide6.QtQuick import QQuickItem
     from src.qml_ui import app as qml_app
     monkeypatch.setattr(qml_app, "setup_logging", lambda: None)
     _, engine = qml_app.create_qml_app()
@@ -483,7 +481,6 @@ def test_scroll_areas_cover_their_whole_content_so_the_last_row_is_not_cut(qapp,
 
 def test_tab_navigation_is_centred_in_the_header_when_it_fits(qapp, monkeypatch):
     """Kullanıcı: navbar butonları çubuğun ortasında durmalı."""
-    from PySide6.QtCore import QPointF
     from src.qml_ui import app as qml_app
     monkeypatch.setattr(qml_app, "setup_logging", lambda: None)
     _, engine = qml_app.create_qml_app()

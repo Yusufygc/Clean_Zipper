@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 
 from src.core.interfaces import IRecommendationEngine
 from src.models.analysis_models import AnalysisResult, ProjectAnalysis, Severity
-from src.services.audit_catalog import RULE_LABELS, SEVERITY_LABELS   # salt veri modülü; servis mantığı içermez
+from src.services.audit_catalog import RULE_LABELS, SEVERITY_LABELS
 
 # Öneriye girecek en düşük şiddet; DÜŞÜK ve BİLGİ bulguları öneri kartını boğmasın.
 MIN_SEVERITY = Severity.MEDIUM

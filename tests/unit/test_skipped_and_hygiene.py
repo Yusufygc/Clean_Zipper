@@ -5,9 +5,8 @@ from pathlib import Path
 
 from src.analyzers.duplicate_finder import DuplicateFinder
 from src.core.project_index import ProjectIndex
-from src.doctors.project_doctor import ProjectDoctor
 from src.languages import parse_file
-from src.languages.base import LanguageSupport, SourceMetrics
+from src.languages.base import LanguageSupport
 from src.languages.registry import LanguageRegistry
 from src.services.cleanup_service import CleanupService
 from src.services.project_service import ProjectService
@@ -145,10 +144,7 @@ def test_cleanup_failure_is_logged_as_warning(tmp_path, caplog):
 # ---- gerileme koruması: sessiz hata yutma yasak ---------------------------------------------------
 
 def _python_files():
-    for path in SRC.rglob("*.py"):
-        if "ui" in path.relative_to(SRC).parts[:1]:
-            continue                                   # UI sıfırdan yazılacak
-        yield path
+    yield from SRC.rglob("*.py")                       # arayüz (`qml_ui`) dahil, istisna yok
 
 
 def _handler_logs(handler: ast.ExceptHandler) -> bool:

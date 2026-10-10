@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from src.doctors.recommendation_engine import RecommendationEngine
+from src.services.recommendation_engine import RecommendationEngine
 from src.models.analysis_models import AnalysisResult, ProjectAnalysis, Severity
 
 

@@ -10,6 +10,7 @@ from src.doctors.project_doctor import ProjectDoctor
 from src.models.analysis_models import ProjectAnalysis
 from src.services.archive_service import ArchiveService
 from src.services.cleanup_service import CleanupService
+from src.services.recommendation_engine import RecommendationEngine
 from src.services.backup_service import BackupService
 from src.utils.gitignore_parser import GitignoreParser
 
@@ -105,8 +106,11 @@ class ProjectService:
         return cache.analysis
 
     def analyze_project(self, progress: Optional[ProgressCallback] = None, refresh: bool = True) -> Dict:
-        """Dashboard özeti; yeniden tarar (kullanıcı "Tara" dedi), eşzamanlı istekle birleşir."""
-        return self.doctor.summarize(self.diagnose(progress, refresh=refresh))
+        """Dashboard özeti ve öneriler; yeniden tarar (kullanıcı "Tara" dedi), eşzamanlı istekle birleşir."""
+        analysis = self.diagnose(progress, refresh=refresh)
+        summary = self.doctor.summarize(analysis)
+        summary['top_recommendations'] = RecommendationEngine().get_top_recommendations(analysis)
+        return summary
 
     # ── Projeyi değiştiren işlemler ───────────────────────────────────────
 

@@ -7,7 +7,6 @@ from src.core.interfaces import IAnalyzer
 from src.core.project_index import ProjectIndex
 from src.core.thresholds import QualityThresholds
 from src.doctors.health_checker import HealthChecker
-from src.doctors.recommendation_engine import RecommendationEngine
 from src.models.analysis_models import ProjectAnalysis, AnalysisResult, Severity, FileInfo
 
 logger = logging.getLogger(__name__)
@@ -27,7 +26,6 @@ class ProjectDoctor:
         self.disabled_rules = frozenset(disabled_rules)
         self._analyzers: List[IAnalyzer] = []
         self._health_checker = HealthChecker()
-        self._recommendation_engine = RecommendationEngine()
         for analyzer in analyzers or ():
             self.register_analyzer(analyzer)
 
@@ -119,7 +117,7 @@ class ProjectDoctor:
         return self.summarize(self.diagnose(project_path, progress))
 
     def summarize(self, analysis: ProjectAnalysis) -> Dict:
-        """Dashboard özeti (teşhisi yeniden çalıştırmaz)."""
+        """Dashboard özeti (teşhisi yeniden çalıştırmaz). Öneriler `ProjectService.analyze_project` içinde eklenir."""
         # Sadece gerçek kod kalitesi sorunları ve uyarıları sayılıyor (INFO düzeyindeki loglar hariç)
         actual_issues_count = len(analysis.issues) + len(analysis.warnings)
 
@@ -138,7 +136,6 @@ class ProjectDoctor:
             'skipped_files': analysis.skipped_files,
             'gitignore_applied': analysis.gitignore_applied,
             'ignored_by_gitignore': analysis.ignored_by_gitignore,
-            'top_recommendations': self._recommendation_engine.get_top_recommendations(analysis),
             'project_path': str(analysis.project_path),
             'all_issues': analysis.issues + analysis.warnings # Sadece gerçek hatalar ve uyarılar listeleniyor
         }

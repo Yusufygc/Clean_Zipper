@@ -47,6 +47,7 @@ QtObject {
     readonly property string takeBackup: "Hızlı Proje Yedeği Al"
     readonly property string backupDescription: "Yeniden üretilebilir klasörler hariç tutularak doğrudan ~/.gitclean_backups dizinine yedekler. Fazla otomatik yedekler Geri Dönüşüm Kutusu'na taşınır."
     readonly property string keptBackups: "Saklanan yedek:"
+    readonly property string backupSecretsWarning: "Yedek .env, yerel veritabanı gibi .gitignore'daki dosyaları da içerir ve şifrelenmez; yedek zip'ini paylaşmayın."
 
     // Temizlik
     readonly property string cleanupTitle: "Güvenli Proje Temizliği"

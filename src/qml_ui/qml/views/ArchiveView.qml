@@ -385,6 +385,17 @@ Item {
                                     renderType: Text.NativeRendering
                                 }
 
+                                Text {
+                                    objectName: "backupSecretsWarning"
+                                    text: AppStrings.backupSecretsWarning
+                                    color: AppTheme.warning
+                                    font.family: AppTheme.fontFamily
+                                    font.pixelSize: AppTheme.fontSizeSmall
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                    renderType: Text.NativeRendering
+                                }
+
                                 // Proje başına saklanan otomatik yedek (eskiler Geri Dönüşüm Kutusu'na; 0 = sınırsız)
                                 RowLayout {
                                     objectName: "maxBackupsRow"
