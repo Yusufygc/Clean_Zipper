@@ -4,11 +4,13 @@
 
 ## Komutlar
 ```bash
-./venv/Scripts/python.exe -m pytest                       # 680+ test (1 atlanır), yaklaşık 60-90 sn
+./venv/Scripts/python.exe -m pytest                       # 790+ test (yetkiye bağlı 1-2 atlanır), yaklaşık 90-100 sn
 ./venv/Scripts/python.exe -m pytest tests/unit/test_x.py  # tek dosya
+./venv/Scripts/python.exe -m ruff check .                 # lint (ruff.toml: E9, F)
 ./venv/Scripts/python.exe -m py_compile <dosya>
 ```
-Bağımlılıklar `requirements-dev.txt` ile kurulur. Ayarlar `pytest.ini` (`testpaths = tests`, `pythonpath = .`). Git gerektiren testler `git` yoksa atlanır (`skipif`). GUI testi yoktur ve bilinçli olarak kapsam dışıdır.
+CI (`.github/workflows/ci.yml`) aynı üç adımı Windows'ta koşar ve `pip-audit -r requirements.txt` ekler; yerelde ekransız çalıştırmak için `QT_QPA_PLATFORM=offscreen`. Dosya sembolik bağı testi Windows'ta Geliştirici Modu / yönetici yoksa atlanır; junction testleri yetki gerektirmez (`_winapi.CreateJunction`).
+Bağımlılıklar `requirements-dev.txt` ile kurulur. Ayarlar `pytest.ini` (`testpaths = tests`, `pythonpath = .`). Git gerektiren testler `git` yoksa atlanır (`skipif`). QML yerleşimi ekransız çizimle sınanır (`test_qml_layout`); görsel his elle kontrol edilir. Katman yönü `test_layering` ile zorunludur.
 
 ## Test dosyaları (`tests/unit/`)
 | Konu | Dosyalar |
@@ -53,7 +55,7 @@ Birim testleri tek başına yetmez: her aşamada sonuçlar, **farklı bir araçl
 Refactor öncesi commit `git worktree` ile ayrı bir klasöre alınır; aynı betik iki kod tabanında 8 gerçek projede çalıştırılır ve tam teşhis çıktısı (her bulgunun kategori, öncelik, başlık, dosya, açıklama, tüm metadata'sı, skorlar, dil istatistikleri, atlananlar) anahtarları sıralanmış JSON olarak `cmp` ile karşılaştırılır. Her adımdan sonra tekrarlanır; sonuç 8/8 birebir olmalıdır. `build_exe.py` gibi dış araca bağlı betikler sahte modülle (örn. sahte `PyInstaller`) eski ve yeni sürümde çalıştırılıp argüman ve çıktı karşılaştırılır.
 
 ## Dogfooding (kendi kendini tarama)
-Her aşamanın yeni kodu, aracın kendi `CodeComplexityAnalyzer` eşiklerinden (V2) geçmelidir: yeni dosyalarda bulgu kalmayana dek fonksiyonlar bölünür. Bu repo skoru: 83,1 → 88,3 → 89,1; kalan bulgular UI dosyaları (yeniden yazılacak) ve `BaseAnalyzer._create_result` (7 parametreli genel API).
+Her aşamanın yeni kodu, aracın kendi `CodeComplexityAnalyzer` eşiklerinden (V2) geçmelidir: yeni dosyalarda bulgu kalmayana dek fonksiyonlar bölünür. Bu repo skoru: 83,1 → 88,3 → 89,1; kalan bulgular: QML ViewModel'lerinin `class-size` bulguları (`ScanViewModel`, `SettingsViewModel`, `FindingsViewModel`: her `@Property` / `@Slot` bir metot sayılır, sınıf QML'e açılan yüzeydir) ve `BaseAnalyzer._create_result` (7 parametreli genel API). Eski arayüz kaldırıldıktan sonra (2026-10-10) skor 85,7.
 
 ## Performans bütçesi
 Tüm `C:\2UYGULAMALAR` (yaklaşık 5.900 dosya, 30 depo): hedef < 60 sn, ölçülen 30-35 sn. Tek bir analizör pahalıysa (örn. sağlayıcı sırları regex'i bir ara 70 sn'ye çıkmıştı) `analizör başına süre` ölçülür ve anchor + alt dizgi ipucuyla hızlandırılır (2,6 sn). Git tabanlı analizörler 29 depoda toplam 14,6 sn.

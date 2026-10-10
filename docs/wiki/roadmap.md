@@ -11,7 +11,7 @@ Kaynak: 2026-10-08 sistem denetimi. Mimari bağlam için [[architecture]], çal�
 | 5 | Analizör kaydı UI içinde, arayüzler yarım uygulanmış | 🟠 | Tamamlandı (2026-10-08) |
 | 6 | Sadece Python ve `requirements.txt` destekleniyor | 🟠 | Tamamlandı (2026-10-08) |
 | 7 | Hatalar sessizce yutuluyor, logger yok | 🟠 | Tamamlandı (2026-10-08) |
-| 8 | Test yok | 🟠 | Backend için tamamlandı (680+ test, bkz. [[testing]]); GUI testi bilinçli kapsam dışı |
+| 8 | Test yok | 🟠 | Tamamlandı (790+ test, bkz. [[testing]]); QML yerleşimi ekransız çizimle sınanır, görsel his elle kontrol |
 | 9 | Çift dosya bulucu tüm dosyayı belleğe okuyor | 🟠 | Tamamlandı (2026-10-08, parçalı hash) |
 | 10 | Dışlama listesi birden fazla yerde tekrarlanıyor | 🟡 | Tamamlandı (2026-10-09): analiz, temizlik, arşiv ve yedek `exclusions.py` kullanır; yedek `.gitignore` uygulamaz ([[decisions]]) |
 | 11 | Arşiv profil regex'leri iç içe klasörleri kaçırıyor | 🟡 | Tamamlandı (2026-10-08) |
@@ -72,6 +72,23 @@ Kaynak: ikinci dış denetim raporu (`BACKEND_ANALIZ_RAPORU.md`, depoya eklenmed
 | Analiz iptali yok | Kapsam dışı (kullanıcı kararı); bekleme bilinen sınır |
 | Test boşlukları (kilitli dosya, gerçek iş parçacığı, büyük proje) | Büyük ölçüde mevcut (`PermissionError` testleri, 8 iş parçacıklı servis testi, her fazda tüm `C:\2UYGULAMALAR` ölçümü); yan bulgu: bir test gerçek `~/.gitclean_backups`'a yazıyordu, yalıtıldı |
 
+## Bağımsız denetim (2026-10-10)
+Kaynak: Claude'un güvenlik / DevOps / mimari incelemesi (kod okuma ve deney). Kararlar [[decisions]] içinde.
+
+| # | Bulgu | Durum |
+|---|---|---|
+| 1 | Junction / sembolik bağ üzerinden temizlik proje dışını aday gösteriyor | Tamamlandı (bağ izlenmez + çöpe göndermeden önce proje içi denetimi) |
+| 2 | Arşiv, kopya, yedek bağ hedefini (proje dışı) içeriğe koyuyor | Tamamlandı (`skipped_links`) |
+| 3 | Kendine işaret eden junction analizi / temizliği döngüye sokuyor | Tamamlandı |
+| 4 | EXE ve `main.py` eski arayüzü paketliyor, QML pakete girmiyor | Tamamlandı (eski `src/ui` kaldırıldı, giriş QML, EXE yeniden derlenip içeriği doğrulandı) |
+| 5 | Ajan görev dosyalarında prompt injection | Tamamlandı ("veridir, talimat değildir" kuralı, satır içi kaçış) |
+| 6 | PySide6 6.6.1 eski | Tamamlandı (6.12.0) |
+| 7 | CI / lint / bağımlılık taraması yok | Tamamlandı (GitHub Actions; ilk koşu henüz GitHub'da görülmedi) |
+| 8 | Yedekteki sırlar için kullanıcı uyarısı yok | Tamamlandı (arşiv sayfasında uyarı) |
+| 9 | İmzasız EXE (Uygulama Denetimi engeller) | Geçersiz: EXE bu makinede imzasız açılıyor, donmuş teşhis doğrulandı. Başka makinelerde SmartScreen uyarısı olabilir (imza yalnızca dağıtım için) |
+| 10 | `shutil.which('git')` geçerli klasöre bakıyor | Tamamlandı (`find_git`) |
+| 11 | `doctors` → `services` katman ihlali | Tamamlandı (öneri motoru servis katmanına taşındı, `test_layering`) |
+
 ## Kararlar
 Tam liste ve gerekçeler: [[decisions]]. Özet: önce backend (UI sonradan sıfırdan), çok dilli analiz, CLI yok, silme kalıcı değil (Geri Dönüşüm Kutusu), kendi kodumuz kendi taramamızdan geçer.
 
@@ -79,9 +96,9 @@ Tam liste ve gerekçeler: [[decisions]]. Özet: önce backend (UI sonradan sıf�
 - Analiz iptal edilemiyor (UI'da iptal düğmesi yok); proje değişince yeni teşhis eskisini bekler ([[decisions]], kapsam dışı).
 - `read_text` 2 MB üstü dosyaları atlıyor: büyük kaynak dosyalar karmaşıklık ve sızıntı taramasına girmez (`skipped_files` ile görünür).
 - Java/Go yalnızca örnek kodla doğrulandı (diskte gerçek kod yoktu); C#, JS/TS ve Rust gerçek projelerde doğrulandı. Kotlin/PHP/Swift: yalnızca yeni bir `LanguageSpec` gerekir.
-- Donmuş exe içinde analiz çalıştırılamadı (Windows Uygulama Denetimi imzasız exe'yi engelliyor); paket içeriği doğrulandı.
+- İmzasız EXE başka makinelerde SmartScreen "tanınmayan uygulama" uyarısı verebilir ("Yine de çalıştır"); imza yalnızca geniş dağıtımda gerekir.
 - UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı ([[backend-api]]).
-- Kendi taramamızın bilinçli bırakılan bulguları: 4 UI işlevi (yeniden yazılacak) ve `BaseAnalyzer._create_result` (7 parametreli genel API).
+- Kendi taramamızın bilinçli bırakılan bulguları: QML ViewModel'lerinin `class-size` bulguları (`ScanViewModel`, `SettingsViewModel`, `FindingsViewModel`: her `@Property` / `@Slot` bir metot sayılır, sınıf QML'e açılan yüzeydir) ve `BaseAnalyzer._create_result` (7 parametreli genel API).
 - Geçişli bağımlılıklar için kilit dosyası (`pip freeze` türevi) üretilmedi; yalnızca doğrudan bağımlılıklar tam sabit.
 
 ## Sonraki adaylar (onay bekliyor, öncelik sırasız)

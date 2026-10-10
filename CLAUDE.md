@@ -10,9 +10,10 @@ PySide6 tabanlı proje analiz, temizlik ve arşivleme aracı. Python 3.10, `venv
 
 ## Komutlar
 ```bash
-./venv/Scripts/python.exe -m pytest          # testler (680+; requirements-dev.txt gerekir)
+./venv/Scripts/python.exe -m pytest          # testler (790+; requirements-dev.txt gerekir)
+./venv/Scripts/python.exe -m ruff check .    # lint (CI'da da koşar)
 ./venv/Scripts/python.exe -m py_compile <dosya>
-./venv/Scripts/python.exe main.py            # uygulama (GUI)
+./venv/Scripts/python.exe main.py            # uygulama (QML arayüzü, src/qml_ui)
 pip install -r requirements.txt              # yalnızca çalıştırmak için (dev: requirements-dev.txt, derleme: requirements-build.txt)
 ```
 
@@ -23,4 +24,4 @@ pip install -r requirements.txt              # yalnızca çalıştırmak için (
 - Commit yalnızca kullanıcı "commit at" deyince; Türkçe, `tip(kapsam): özet`, AI/Co-Authored-By referansı yok.
 - Aşama sonunda rapor verip dur; bağımsız doğrulama yap ve doğrulanamayanı dürüstçe söyle.
 - Kod yazarken bash heredoc kullanma (kaçış dizileri bozulur); `Write`/`Edit` ya da betik dosyası kullan.
-- `src/ui` sıfırdan yazılacak: ona dokunma.
+- Arayüz yalnızca `src/qml_ui` (QML + ViewModel'ler); eski `src/ui` (QWidget) 2026-10-10'da kaldırıldı. ViewModel'ler alt servisleri değil `ProjectService` yöntemlerini çağırır.

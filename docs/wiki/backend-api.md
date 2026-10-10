@@ -1,6 +1,6 @@
 # Backend Arayüzü (UI için)
 
-`src/ui` sıfırdan yazılacak; bu sayfa yeni arayüzün tüketeceği backend yüzeyini özetler. Katmanlar için [[architecture]], bulgu ve kural ayrıntıları için [[analyzers]], bilinen sınırlar için [[roadmap]].
+Bu sayfa arayüzün (`src/qml_ui`) tükettiği backend yüzeyini özetler. Katmanlar için [[architecture]], bulgu ve kural ayrıntıları için [[analyzers]], bilinen sınırlar için [[roadmap]].
 
 Tek giriş noktası `ProjectService` (`src/services/project_service.py`). Arayüz doğrudan analizör ya da `ProjectIndex` kullanmamalıdır.
 
@@ -54,10 +54,11 @@ UI bunları kullanıcıya göstermelidir (sessiz kısmi sonuç yok):
 - Yedek: `backup_name`, `size`, `excluded_dirs` (en çok 100), `excluded_dir_count`, `removed_backups` (rotasyonla Geri Dönüşüm Kutusu'na taşınan eski yedek adları) ve `rotation_errors`. Rotasyon: `BackupService(max_backups=5)` (0 = sınırsız; ayar `max_backups`, arşiv sayfasındaki "Saklanan yedek"), yalnızca aynı projenin tam ve otomatik adlı yedekleri sayılır; elle adlandırılmış ve `backup.json` kimliği olmayan eski yedeklere dokunulmaz. Yedek `.gitignore` uygulamaz, yalnızca yeniden üretilebilir klasörleri dışlar ([[decisions]]).
 - Arşiv, `.gitignore` okunamıyorsa gizli dosyaları sızdırmamak için işlemi reddeder (`error` dolu, `success=False`).
 - Kopya, hedef kaynağın kendisi ya da üst klasörüyse hiçbir dosyaya dokunmadan reddeder (`error` dolu, `success=False`). Hedef kaynağın içindeyse (`src/out/yedek`) yalnızca hedef klasörün kendisi atlanır, üst klasörleri kopyalanır.
+- Arşiv, kopya ve yedek bağ klasörlerine girmez; dosya bağları içeriğe konmaz ve `skipped_links` (proje köküne göre yol listesi) ile bildirilir.
 - UI `complete=False` ve `failed_files`'ı kullanıcıya göstermelidir.
 
 ## Temizlik
-`ProjectService.preview_cleanup / cleanup(dry_run=True)` (altta `CleanupService`): kategoriler `python_cache`, `temp_files` (varsayılan açık), `logs`, `backups` (varsayılan kapalı). Dışlanan klasörlerin içine girilmez; kural analizle aynıdır (`is_excluded_dir`: `venv`, `node_modules`, adı ne olursa olsun `pyvenv.cfg` içeren sanal ortam, derleme dosyası yanındaki `target` / `bin` / `obj`). Silme kalıcı değildir: Geri Dönüşüm Kutusu (`send2trash`). `cleanup` varsayılanı `dry_run=True`.
+`ProjectService.preview_cleanup / cleanup(dry_run=True)` (altta `CleanupService`): kategoriler `python_cache`, `temp_files` (varsayılan açık), `logs`, `backups` (varsayılan kapalı). Dışlanan klasörlerin içine girilmez; kural analizle aynıdır (`is_excluded_dir`: `venv`, `node_modules`, adı ne olursa olsun `pyvenv.cfg` içeren sanal ortam, derleme dosyası yanındaki `target` / `bin` / `obj`, sembolik bağ / junction klasörler). Proje dışına çözümlenen bir yol asla çöpe gönderilmez (`failed`: "proje klasörünün dışında"). Silme kalıcı değildir: Geri Dönüşüm Kutusu (`send2trash`). `cleanup` varsayılanı `dry_run=True`.
 
 ## Denetim raporu
 `AuditReportService` (Markdown) bölümleri: A yönetici özeti, B iyi pratikler, C incelenmedi, D ayrıntılı bulgular, E aksiyon planı, F sonraki adım. Kurallar:
@@ -74,12 +75,12 @@ HTML `ReportService` kategori puanı kartlarını ve tüm bulguları gösterir; 
 
 `verify_agent_tasks` dönüşü: `{'tasks': [{id, wave, rule, total, closed, reduced, open, open_fingerprints}], 'totals': {total, closed, reduced, open}, 'new_count', 'new_findings': [{fingerprint, rule, severity, path, line, title}] (en çok 50), 'warning'?}`. `warning` görevler başka bir proje için üretildiyse gelir. Geçersiz / eksik / desteklenmeyen sürümlü `tasks.json` için `GitCleanError`.
 
-Arayüz: bir "ajan görevleri olarak dışa aktar" düğmesi yalnızca `export_agent_tasks`'ı çağırır; ilerleme için `ProjectService` içinde ayrı bir `progress` yoktur (tarama `doctor.diagnose` ile yapılır, uzun sürebilir: bir `QThread` worker kullanın). "Doğrula" düğmesi `verify_agent_tasks`'ı çağırır.
+Arayüz: bir "ajan görevleri olarak dışa aktar" düğmesi yalnızca `export_agent_tasks`'ı çağırır; ilerleme için `ProjectService` içinde ayrı bir `progress` yoktur (görev dışa aktarımı son teşhisi kullanır, yoksa `ProjectService.diagnose` tarar; uzun sürebilir: bir `QThread` worker kullanın). "Doğrula" düğmesi `verify_agent_tasks`'ı çağırır.
 
 ## Kalıcı ayarlar
-`src/services/app_settings.py`: `AppSettings` (`respect_gitignore`, `disabled_analyzers`, `disabled_rules`, 9 eşik, `agent_batch_size`, `agent_output_dir`) `~/.gitclean/settings.json` dosyasında saklanır (`load_settings`, `save_settings`, atomik yazım). Bozuk / eksik dosya, bilinmeyen anahtar ve sınır dışı değer güvenle varsayılana döner (uygulama açılışı bozulmaz). Eşik varsayılanları `QualityThresholds`'tan gelir (tek kaynak), en küçük değerler `THRESHOLD_LIMITS` içindedir. Ajan görevleri için varsayılan çıktı klasörü `~/.gitclean/agent-tasks/<proje>` (projenin **dışında**: analiz görev dosyalarını bulgu saymasın).
+`src/services/app_settings.py`: `AppSettings` (`respect_gitignore`, `disabled_analyzers`, `disabled_rules`, 9 eşik, `agent_batch_size`, `agent_output_dir`, `max_backups`) `~/.gitclean/settings.json` dosyasında saklanır (`load_settings`, `save_settings`, atomik yazım). Bozuk / eksik dosya, bilinmeyen anahtar ve sınır dışı değer güvenle varsayılana döner (uygulama açılışı bozulmaz). Eşik varsayılanları `QualityThresholds`'tan gelir (tek kaynak), en küçük değerler `THRESHOLD_LIMITS` içindedir. Ajan görevleri için varsayılan çıktı klasörü `~/.gitclean/agent-tasks/<proje>` (projenin **dışında**: analiz görev dosyalarını bulgu saymasın).
 
-`SettingsViewModel` açılışta kayıtlı ayarları `ProjectService.doctor`'a uygular; `applySettings` / `resetToDefaults` / `disableRule` / `enableRule` diske yazar. `disabled_rules` tüm analizörlerin `metadata['rule']` kimlikli bulgularını eler (`ProjectDoctor._without_disabled_rules`; skor da bunlarsız hesaplanır), yalnızca SAST kurallarını değil.
+`SettingsViewModel` açılışta kayıtlı ayarları `ProjectService.doctor`'a uygular; `applySettings` / `resetToDefaults` / `disableRule` / `enableRule` / `adjustMaxBackups` diske yazar (`adjustMaxBackups` teşhisi yenilemez). `disabled_rules` tüm analizörlerin `metadata['rule']` kimlikli bulgularını eler (`ProjectDoctor._without_disabled_rules`; skor da bunlarsız hesaplanır), yalnızca SAST kurallarını değil.
 
 ## Arayüz (QML) ViewModel haritası
 | ViewModel | Arayüzde karşılığı |

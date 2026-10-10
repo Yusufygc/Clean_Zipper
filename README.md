@@ -2,8 +2,8 @@
 
 > **Profesyonel Proje Yönetim, Analiz ve Optimizasyon Aracı**
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml/badge.svg)](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/Version-2.0.0-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
 
@@ -13,7 +13,6 @@
 
 - [Genel Bakış](#-genel-bakış)
 - [Özellikler](#-özellikler)
-- [Ekran Görüntüleri](#-ekran-görüntüleri)
 - [Mimari Yapı](#-mimari-yapı)
 - [Kurulum](#-kurulum)
 - [Kullanım Kılavuzu](#-kullanım-kılavuzu)
@@ -47,22 +46,22 @@
 ## ✨ Özellikler
 
 ### 🏥 Proje Doktoru
-- **6 kategoride bulgu tabanlı sağlık analizi** (Güvenlik, Karmaşıklık, Çiftler, Boyut, Yapı, Bağımlılık)
+- **11 kategoride bulgu tabanlı sağlık analizi** (Güvenlik, Karmaşıklık, Çiftler, Boyut, Yapı, Bağımlılık, Ölü kod, Mimari, Güvenilirlik, Test, Hijyen)
 - **A+ 'dan F' e kadar notlandırma** sistemi
 - **Kritik sorunların otomatik tespiti**
-- **İyileştirme önerileri** ve tahmini kazanç hesaplama
+- **İyileştirme önerileri** (kural başına, şiddete göre en önemli 5) ve tahmini kazanç hesaplama
 
 ### 📦 Akıllı Arşivleme
 - `.gitignore` kurallarına **tam uyumlu** zip oluşturma
 - **Temiz dizin kopyası** oluşturma
-- **Özel filtreleme** desteği
-- **Sıkıştırma seviyesi** kontrolü (store/fast/normal/maximum)
+- **Arşiv profilleri** (Geliştirici / Müşteri Teslimi / Yayınlama; kendi profilinizi JSON ile ekleyebilirsiniz)
+- **Proje dışına taşmaz:** sembolik bağ ve junction klasörlere girilmez, dosya bağlarının hedefi arşive konmaz
 
 ### 🧹 Otomatik Temizlik
-- **Kategorilere göre** temizlik (Python, JS, IDE, Genel)
+- **Kategorilere göre** temizlik: Python önbelleği ve geçici dosyalar (varsayılan açık), log ve `.bak` dosyaları (varsayılan kapalı: kullanıcı verisi içerebilir)
 - **Önizleme modu** ile silinecekleri görme
-- **Geri alınamaz işlemler için onay** mekanizması
-- **Güvenli mod** (sadece cache dosyaları)
+- **Kalıcı silme yok:** her şey Geri Dönüşüm Kutusu'na taşınır
+- **Güvenli sınır:** sanal ortam, `node_modules`, derleme çıktıları, bağ / junction klasörler ve proje dışı yollar asla temizlenmez
 
 ### 💾 Versiyonlu Yedekleme
 - **Otomatik isimlendirme** (proje_adı_tarih_saat)
@@ -75,7 +74,7 @@
 ### 📊 Görsel Dashboard
 - **Dairesel sağlık skoru** göstergesi
 - **İstatistik kartları** (dosya sayısı, boyut, klasör, sorunlar)
-- **İnteraktif pasta grafiği** (dosya türü dağılımı)
+- **Dosya türü ve dil dağılımı**
 - **Canlı öneri paneli**
 - **Koyu/Açık tema** desteği
 
@@ -144,7 +143,6 @@ gitclean-archiver-pro/
 │   ├── doctors/                  # 🏥 Proje doktoru (FAZ 3)
 │   │   ├── project_doctor.py     #    Ana doktor koordinatörü
 │   │   ├── health_checker.py     #    Sağlık skoru hesaplama
-│   │   └── recommendation_engine.py  # Öneri motoru
 │   │
 │   ├── services/                 # ⚙️ İş servisleri (FAZ 5)
 │   │   ├── archive_service.py    #    Arşivleme (zip/kopyalama)
@@ -154,26 +152,21 @@ gitclean-archiver-pro/
 │   │   ├── audit_report_service.py # V2 formatında Markdown denetim raporu
 │   │   ├── audit_catalog.py      #    Rapor sabitleri: etiket, efor, etki tabloları
 │   │   ├── audit_evidence.py     #    Bulgu konumu ve kanıt (kod parçası)
+│   │   ├── recommendation_engine.py # Dashboard önerileri (kural başına, şiddete göre)
 │   │   └── project_service.py    #    Ana servis (Facade)
 │   │
-│   ├── ui/                       # 🎨 Kullanıcı arayüzü
-│   │   ├── main_window.py        #    Ana pencere (FAZ 6)
-│   │   ├── dashboard/            #    Dashboard paneli (FAZ 4)
-│   │   │   └── dashboard_panel.py
-│   │   ├── widgets/              #    UI bileşenleri (FAZ 4)
-│   │   │   ├── stats_card.py     #    İstatistik kartı
-│   │   │   ├── health_score_widget.py  # Sağlık skoru
-│   │   │   ├── pie_chart_widget.py     # Pasta grafiği
-│   │   │   └── progress_card.py  #    İlerleme kartı
-│   │   └── themes/               #    Tema yönetimi
-│   │       └── theme_manager.py
+│   ├── qml_ui/                   # 🎨 Kullanıcı arayüzü (QML)
+│   │   ├── app.py                #    Uygulama kurulumu, ViewModel bağlantıları, kapanış sırası
+│   │   ├── viewmodels/           #    QML köprüleri (QThread worker'ları ProjectService'i çağırır)
+│   │   ├── qml/                  #    MainView.qml, views/, components/, singletons/ (tema, metinler)
+│   │   └── resources/icons/      #    Arayüz simgeleri (SVG)
 │   │
 │   └── utils/                    # 🛠️ Yardımcı araçlar
 │       └── gitignore_parser.py   #    .gitignore parser
 │
 ├── docs/wiki/                    # 📚 Proje wiki'si (kurallar, kararlar, analizör kataloğu, backend arayüzü)
 │
-├── tests/                        # 🧪 Testler (680+)
+├── tests/                        # 🧪 Testler (790+)
 │   ├── unit/                     #    Birim testleri
 │   ├── integration/              #    Entegrasyon testleri
 │   └── fixtures/                 #    Test verileri
@@ -183,10 +176,12 @@ gitclean-archiver-pro/
 │   ├── templates/                #    Rapor şablonları
 │   └── profiles/                 #    Arşiv profilleri (JSON, gitignore sözdizimi)
 │
-├── main.py                       # 🚀 Ana giriş noktası
+├── main.py                       # 🚀 Ana giriş noktası (QML arayüzü)
 ├── build_exe.py                  # 🔨 Build script'i
 ├── requirements.txt              # 📋 Çalışma zamanı bağımlılıkları (tam sabit sürümler)
-├── requirements-dev.txt          # 🧪 + test (pytest)
+├── requirements-dev.txt          # 🧪 + test ve lint (pytest, ruff)
+├── ruff.toml                     # 🧹 Lint ayarı (yalnızca kesin hatalar)
+├── .github/workflows/ci.yml      # 🤖 CI: Windows'ta ruff, pytest, pip-audit
 ├── requirements-build.txt        # 🔨 + EXE derleme (pyinstaller)
 ├── .gitattributes / .editorconfig # ↩️ Satır sonu (LF) ve kodlama (UTF-8) politikası
 └── README.md                     # 📖 Bu doküman
@@ -195,7 +190,7 @@ gitclean-archiver-pro/
 ### Veri Akış Diyagramı
 
 ```
-Kullanıcı → UI (main_window.py)
+Kullanıcı → QML arayüzü (MainView.qml + ViewModel'ler)
               ↓
          ProjectService (Facade)
               ↓
@@ -238,7 +233,7 @@ source venv/bin/activate
 
 # 4. Bağımlılıkları yükleyin
 pip install -r requirements.txt          # yalnızca çalıştırmak için
-pip install -r requirements-dev.txt      # + testler (python -m pytest)
+pip install -r requirements-dev.txt      # + testler ve lint (python -m pytest, python -m ruff check .)
 pip install -r requirements-build.txt    # + EXE derleme (python build_exe.py)
 
 # 5. Uygulamayı başlatın
@@ -257,34 +252,36 @@ python -m venv venv && venv\Scripts\activate && pip install -r requirements.txt 
 
 ### 1. Proje Açma
 
-1. Uygulamayı başlatın
-2. Sol üstteki **📁 Proje Aç** butonuna tıklayın
+1. Uygulamayı başlatın (`python main.py` ya da `GitCleanArchiverPro.exe`)
+2. Sağ üstteki **Proje Dizini Aç** düğmesine tıklayın
 3. Analiz etmek istediğiniz proje dizinini seçin
-4. Otomatik analiz başlayacaktır
+4. Gösterge Paneli ve Sorunlar sayfası otomatik olarak tek bir teşhisle dolar
 
 ### 2. Dashboard Kullanımı
 
 - **Sağlık Skoru**: Projenizin genel durumunu gösterir (A+ en iyi, F en kötü)
 - **İstatistik Kartları**: Dosya sayısı, boyut, klasör sayısı, sorun sayısı
-- **Pasta Grafiği**: Dosya türlerinin dağılımını gösterir
+- **Dosya Türü ve Dil Dağılımı**: Dosya türleri ve dillere göre satır dağılımı
 - **Öneriler**: En önemli 5 iyileştirme önerisi
 
 ### 3. Arşivleme İşlemleri
 
 **Zip Oluşturma:**
-1. **📦 Arşivle** sekmesine geçin
-2. Çıktı dosyası yolunu belirtin (veya varsayılanı kullanın)
-3. **🚀 Zip Oluştur** butonuna tıklayın
+1. **Arşivleme ve Dağıtım** sekmesine geçin, **Zip Arşivi** modunu seçin
+2. **Sıkıştırma & Temizleme Profili**'ni seçin
+3. **Zip Konumu Seç ve Arşivle** ile çıktı dosyasını belirleyin
 
 **Temiz Kopya Oluşturma:**
-1. Aynı sekmede **📋 Temiz Kopya Oluştur** butonuna tıklayın
-2. `.gitignore` kurallarına uygun temiz bir kopya oluşturulur
+1. Aynı sekmede **Temiz Kopya** modunu seçin
+2. **Hedef Klasör Seç ve Kopyala** ile `.gitignore` ve profil kurallarına uygun temiz bir kopya oluşturun (hedef kaynağın kendisi ya da üst klasörü olamaz)
+
+**Yedek:** **Proje Yedeği** modunda **Hızlı Yedek Al**; proje başına saklanan yedek sayısı aynı kartta ayarlanır.
 
 ### 4. Temizlik İşlemleri
 
-1. **🧹 Temizlik** sekmesine geçin
-2. **🔍 Temizlik Önizleme** ile silinecek dosyaları görün
-3. Onay verdikten sonra **🧹 Temizliği Başlat** ile temizleyin
+1. **Proje Temizliği** sekmesine geçin ve kategorileri seçin
+2. **Önizleme (Tara)** ile taşınacak dosyaları görün
+3. **Temizliği Başlat** ile dosyaları Geri Dönüşüm Kutusu'na taşıyın (aynı anda yalnızca bir temizlik / arşiv / yedek işlemi çalışır)
 
 ### 5. Yedekleme (Komut Satırı)
 
@@ -755,7 +752,8 @@ Projenin kararları, analizör kataloğu, backend arayüzü ve çalışma kurall
 ```bash
 # Önce test bağımlılığı: pip install -r requirements-dev.txt
 
-# Tüm testler (680'den fazla, yaklaşık 60-90 sn)
+# Tüm testler (790'dan fazla, yaklaşık 90-100 sn)
+# Lint (CI ile aynı): python -m ruff check .
 python -m pytest tests/ -v
 
 # Belirli bir test dosyası
@@ -794,7 +792,10 @@ Uygulamanın sorunsuz, taşınabilir ve güvenilir bir biçimde derlenmesi için
 | `--icon=...` | Uygulama exe'sine ve görev çubuğuna özel `app_icon.ico` ikonunu gömer |
 | `--noupx` | UPX sıkıştırmasını devre dışı bırakarak yanlış pozitif virüs algılamalarını önler |
 | `--version-file=...` | Telif hakkı ve sürüm (.exe içine) ekleyerek anti-virüs güvenilirliğini artırır |
-| `--add-data=...` | Stil, ikon ve diğer gerekli kaynak klasörlerini derlenmiş dosyaya dâhil eder |
+| `--add-data=...` | QML arayüz dosyaları (`src/qml_ui/qml`), arayüz simgeleri ve `resources/` (kurallar, profiller, ikon); eksik klasör derlemeyi durdurur |
+| `--collect-submodules=src.analyzers` | Kendini kaydeden analizörlerin pakete girmesini sağlar |
+
+EXE imzasızdır ve bu makinede doğrudan açılır; başka bilgisayarlarda Windows SmartScreen "tanınmayan uygulama" uyarısı gösterebilir (**Ek bilgi → Yine de çalıştır**). Geniş dağıtım için kod imzalama sertifikası önerilir.
 
 ---
 
@@ -802,18 +803,26 @@ Uygulamanın sorunsuz, taşınabilir ve güvenilir bir biçimde derlenmesi için
 
 ### S: Hangi dosyalar temizlenir?
 **C:** Varsayılan olarak:
-- Python: `__pycache__`, `*.pyc`, `*.pyo`
-- Genel: `*.log`, `*.tmp`, `*.bak`
-- IDE: `.idea/`, `.vscode/`, `.vs/`
+- Python önbelleği: `__pycache__`, `*.pyc`, `*.pyo` (varsayılan açık)
+- Geçici dosyalar: `*.tmp` (varsayılan açık)
+- Log `*.log` ve yedek `*.bak` dosyaları (varsayılan kapalı; kullanıcı verisi içerebilir)
+
+Sanal ortamlar, `node_modules`, derleme çıktıları, sembolik bağ / junction klasörler ve proje dışındaki yollar hiçbir zaman temizlenmez.
 
 ### S: Temizlik geri alınabilir mi?
-**C:** Hayır, bu yüzden önce **yedek almanız** önerilir. Önizleme modu ile silinecekleri görebilirsiniz.
+**C:** Evet. Temizlik kalıcı silme yapmaz, dosyaları Geri Dönüşüm Kutusu'na taşır; oradan geri yüklenebilir. Önizleme modu ile taşınacakları önceden görebilirsiniz.
 
 ### S: .gitignore nasıl kullanılır?
-**C:** Proje kök dizinindeki `.gitignore` dosyası otomatik olarak okunur ve zip/kopyalama işlemlerinde bu kurallar uygulanır.
+**C:** Kökteki ve alt klasörlerdeki tüm `.gitignore` dosyaları ile `.git/info/exclude` git ile aynı öncelikle okunur; analiz, zip ve temiz kopyada uygulanır (git'in izlediği dosyalar yine dahil edilir). Yedek bilinçli olarak `.gitignore` uygulamaz.
 
 ### S: Sağlık skoru nasıl hesaplanır?
-**C:** 6 kategoride, bulguların şiddetine göre hesaplanan ağırlıklı ortalama ile. Detaylar için [Sağlık Skorlama Sistemi](#-sağlık-skorlama-sistemi) bölümüne bakın.
+**C:** 11 kategoride, bulguların şiddetine göre hesaplanan ağırlıklı ortalama ile. Detaylar için [Sağlık Skorlama Sistemi](#-sağlık-skorlama-sistemi) bölümüne bakın.
+
+---
+
+## 📄 Lisans
+
+Depoda henüz bir `LICENSE` dosyası yok; lisans seçimi depo sahibine aittir. Lisans eklenene kadar tüm hakları saklıdır.
 
 ---
 

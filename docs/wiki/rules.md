@@ -19,7 +19,7 @@ Bu dosya projedeki AI destekli çalışma düzenini tanımlar. Kaynak metodoloji
 - Bulgular önce raporlanır, onaydan sonra sırayla ve her biri ayrı adım olarak uygulanır.
 - Büyük işlerde plan modu kullanılır. Plan onaylanmadan uygulamaya geçilmez. Çok aşamalı işte her aşama sonunda durulur, kullanıcı "commit at, devam" deyince commit atılır ve sonraki aşamaya geçilir.
 - Her değişiklikten sonra `python -m py_compile` ve `pytest` çalıştırılır. Mantık değişikliğinde davranış ayrıca doğrulanır ([[testing]]).
-- GUI ve görsel davranış otomatik doğrulanamaz. Bu kısımlar "elle kontrol gerekir" diye açıkça belirtilir.
+- QML yerleşimi ekransız çizimle kodla sınanır (`test_qml_layout`); görsel his, gerçek fare / klavye etkileşimi ve gerçek pencere otomatik doğrulanamaz. Bu kısımlar "elle kontrol gerekir" diye açıkça belirtilir.
 - Silinen kodun bıraktığı kalıntı referanslar (README, wiki) aynı turda temizlenir.
 - Kapsam dışı bırakılan kararlar planda gerekçesiyle yazılır ([[decisions]]).
 
