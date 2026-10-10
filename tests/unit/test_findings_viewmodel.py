@@ -6,7 +6,7 @@ import pytest
 from PySide6.QtWidgets import QApplication
 from src.services.project_service import ProjectService
 from src.models.analysis_models import AnalysisResult, Severity
-from src.qml_ui.viewmodels.findings_viewmodel import FindingsViewModel, is_sensitive_finding, get_finding_effort
+from src.qml_ui.viewmodels.findings_viewmodel import FindingsViewModel, is_sensitive_finding
 
 
 @pytest.fixture(scope="session")

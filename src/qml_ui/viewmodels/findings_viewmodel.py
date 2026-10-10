@@ -7,7 +7,7 @@ from PySide6.QtCore import (
     QObject, QThread, Signal, Slot, Property,
     QAbstractListModel, QModelIndex, Qt, QByteArray
 )
-from src.models.analysis_models import AnalysisResult, ProjectAnalysis, Severity
+from src.models.analysis_models import AnalysisResult, ProjectAnalysis
 from src.services import audit_evidence as source_evidence
 from src.services.project_service import ProjectService
 from src.services.audit_catalog import RULE_EFFORT, DEFAULT_EFFORT, CATEGORY_NAMES, RULE_LABELS

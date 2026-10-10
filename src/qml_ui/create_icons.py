@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 
 icons_dir = Path(__file__).parent / "resources" / "icons"

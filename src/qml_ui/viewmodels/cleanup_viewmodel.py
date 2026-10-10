@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot, Property
 from src.services.project_service import ProjectService
-from src.services.cleanup_service import CleanupService
 
 logger = logging.getLogger(__name__)
 

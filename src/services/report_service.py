@@ -1,10 +1,8 @@
 import html
 import logging
-import os
 from pathlib import Path
-from datetime import datetime
 from src.core.interfaces import IReporter
-from src.models.analysis_models import ProjectAnalysis, Severity, HealthStatus
+from src.models.analysis_models import ProjectAnalysis, Severity
 from src.services.audit_catalog import CATEGORY_NAMES
 
 logger = logging.getLogger(__name__)

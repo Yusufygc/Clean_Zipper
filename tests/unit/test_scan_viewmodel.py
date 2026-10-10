@@ -1,6 +1,5 @@
 """ScanViewModel ve Dashboard veri köprüsü birim testi."""
 import sys
-from pathlib import Path
 import pytest
 
 from PySide6.QtWidgets import QApplication

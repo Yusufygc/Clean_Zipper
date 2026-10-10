@@ -1,0 +1,37 @@
+# Kalite kapısı: her push ve pull request'te lint, testler ve bağımlılık güvenlik taraması.
+# Windows: uygulama ve dosya sistemi davranışı (junction, harf duyarsızlık, send2trash) Windows'a göre sınanır.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      QT_QPA_PLATFORM: offscreen          # ekransız QML testleri (conftest yazı tipi klasörünü ayarlar)
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0                  # git geçmişi analizörü testleri gerçek depo kurar; tam geçmiş zararsız
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Bağımlılıklar
+        run: python -m pip install -r requirements-dev.txt
+      - name: Lint (ruff)
+        run: python -m ruff check .
+      - name: Testler
+        run: python -m pytest -q
+      - name: Bağımlılık güvenlik taraması (pip-audit)
+        run: |
+          python -m pip install pip-audit==2.10.1
+          python -m pip_audit -r requirements.txt

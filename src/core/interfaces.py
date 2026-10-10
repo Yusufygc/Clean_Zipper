@@ -2,7 +2,7 @@
 Temel interface'ler - SOLID prensipleri icin abstract base class'lar
 """
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional, Any, Tuple
+from typing import List, Tuple
 from pathlib import Path
 from src.core.project_index import ProjectIndex
 from src.models.analysis_models import AnalysisResult, ProjectAnalysis, HealthStatus

@@ -1,6 +1,6 @@
 # Çalışma zamanı bağımlılıkları (uygulamayı çalıştırmak için gereken her şey). Sürümler tam sabittir.
 # Test için: requirements-dev.txt, EXE derlemek için: requirements-build.txt
-PySide6-Essentials==6.6.1
+PySide6-Essentials==6.12.0
 pathspec==1.1.1
 Send2Trash==2.1.0
 tomli==2.5.0; python_version < "3.11"

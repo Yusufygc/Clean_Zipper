@@ -1,0 +1,8 @@
+# Lint: yalnızca kesin hatalar (sözdizimi, tanımsız ad, kullanılmayan import). Biçim kuralları bilinçli olarak yok.
+# Ayrıntı: docs/wiki/decisions.md ("CI ve kalite kapısı").
+target-version = "py310"
+line-length = 120
+extend-exclude = ["venv", "build", "dist"]
+
+[lint]
+select = ["E9", "F"]
