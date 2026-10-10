@@ -67,5 +67,6 @@ Tüm `C:\2UYGULAMALAR` (yaklaşık 5.900 dosya, 30 depo): hedef < 60 sn, ölçü
 - Bash heredoc içindeki kaçış dizileri bozulur: `\n` gerçek satır sonuna, `\b` 0x08 karakterine, `'\\'` `'\'`ya dönüşebilir. Kod yazarken `Write`/`Edit` aracı ya da betik dosyası kullanılır; sonra kontrol karakteri taraması (`[\x00-\x08\x0b\x0c\x0e-\x1f]`) yapılır.
 - Windows Python, Git Bash'in `/tmp` ve `/c/...` yollarını göremez: betik dosyaları oturum scratchpad klasörüne `C:/...` yoluyla yazılır.
 - Konsol cp1254 olduğu için betiklerde `PYTHONIOENCODING=utf-8` kullanılır (örn. `↔` yazdırmak).
+- **Kodlamasız dosya yazma / okuma yerel ayara bağlıdır:** Türkçe Windows'ta varsayılan cp1254 `ı`, `ş` yazabilir, GitHub runner'ında cp1252 yazamaz (`UnicodeEncodeError`; ilk CI koşusunda 2 test böyle kırıldı). Testler ve kod her zaman `encoding="utf-8"` verir. Koruma: `pytest.ini` `EncodingWarning`'i hataya çevirir, CI `PYTHONWARNDEFAULTENCODING=1` ile çalışır; yerelde aynısı `python -X warn_default_encoding -m pytest`.
 - `.gitattributes` eklenince `git status` satır sonu önbelleği yüzünden dosyaları "değişmiş" gösterebilir; gerçek farkı `git diff` ve `git add -A --dry-run` verir.
 - `test_` ile başlayan analizör dosyası test sayılır ve kurallardan muaf kalır; bu yüzden `testing_analyzer.py` / `testing_patterns.py`.

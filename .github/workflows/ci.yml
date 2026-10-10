@@ -30,6 +30,8 @@ jobs:
       - name: Lint (ruff)
         run: python -m ruff check .
       - name: Testler
+        env:
+          PYTHONWARNDEFAULTENCODING: "1"  # kodlamasız dosya açan kod / test yerel ayara bağlı kalmasın (pytest.ini hataya çevirir)
         run: python -m pytest -q
       - name: Bağımlılık güvenlik taraması (pip-audit)
         run: |

@@ -26,8 +26,8 @@ def make_project(root: Path):
     (root / "b").mkdir()
     (root / "empty").mkdir()
     payload = "x" * 2048
-    (root / "a" / "one.txt").write_text(payload)
-    (root / "b" / "two.txt").write_text(payload)
+    (root / "a" / "one.txt").write_text(payload, encoding="utf-8")
+    (root / "b" / "two.txt").write_text(payload, encoding="utf-8")
     return root
 
 
@@ -101,7 +101,7 @@ def test_stats_come_from_index_and_exclude_venv_and_git(tmp_path):
     (tmp_path / "venv").mkdir()
     (tmp_path / "venv" / "big.bin").write_bytes(b"0" * 100_000)
     (tmp_path / ".git").mkdir()
-    (tmp_path / ".git" / "HEAD").write_text("ref")
+    (tmp_path / ".git" / "HEAD").write_text("ref", encoding="utf-8")
     analysis = doctor(EmptyFolderFinder()).diagnose(tmp_path)
     assert analysis.total_files == 2
     assert analysis.total_size == 4096

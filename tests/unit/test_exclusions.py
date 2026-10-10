@@ -5,7 +5,7 @@ def make(tmp_path, *relative_files):
     for rel in relative_files:
         path = tmp_path / rel
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("x")
+        path.write_text("x", encoding="utf-8")
     return tmp_path
 
 

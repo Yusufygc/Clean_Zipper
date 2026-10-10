@@ -11,7 +11,7 @@ def write(path, content="x", mode="w", **kw):
     if "b" in mode:
         path.write_bytes(content)
     else:
-        path.write_text(content, **kw)
+        path.write_text(content, **{"encoding": "utf-8", **kw})
     return path
 
 
@@ -124,7 +124,7 @@ def test_read_text_is_cached(tmp_path):
     index = ProjectIndex.build(tmp_path)
     e = entry(index, "a.py")
     assert index.read_text(e) == "v1"
-    f.write_text("v2")
+    f.write_text("v2", encoding="utf-8")
     assert index.read_text(e) == "v1"        # ikinci okuma diskten gelmez
 
 

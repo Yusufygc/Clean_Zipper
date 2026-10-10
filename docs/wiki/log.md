@@ -1,5 +1,10 @@
 # Değişiklik Günlüğü
 
+## [2026-10-10] [FIX] | İlk CI koşusu: yerel ayara bağlı test kodlaması
+- **Belirti (GitHub Actions, Windows):** 2 test `UnicodeEncodeError: 'charmap' codec can't encode character 'ı'` ile kırıldı; yerelde geçiyordu.
+- **Neden:** test yardımcıları `write_text`'i kodlamasız çağırıyordu; yerel varsayılan cp1254 Türkçe karakteri yazabiliyor, runner'ın cp1252'si yazamıyor. `-X warn_default_encoding -W error::EncodingWarning` ile tüm testlerde 7 yer bulundu (5 yardımcı, 2 satır), hepsi `encoding="utf-8"` aldı; kaynak kodda kodlamasız açılış yok.
+- **Kalıcı koruma:** `pytest.ini` `EncodingWarning`'i hataya çevirir; CI test adımı `PYTHONWARNDEFAULTENCODING=1` ile çalışır. Yerelde CI koşulunda 789 test geçti.
+
 ## [2026-10-10] [DOC] | Wiki lint ve Markdown güncellemesi
 - **Wiki sağlığı:** `test_wiki` (kırık link, öksüz sayfa) temiz. Kodla çelişen ifadeler düzeltildi: test sayısı (680+ → 790+, 3 yerde), `backend-api`'de taramanın `doctor.diagnose` ile yapıldığı (artık `ProjectService.diagnose`), ayarlarda eksik `max_backups` / `adjustMaxBackups`, `rules`'ta "GUI otomatik doğrulanamaz" (QML yerleşimi artık ekransız sınanıyor). Sayılar koddan doğrulandı: 18 analizör, 39 SAST kuralı, 791 test.
 - **README (kodla çelişen iddialar):** Python 3.8+ rozeti → 3.10+; CI rozeti eklendi; "6 kategori" → 11 (iki yerde); var olmayan "sıkıştırma seviyesi kontrolü" ve "IDE / JS temizliği" kaldırıldı; SSS'de "temizlik geri alınamaz" yanlıştı (Geri Dönüşüm Kutusu); `.gitignore` SSS'si iç içe dosyaları ve izlenen dosyaları anlatır; kullanım kılavuzu eski arayüzün düğmelerini anlatıyordu, QML etiketleriyle yeniden yazıldı; derleme tablosu QML paketlemesini ve SmartScreen notunu içerir; içindekilerdeki karşılıksız "Ekran Görüntüleri" bağlantısı kaldırıldı.
