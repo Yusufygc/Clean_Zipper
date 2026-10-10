@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -62,14 +63,14 @@ def test_non_repository_returns_none(tmp_path):
 
 
 def test_missing_git_returns_none_and_logs(tmp_path, monkeypatch, caplog):
-    monkeypatch.setattr(git_info.shutil, "which", lambda name: None)
+    monkeypatch.setattr(git_info, "find_git", lambda: None)
     with caplog.at_level(logging.INFO):
         assert tracked_paths(tmp_path) is None
     assert "git bulunamadı" in caplog.text
 
 
 def test_timeout_and_os_errors_return_none_and_log(tmp_path, monkeypatch, caplog):
-    monkeypatch.setattr(git_info.shutil, "which", lambda name: "git")
+    monkeypatch.setattr(git_info, "find_git", lambda: "git")
 
     def timeout(*args, **kwargs):
         raise subprocess.TimeoutExpired("git", 1)
@@ -82,7 +83,7 @@ def test_timeout_and_os_errors_return_none_and_log(tmp_path, monkeypatch, caplog
 
 def test_command_is_read_only_and_non_interactive(tmp_path, monkeypatch):
     captured = {}
-    monkeypatch.setattr(git_info.shutil, "which", lambda name: "git")
+    monkeypatch.setattr(git_info, "find_git", lambda: "git")
 
     class Done:
         returncode, stdout, stderr = 0, b"a.py\0", b""
@@ -122,3 +123,24 @@ def test_index_without_gitignore_support_loads_git_tracked_lazily(repo, monkeypa
     index = ProjectIndex.build(repo, respect_gitignore=False)
     assert calls == []
     assert "tracked.py" in index.git_tracked and len(calls) == 1
+
+
+def test_find_git_searches_only_absolute_path_entries(tmp_path, monkeypatch):
+    """Analiz edilen projedeki sahte `git` (geçerli klasör ya da göreli PATH girdisi) çalıştırılmamalı."""
+    fake_dir = tmp_path / "proje"
+    fake_dir.mkdir()
+    name = "git.exe" if os.name == "nt" else "git"
+    fake = fake_dir / name
+    fake.write_text("sahte", encoding="utf-8")
+    fake.chmod(0o755)
+    monkeypatch.chdir(fake_dir)
+    monkeypatch.setenv("PATH", "." + os.pathsep + "proje")
+    assert git_info.find_git() is None
+    monkeypatch.setenv("PATH", str(fake_dir))                         # açıkça PATH'e konmuşsa kullanıcının seçimi
+    assert os.path.normcase(git_info.find_git()) == os.path.normcase(str(fake))
+
+
+@pytest.mark.skipif(not HAS_GIT, reason="git kurulu değil")
+def test_find_git_returns_an_absolute_path():
+    found = git_info.find_git()
+    assert found is not None and os.path.isabs(found)

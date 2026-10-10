@@ -8,7 +8,7 @@ from datetime import datetime
 
 from send2trash import send2trash
 
-from src.core.exclusions import is_excluded_dir
+from src.core.exclusions import is_excluded_dir, is_link
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +52,12 @@ class BackupService:
         zip_path = backup_dir / f"{backup_name}.zip"
         result = {'success': False, 'complete': False, 'backup_name': backup_name, 'size': 0,
                   'failed_files': [], 'error': None, 'excluded_dirs': [], 'excluded_dir_count': 0,
-                  'removed_backups': [], 'rotation_errors': []}
+                  'removed_backups': [], 'rotation_errors': [], 'skipped_links': []}
         try:
             backup_dir.mkdir(parents=True, exist_ok=True)
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
                 excluded: List[str] = []
-                for fp in self._backup_files(Path(project_path), zip_path, excluded):
+                for fp in self._backup_files(Path(project_path), zip_path, excluded, result['skipped_links']):
                     try:
                         zf.write(fp, str(fp.relative_to(project_path)))
                     except OSError as e:
@@ -126,9 +126,10 @@ class BackupService:
                 result['rotation_errors'].append((name, str(e)))
 
     @staticmethod
-    def _backup_files(project_path: Path, zip_path: Path, excluded: List[str]) -> Iterator[Path]:
-        """Yedeğe girecek dosyalar. Girilmeyen klasörlerin proje köküne göre yolu `excluded`a eklenir.
-        Yedek zip'inin kendisi (yedek klasörü proje içindeyse) atlanır."""
+    def _backup_files(project_path: Path, zip_path: Path, excluded: List[str], links: List[str]) -> Iterator[Path]:
+        """Yedeğe girecek dosyalar. Girilmeyen klasörlerin proje köküne göre yolu `excluded`a, atlanan dosya
+        bağları (hedefi proje dışında olabilir) `links`e eklenir. Yedek zip'inin kendisi (yedek klasörü proje
+        içindeyse) atlanır."""
         own_zip = zip_path.resolve()
         for root, dirs, files in os.walk(project_path):
             siblings = dirs + files
@@ -141,7 +142,9 @@ class BackupService:
             dirs[:] = kept
             for name in files:
                 path = Path(root) / name
-                if path.resolve() != own_zip:
+                if is_link(path):
+                    links.append(path.relative_to(project_path).as_posix())
+                elif path.resolve() != own_zip:
                     yield path
 
     @staticmethod

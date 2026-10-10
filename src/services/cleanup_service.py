@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Optional
 
 from send2trash import send2trash
 
-from src.core.exclusions import is_excluded_dir
+from src.core.exclusions import is_excluded_dir, is_link
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class CleanupService:
         kept = []
         for name in dirs:
             full = root / name
-            if name in dir_map and not full.is_symlink():
+            if name in dir_map and not is_link(full):
                 size, count = self._dir_stats(full)
                 items.append(CleanupItem(full, size, dir_map[name], is_dir=True, file_count=count))
             elif not is_excluded_dir(str(full), name, siblings):
@@ -94,7 +94,7 @@ class CleanupService:
         for name in files:
             path = root / name
             category = ext_map.get(path.suffix.lower())
-            if category is None or path.is_symlink():
+            if category is None or is_link(path):
                 continue
             try:
                 items.append(CleanupItem(path, path.stat().st_size, category))
@@ -122,7 +122,13 @@ class CleanupService:
         if dry_run:
             return result
 
+        root = Path(project_path).resolve()
         for item in items:
+            if not self._inside(item.path, root):
+                # Son savunma: tarama bağları izlemez; yine de proje dışındaki bir yol asla çöpe gönderilmez.
+                logger.error("Proje dışındaki yol temizlenmedi: %s", item.path)
+                result['failed'].append((str(item.path), "proje klasörünün dışında"))
+                continue
             try:
                 self._trash(os.path.abspath(item.path))
             except Exception as e:
@@ -133,6 +139,14 @@ class CleanupService:
             result['cleaned_size'] += item.size
         result['success'] = not result['failed']
         return result
+
+    @staticmethod
+    def _inside(path: Path, root: Path) -> bool:
+        try:
+            Path(path).resolve().relative_to(root)
+        except (ValueError, OSError):
+            return False
+        return True
 
     @staticmethod
     def _dir_stats(directory: Path):

@@ -28,12 +28,29 @@ class HistoryEntry:
     time: int
 
 
+def find_git() -> Optional[str]:
+    """`git` çalıştırılabilirinin tam yolu; yalnızca PATH klasörlerinde aranır.
+
+    `shutil.which` Windows'ta önce geçerli klasöre bakar: uygulama analiz edilen projenin klasöründen başlatılırsa
+    projedeki sahte bir `git.exe` çalışabilirdi. Göreli PATH girdileri de aynı nedenle atlanır.
+    """
+    folders = [d for d in os.environ.get('PATH', '').split(os.pathsep) if d and os.path.isabs(d)]
+    found = shutil.which('git', path=os.pathsep.join(folders)) if folders else None
+    if found is None:
+        return None
+    if os.name == 'nt' and os.path.dirname(os.path.abspath(found)).lower() == os.getcwd().lower() \
+            and os.getcwd().lower() not in (d.rstrip('\\/').lower() for d in folders):
+        logger.warning("Geçerli klasördeki git yok sayıldı: %s", found)
+        return None
+    return os.path.abspath(found)
+
+
 def _run_git(root, args: Sequence[str], timeout: float) -> Optional[bytes]:
     """Salt-okunur git çağrısı; başarılıysa stdout baytları, aksi hâlde None.
 
     Güvenli kullanım: indeks kilidi alınmaz (GIT_OPTIONAL_LOCKS=0), fsmonitor kapalı, etkileşimli soru yok.
     """
-    git = shutil.which('git')
+    git = find_git()
     if git is None:
         logger.info("git bulunamadı; git bilgisi yok")
         return None

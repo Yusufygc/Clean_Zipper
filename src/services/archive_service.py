@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import Optional, Callable, Dict, List, Mapping, Tuple
 
-from src.core.exclusions import is_excluded_dir
+from src.core.exclusions import is_excluded_dir, is_link
 from src.services.archive_profiles import ArchiveProfile, load_profiles
 from src.utils.git_info import tracked_paths
 from src.utils.gitignore_parser import GitignoreParser
@@ -71,6 +71,10 @@ class ArchiveService:
             for name in filenames:
                 fp = root_path / name
                 rp = fp.relative_to(source_dir)
+                if is_link(fp):
+                    # Bağın hedefi proje dışında olabilir (ör. ~/.ssh/id_rsa): paylaşılan arşive içerik sızmasın.
+                    result['skipped_links'].append(rp.as_posix())
+                    continue
                 if self._is_filtered(fp, rp, profile, skip_file):
                     result['skipped_files'] += 1
                 else:
@@ -122,7 +126,7 @@ class ArchiveService:
         output_path = Path(output_path).resolve()
 
         result = {'success': False, 'complete': False, 'total_files': 0, 'added_files': 0,
-                  'skipped_files': 0, 'failed_files': [], 'error': None}
+                  'skipped_files': 0, 'failed_files': [], 'error': None, 'skipped_links': []}
         profile = self._resolve_profile(profile_name, result)
         if profile is None or self._refuse_if_gitignore_unreadable(result):
             return result
@@ -175,7 +179,7 @@ class ArchiveService:
         target_dir = Path(target_dir).resolve()
 
         result = {'success': False, 'complete': False, 'copied_files': 0,
-                  'skipped_files': 0, 'failed_files': [], 'error': None}
+                  'skipped_files': 0, 'failed_files': [], 'error': None, 'skipped_links': []}
         if self._refuse_if_target_contains_source(source_dir, target_dir, result):
             return result
         profile = self._resolve_profile(profile_name, result)

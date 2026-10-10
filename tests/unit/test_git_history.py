@@ -83,13 +83,13 @@ def test_history_helpers_return_none_outside_a_repository(tmp_path):
 
 
 def test_history_helpers_return_none_without_git(tmp_path, monkeypatch):
-    monkeypatch.setattr(git_info.shutil, "which", lambda name: None)
+    monkeypatch.setattr(git_info, "find_git", lambda: None)
     assert git_info.recent_commits(tmp_path) is None and git_info.history_paths(tmp_path, ["x"]) is None
 
 
 def test_history_commands_are_read_only(tmp_path, monkeypatch):
     seen = []
-    monkeypatch.setattr(git_info.shutil, "which", lambda name: "git")
+    monkeypatch.setattr(git_info, "find_git", lambda: "git")
 
     class Done:
         returncode, stdout, stderr = 0, b"", b""
