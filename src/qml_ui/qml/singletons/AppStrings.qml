@@ -7,7 +7,6 @@ QtObject {
 
     // Uygulama Genel
     readonly property string appTitle: "GitClean Archiver"
-    readonly property string appVersion: "v2.0.0"
 
     // Sekme Başlıkları
     readonly property string tabDashboard: "Gösterge Paneli"

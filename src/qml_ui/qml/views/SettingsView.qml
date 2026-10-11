@@ -396,6 +396,91 @@ Item {
                 }
             }
 
+            // ── Güncellemeler ──
+            CardFrame {
+                Layout.fillWidth: true
+
+                ColumnLayout {
+                    width: parent.width
+                    spacing: 12
+
+                    RowLayout {
+                        spacing: 8
+                        SvgIcon {
+                            source: AppIcons.refresh
+                            size: 16
+                            color: AppTheme.accent
+                        }
+                        Text {
+                            text: "Güncellemeler"
+                            color: AppTheme.textPrimary
+                            font.family: AppTheme.fontFamily
+                            font.pixelSize: AppTheme.fontSizeBase
+                            font.bold: true
+                            renderType: Text.NativeRendering
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        AppCheckBox {
+                            accessibleName: "Açılışta güncellemeleri denetle"
+                            checked: updateVM.checkEnabled
+                            onToggled: updateVM.setCheckEnabled(checked)
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Text {
+                                text: "Açılışta güncellemeleri denetle"
+                                color: AppTheme.textPrimary
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSizeBase
+                                font.bold: true
+                                renderType: Text.NativeRendering
+                            }
+                            Text {
+                                text: "Yalnızca GitHub'dan en son sürüm numarası sorulur; proje ya da kişisel veri gönderilmez ve hiçbir şey kendiliğinden indirilmez."
+                                color: AppTheme.textSecondary
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSizeSmall
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                renderType: Text.NativeRendering
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        CustomButton {
+                            objectName: "checkUpdateButton"
+                            text: "Şimdi Denetle"
+                            variant: "secondary"
+                            enabled: !updateVM.checking
+                            onClicked: updateVM.checkNow()
+                        }
+
+                        Text {
+                            objectName: "updateStatus"
+                            text: updateVM.statusText !== "" ? updateVM.statusText : "Kurulu sürüm: v" + updateVM.currentVersion
+                            color: AppTheme.textSecondary
+                            font.family: AppTheme.fontFamily
+                            font.pixelSize: AppTheme.fontSizeSmall
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            renderType: Text.NativeRendering
+                        }
+                    }
+                }
+            }
+
             // ── 6. Yapay zeka ajan görevleri ──
             CardFrame {
                 Layout.fillWidth: true
