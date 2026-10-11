@@ -45,6 +45,19 @@ class UpdateCheckError(Exception):
     """Denetim yapılamadı (ağ yok, GitHub hatası, bozuk yanıt); mesaj kullanıcıya gösterilebilir."""
 
 
+BLOCKED_WINERRORS = (4551, 1260)          # 4551: Uygulama Denetimi ilkesi engelledi; 1260: grup ilkesi engelledi
+
+
+class InstallerBlockedError(UpdateCheckError):
+    """Windows (Akıllı Uygulama Denetimi) kurulum dosyasının başlatılmasına izin vermedi. Dosya indirildi ve doğrulandı:
+    kullanıcı Gezgin'den çift tıklayarak kurabilir (ya da bir süre sonra yeniden deneyebilir)."""
+
+    def __init__(self, path: Path):
+        super().__init__("Windows (Akıllı Uygulama Denetimi) kurulum dosyasını şimdilik engelledi. Dosya indirildi ve doğrulandı; "
+                         "klasörde gösterildi: çift tıklayarak kurabilirsiniz. Olmazsa birkaç dakika sonra yeniden deneyin.")
+        self.path = path
+
+
 @dataclass(frozen=True)
 class UpdateInfo:
     version: str            # "2.1.0"
@@ -236,7 +249,15 @@ def download_installer(info: UpdateInfo, progress: Optional[ProgressCallback] = 
     return target
 
 
-def launch_installer(installer: Path, popen: Callable = subprocess.Popen) -> None:
+def _shell_execute(installer: Path, parameters: str) -> None:
+    """Gezgin'de çift tıklamayla aynı yol (ShellExecute); doğrudan süreç oluşturma engellendiğinde ikinci deneme."""
+    import ctypes
+    result = ctypes.windll.shell32.ShellExecuteW(None, "open", str(installer), parameters, str(installer.parent), 1)
+    if result <= 32:
+        raise OSError(result, "ShellExecute başarısız")
+
+
+def launch_installer(installer: Path, popen: Callable = subprocess.Popen, shell_execute: Callable = _shell_execute) -> None:
     """Kurulumu uygulamadan bağımsız başlatır (kabuk yok, sabit argümanlar); çağıran uygulamayı kapatmalıdır.
 
     `/SILENT`: ilerleme penceresiyle sormadan kurar, çalışan uygulamayı kapatır, kurulumdan sonra uygulama yeniden açılır
@@ -247,8 +268,16 @@ def launch_installer(installer: Path, popen: Callable = subprocess.Popen) -> Non
     if not INSTALLER_PATTERN.match(installer.name) or not installer.is_file():
         raise UpdateCheckError("Kurulum dosyası bulunamadı.")
     flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-    popen([str(installer), "/SILENT", "/SUPPRESSMSGBOXES", "/CLOSEAPPLICATIONS", f"/LOG={installer.with_name('install.log')}"],
-          close_fds=True, creationflags=flags)
+    log = installer.with_name("install.log")
+    try:
+        popen([str(installer), "/SILENT", "/SUPPRESSMSGBOXES", "/CLOSEAPPLICATIONS", f"/LOG={log}"], close_fds=True, creationflags=flags)
+    except OSError as e:
+        if getattr(e, "winerror", None) not in BLOCKED_WINERRORS:
+            raise UpdateCheckError(f"Kurulum başlatılamadı: {e.strerror or e}") from e
+        try:                                                    # Gezgin yolu: doğrudan başlatma engellense de çift tıklama çalışabilir
+            shell_execute(installer, f'/SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS "/LOG={log}"')
+        except OSError:
+            raise InstallerBlockedError(installer) from e
 
 
 # ── Kullanıcı tercihleri: ayrı dosya (ana ayar dosyasını yazan ViewModel ile çakışmaz) ──

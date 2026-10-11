@@ -35,6 +35,9 @@ Karar **dosya başına ve öngörülemez**: aynı kaynak koddan, aynı bayraklar
 | Kullanıcının diğer projeleri (imzasız PyInstaller exe + Inno kurulum, 16-98 günlük) | 8 çalıştı, 2 engellendi (en eski ikisi) |
 | **P013 (Proje Takip Platformu), desenin kaynağı:** onedir exe (8 Ekim, `upx=False`, sürüm bilgisi gömülü) | **engellendi**; aynı projenin eski `--onefile` exe'si (Temmuz) çalıştı |
 | Engellenen exe'nin **aynı hash'li kopyası başka klasörde** | yine engellendi: konuma bağlı değil, içeriğe bağlı |
+| **CI'da derlenen v2.1.1 kurulum dosyası**, kurulu uygulamanın başlattığı süreçten (`CreateProcess`) | engellendi (olay 3077, başlatan: kurulu `GitCleanArchiver.exe`); SHA-256 doğrulaması geçmişti |
+| **Aynı dosya (aynı SHA-256), ~10 dk sonra**, Gezgin (`ShellExecute`) ve `CreateProcess` ile | **başladı** (sihirbaz açıldı): verdict zamanla ya da başlatan sürece göre değişmiş; hangisi olduğu ayrıştırılamadı |
+| Doğrulamalı derleme turu (6 deneme, 2026-10-11 akşam) | 5 exe + 1 kaldırıcı (`unins000.exe`) engellendi, geçen derleme çıkmadı: oran zamanla kötüleşiyor gibi, ama örnek küçük |
 | İndirilmiş dosya işareti (MOTW, `Zone.Identifier` ZoneId=3) ekli kopya | çalışanlarda sonucu değiştirmedi |
 | Yetki düzeyi (yönetici / kullanıcıya özel kurulum) | belirgin etkisi görülmedi |
 | `onefile` ile `onedir` ayrımı | istatistiksel fark görülmedi (onedir yalnızca daha küçük kurulum dosyası ve hızlı açılış verir) |
@@ -61,6 +64,8 @@ Kullanıcıya düşen: engellenen dosyada "dosyayı yeniden indir / yeni sürüm
 ## 5. Yapılmaması gerekenler (bu depoda yaşandı)
 
 - **Inno kurulum dosyasını "açılıyor mu" diye elle başlatıp öldürmek:** sihirbaz yükseltilmiş çalıştıysa süreç öldürülemez (`Erişim engellendi`) ve kurulum tamamlanabilir; makinede gerçek kurulum, kayıt ve Başlat menüsü grubu kalır. Denemeyi yalnızca `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR=<geçici klasör>` ile yap, ardından `unins000.exe /VERYSILENT` çalıştır (`build_verify.installer_check`).
+- **Derleme sonrası denemenin gerçek kurulumu ezmesi (yaşandı, düzeltildi):** deneme kurulumu gerçek kurulumla aynı `AppId`'yi kullanır; Inno aynı "Uygulamalar ve özellikler" kaydını ve Başlat menüsü kısayolunu yazar / siler. Deneme çökünce kullanıcının kaydı ve kısayolu geçici klasörü gösteriyordu. `build_verify.py` artık denemeden önce kaydı ve kısayolu yedekler, ne olursa olsun geri yükler (`save_registration` / `restore_registration`, testli).
+- **Kaldırıcıyı (`unins000.exe`) unutmak:** kurulum sırasında üretilen kaldırıcı da imzasız bir exe'dir ve engellenebilir (kullanıcı "Uygulamalar ve özellikler"den kaldıramaz); `installer_check` kaldırıcıyı da çalıştırır ve engellenirse denemeyi başarısız sayar.
 - **Aynı `AppId` ile deneme kurulumu bırakmak:** gerçek kurulumun kaydıyla çakışır; deneme sonrası kaydın (`HKLM`/`HKCU ...\Uninstall\{AppId}_is1`) ve Başlat menüsü grubunun kalktığını doğrula.
 - **Yetki gerektiren kurulum dosyasını Python `subprocess` ile başlatmak:** `PrivilegesRequired=admin` iken CreateProcess 740 hatası verir; denetimi otomatikleştirmek için kullanıcıya özel (`PrivilegesRequired=lowest`) kurulum kullanıldı.
 - **Engeli "kodla aşmaya" çalışmak** (hash değiştirme dışında): SAC bir güvenlik özelliğidir; hash değiştirerek yeniden derlemek yalnızca yanlış pozitif ya da bilinmeyen dosyaya yeni karar aldırır, korumayı aşmaz.

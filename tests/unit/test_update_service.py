@@ -301,3 +301,48 @@ def test_launch_installer_uses_fixed_arguments_without_a_shell(tmp_path, monkeyp
         bad.parent.mkdir(exist_ok=True)
         with pytest.raises(UpdateCheckError, match="bulunamadı"):
             svc.launch_installer(bad, popen=lambda *a, **kw: pytest.fail("başlatılmamalı"))
+
+
+def blocked_oserror():
+    error = OSError(22, "Uygulama Denetimi ilkesi bu dosyayı engelledi")
+    error.winerror = 4551
+    return error
+
+
+def installer_file(tmp_path):
+    installer = tmp_path / INSTALLER_NAME
+    installer.write_bytes(b"MZ")
+    return installer
+
+
+def test_a_blocked_direct_launch_falls_back_to_the_explorer_route(tmp_path):
+    installer, shell_calls = installer_file(tmp_path), []
+
+    def popen(*a, **kw):
+        raise blocked_oserror()
+    svc.launch_installer(installer, popen=popen, shell_execute=lambda path, parameters: shell_calls.append((path, parameters)))
+    assert shell_calls == [(installer, f'/SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS "/LOG={tmp_path / "install.log"}"')]
+
+
+def test_when_both_routes_are_blocked_the_error_carries_the_downloaded_file(tmp_path):
+    installer = installer_file(tmp_path)
+
+    def popen(*a, **kw):
+        raise blocked_oserror()
+
+    def shell(path, parameters):
+        raise OSError(5, "erişim engellendi")
+    with pytest.raises(svc.InstallerBlockedError) as caught:
+        svc.launch_installer(installer, popen=popen, shell_execute=shell)
+    assert caught.value.path == installer and "Akıllı Uygulama Denetimi" in str(caught.value) and "çift tıklayarak" in str(caught.value)
+    assert isinstance(caught.value, UpdateCheckError)
+
+
+def test_other_launch_errors_are_readable_and_do_not_try_the_explorer_route(tmp_path):
+    installer = installer_file(tmp_path)
+
+    def popen(*a, **kw):
+        raise OSError(5, "Erişim engellendi")
+    with pytest.raises(UpdateCheckError, match="Kurulum başlatılamadı: Erişim engellendi") as caught:
+        svc.launch_installer(installer, popen=popen, shell_execute=lambda *a: pytest.fail("Gezgin yolu denenmemeli"))
+    assert not isinstance(caught.value, svc.InstallerBlockedError)

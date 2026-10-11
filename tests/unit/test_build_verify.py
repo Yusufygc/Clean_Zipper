@@ -6,6 +6,8 @@ import pytest
 
 import build_verify
 
+REAL_SAVE, REAL_RESTORE = build_verify.save_registration, build_verify.restore_registration
+
 
 def blocked_error():
     error = OSError(22, "Uygulama Denetimi ilkesi bu dosyayı engelledi")
@@ -26,6 +28,8 @@ def fast(monkeypatch, tmp_path):
     monkeypatch.setattr(build_verify.time, "sleep", lambda seconds: None)
     monkeypatch.setattr(build_verify.tempfile, "mkdtemp", lambda prefix="": str(tmp_path / "work"))      # gerçek TEMP'e çöp bırakma
     (tmp_path / "work").mkdir()
+    monkeypatch.setattr(build_verify, "save_registration", lambda: (None, None))          # birim testleri gerçek kayda / kısayola dokunmaz
+    monkeypatch.setattr(build_verify, "restore_registration", lambda saved: None)
     killed = []
     real_run = subprocess.run
     monkeypatch.setattr(build_verify.subprocess, "run",
@@ -129,3 +133,102 @@ def test_skip_build_makes_a_single_attempt(monkeypatch):
     with pytest.raises(SystemExit):
         build_installer.build_installer(skip_build=True)
     assert calls == [True]
+
+
+# ---- gerçek kurulumun kaydı ve kısayolu korunur ---------------------------------------------------------------------------------
+
+@pytest.fixture
+def isolated_registration(monkeypatch, tmp_path):
+    """Gerçek kayıt yerine izole bir alt anahtar ve geçici bir kısayol dosyası."""
+    import uuid
+    import winreg
+    subkey = rf"Software\GitCleanArchiverTest\{uuid.uuid4().hex}"
+    monkeypatch.setattr(build_verify, "UNINSTALL_KEY", subkey)
+    monkeypatch.setattr(build_verify, "SHORTCUT", tmp_path / "GitClean Archiver.lnk")
+    yield subkey
+    for path in (subkey, r"Software\GitCleanArchiverTest"):
+        try:
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, path)
+        except OSError:
+            pass
+
+
+def write_key(subkey, values):
+    import winreg
+    with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, subkey, 0, winreg.KEY_SET_VALUE) as key:
+        for name, (value, kind) in values.items():
+            winreg.SetValueEx(key, name, 0, kind, value)
+
+
+def read_key(subkey):
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, subkey) as key:
+            result, index = {}, 0
+            while True:
+                try:
+                    name, value, kind = winreg.EnumValue(key, index)
+                except OSError:
+                    return result
+                result[name] = (value, kind)
+                index += 1
+    except FileNotFoundError:
+        return None
+
+
+def test_the_real_registration_and_shortcut_survive_a_verification_install(isolated_registration):
+    import winreg
+    real = {"InstallLocation": ("C:/Users/k/AppData/Local/Programs/GitClean Archiver/", winreg.REG_SZ), "EstimatedSize": (172400, winreg.REG_DWORD),
+            "UninstallString": ('"C:/Users/k/AppData/Local/Programs/GitClean Archiver/unins000.exe"', winreg.REG_SZ)}
+    write_key(isolated_registration, real)
+    build_verify.SHORTCUT.write_bytes(b"GERCEK-KISAYOL")
+    saved = REAL_SAVE()
+    write_key(isolated_registration, {"InstallLocation": ("C:/Temp/gcverify_x/app", winreg.REG_SZ), "ExtraValue": ("deneme", winreg.REG_SZ)})   # deneme kurulumu ezdi
+    build_verify.SHORTCUT.write_bytes(b"DENEME-KISAYOL")
+    REAL_RESTORE(saved)
+    assert read_key(isolated_registration) == real                                    # değerler ve türleri birebir geri geldi, fazlalık silindi
+    assert build_verify.SHORTCUT.read_bytes() == b"GERCEK-KISAYOL"
+
+
+def test_when_nothing_was_installed_the_verification_leaves_no_registration_behind(isolated_registration):
+    import winreg
+    assert read_key(isolated_registration) is None and not build_verify.SHORTCUT.exists()
+    saved = REAL_SAVE()
+    write_key(isolated_registration, {"InstallLocation": ("C:/Temp/gcverify_x/app", winreg.REG_SZ)})
+    build_verify.SHORTCUT.write_bytes(b"DENEME-KISAYOL")
+    REAL_RESTORE(saved)
+    assert read_key(isolated_registration) is None and not build_verify.SHORTCUT.exists()
+
+
+def test_installer_check_restores_the_registration_even_when_the_check_blows_up(monkeypatch):
+    events = []
+    monkeypatch.setattr(build_verify, "save_registration", lambda: events.append("save") or ("kayit", "kisayol"))
+    monkeypatch.setattr(build_verify, "restore_registration", lambda saved: events.append(("restore", saved)))
+    monkeypatch.setattr(build_verify, "_installer_check", lambda installer, seconds: (_ for _ in ()).throw(RuntimeError("beklenmedik")))
+    with pytest.raises(RuntimeError):
+        build_verify.installer_check(Path("C:/x/Setup.exe"))
+    assert events == ["save", ("restore", ("kayit", "kisayol"))]
+
+
+def test_a_blocked_uninstaller_fails_the_check_and_the_temp_install_is_removed(monkeypatch, tmp_path, capsys):
+    def fake_run(cmd, *a, **kw):
+        if cmd[0] == "taskkill":
+            return subprocess.CompletedProcess(cmd, 0)
+        directory = next(Path(arg[5:]) for arg in cmd if arg.startswith("/DIR=")) if any(arg.startswith("/DIR=") for arg in cmd) else None
+        if cmd[0].endswith("Setup.exe"):
+            directory.mkdir(parents=True)
+            (directory / build_verify.EXE_NAME).write_bytes(b"MZ")
+            (directory / "unins000.exe").write_bytes(b"MZ")
+            return subprocess.CompletedProcess(cmd, 0)
+        raise blocked_error()                                                         # unins000.exe engellendi
+    monkeypatch.setattr(build_verify.subprocess, "run", fake_run)
+    monkeypatch.setattr(build_verify.subprocess, "Popen", lambda *a, **kw: FakeProcess(alive=True))
+    assert build_verify.installer_check(tmp_path / "Setup.exe") is False
+    assert "kaldırıcıyı engelledi" in capsys.readouterr().out
+    assert not (tmp_path / "work").exists()
+
+
+def test_the_app_id_used_for_the_registration_matches_the_installer_script():
+    script = (Path(__file__).resolve().parents[2] / "packaging" / "GitCleanArchiver.iss").read_text(encoding="utf-8")
+    app_id = script.split("AppId={{", 1)[1].split("}", 1)[0]
+    assert build_verify.UNINSTALL_KEY.endswith("{" + app_id + "}_is1")
