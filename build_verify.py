@@ -3,7 +3,7 @@
 Windows Akıllı Uygulama Denetimi (Smart App Control), imzasız her yeni exe'ye dosya özetine (hash) göre bulut kararı verir ve bazı
 derlemeleri engeller (`OSError: [WinError 4551] Uygulama Denetimi ilkesi bu dosyayı engelledi`). Aynı kaynak kodun bir derlemesi çalışırken
 bir sonraki engellenebilir; bu yüzden dağıtımdan önce denenir ve engellenirse yeniden derlenir (özet değişir).
-Ayrıntı: docs/wiki/windows-exe-dagitim.md. Kod imzalama bu denetimin yerini tutmaz ama imzalı derlemede de zararsızdır.
+Ayrıntı: docs/wiki/exe-dagitim-rehberi.md. Kod imzalama bu denetimin yerini tutmaz ama imzalı derlemede de zararsızdır.
 
 DİKKAT: deneme kurulumu, makinedeki GERÇEK kurulumla aynı `AppId`'yi kullanır; Inno aynı "Uygulamalar ve özellikler" kaydını ve Başlat menüsü
 kısayolunu yazar / siler. Bu yüzden deneme boyunca gerçek kaydın ve kısayolun kopyası alınır ve (hata olsa bile) geri yüklenir.

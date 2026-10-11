@@ -85,7 +85,7 @@ Kaynak: Claude'un güvenlik / DevOps / mimari incelemesi (kod okuma ve deney). K
 | 6 | PySide6 6.6.1 eski | Tamamlandı (6.12.0) |
 | 7 | CI / lint / bağımlılık taraması yok | Tamamlandı (GitHub Actions; ilk koşu henüz GitHub'da görülmedi) |
 | 8 | Yedekteki sırlar için kullanıcı uyarısı yok | Tamamlandı (arşiv sayfasında uyarı) |
-| 9 | İmzasız EXE (Uygulama Denetimi engeller) | Geçersiz: EXE bu makinede imzasız açılıyor, donmuş teşhis doğrulandı. Başka makinelerde SmartScreen uyarısı olabilir (imza yalnızca dağıtım için) |
+| 9 | İmzasız EXE (Uygulama Denetimi engeller) | Çözüldü (2026-10-12): kararlı exe (sürümler arası aynı özet) + yayın kapısı; 2.1.4 ve 2.1.5 bu makinede engellenmeden açıldı, uygulama içi güncelleme beklemeden çalıştı ([[exe-dagitim-rehberi]]). Başka makinelerde doğrulanmadı |
 | 10 | `shutil.which('git')` geçerli klasöre bakıyor | Tamamlandı (`find_git`) |
 | 11 | `doctors` → `services` katman ihlali | Tamamlandı (öneri motoru servis katmanına taşındı, `test_layering`) |
 
@@ -96,7 +96,7 @@ Tam liste ve gerekçeler: [[decisions]]. Özet: önce backend (UI sonradan sıf�
 - Analiz iptal edilemiyor (UI'da iptal düğmesi yok); proje değişince yeni teşhis eskisini bekler ([[decisions]], kapsam dışı).
 - `read_text` 2 MB üstü dosyaları atlıyor: büyük kaynak dosyalar karmaşıklık ve sızıntı taramasına girmez (`skipped_files` ile görünür).
 - Java/Go yalnızca örnek kodla doğrulandı (diskte gerçek kod yoktu); C#, JS/TS ve Rust gerçek projelerde doğrulandı. Kotlin/PHP/Swift: yalnızca yeni bir `LanguageSpec` gerekir.
-- **Akıllı Uygulama Denetimi imzasız her yeni exe / kurulum dosyasını hash başına rastgele engelliyor** (2026-10-11, bu makinede 13 derlemeyle ölçüldü; P013'ün onedir exe'si de engelli): derleme sonrası deneme + yeniden derleme riski azaltır, yok etmez ([[windows-exe-dagitim]]). Kalıcı çözüm olan kod imzalama kullanıcı kararıyla yapılmıyor; engellenen dosya için yeniden derleme / yeniden indirme tek yol.
+- **Akıllı Uygulama Denetimi imzasız her YENİ çalıştırılabilir dosyayı özet başına rastgele değerlendirir.** Exe artık her sürümde aynı olduğu için yalnızca Inno kurulum dosyası (ve kaldırıcı) her sürümde yenidir; uygulama içi güncelleme engelde bekleyip yeniden dener. Başka kullanıcı makinelerinde ilk açılış doğrulanmadı. Kod imzalama kullanıcı kararıyla yapılmıyor. Açık seçenek: kurulum dosyasını da gereksiz kılan dosya-yaması güncellemesi ([[exe-dagitim-rehberi]] bölüm 11).
 - İmzasız EXE başka makinelerde SmartScreen "tanınmayan uygulama" uyarısı verebilir ("Yine de çalıştır"); imza yalnızca geniş dağıtımda gerekir.
 - UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı ([[backend-api]]).
 - Kendi taramamızın bilinçli bırakılan bulguları: QML ViewModel'lerinin `class-size` bulguları (`ScanViewModel`, `SettingsViewModel`, `FindingsViewModel`: her `@Property` / `@Slot` bir metot sayılır, sınıf QML'e açılan yüzeydir) ve `BaseAnalyzer._create_result` (7 parametreli genel API).

@@ -249,7 +249,7 @@ python main.py
 
 ### Kurulum Sihirbazı (önerilen, Windows)
 
-[Releases](https://github.com/Yusufygc/Clean_Zipper/releases) sayfasından `GitCleanArchiver-Setup-X.Y.Z.exe` dosyasını indirip çalıştırın. Yönetici hakkı gerekmez (varsayılan: kullanıcıya özel kurulum); Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve kaldırıcı eklenir. Yeni sürümün üstüne kurulum eski sürümü günceller; ayarlarınız (`~/.gitclean`) korunur. Dosyanın yanındaki `.sha256` ile özetini doğrulayabilirsiniz. Kurulum dosyası imzasızdır: SmartScreen uyarısında **Ek bilgi → Yine de çalıştır**. Windows 11 **Akıllı Uygulama Denetimi** imzasız dosyaları dosya başına rastgele engelleyebilir ("Uygulama Denetimi ilkesi bu dosyayı engelledi"); nedenleri, teşhisi ve alınacak önlemler: [`docs/wiki/windows-exe-dagitim.md`](docs/wiki/windows-exe-dagitim.md).
+[Releases](https://github.com/Yusufygc/Clean_Zipper/releases) sayfasından `GitCleanArchiver-Setup-X.Y.Z.exe` dosyasını indirip çalıştırın. Yönetici hakkı gerekmez (varsayılan: kullanıcıya özel kurulum); Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve kaldırıcı eklenir. Yeni sürümün üstüne kurulum eski sürümü günceller; ayarlarınız (`~/.gitclean`) korunur. Dosyanın yanındaki `.sha256` ile özetini doğrulayabilirsiniz. Kurulum dosyası imzasızdır: SmartScreen uyarısında **Ek bilgi → Yine de çalıştır**. Windows 11 **Akıllı Uygulama Denetimi** imzasız dosyaları dosya başına rastgele engelleyebilir ("Uygulama Denetimi ilkesi bu dosyayı engelledi"); nedenleri, teşhisi ve alınacak önlemler: [`docs/wiki/exe-dagitim-rehberi.md`](docs/wiki/exe-dagitim-rehberi.md).
 
 Uygulama açılışta GitHub'a yalnızca "en son sürüm nedir" diye sorar; daha yeni bir sürüm varsa sürüm notlarıyla bir pencere açar: **Güncelle** kurulum dosyasını indirir, SHA-256 özetini doğrular, uygulamayı kapatır, kurulum üstüne yazar ve uygulama yeniden açılır (ayarlarınız ve yedekleriniz korunur); **Sonra**; **Bu Sürümü Atla**. Proje ya da kişisel veri gönderilmez. Kapatmak için **Ayarlar → Güncellemeler** ya da ortam değişkeni `GITCLEAN_NO_UPDATE_CHECK=1`. Ayrıntı: [`docs/wiki/guncelleme-sistemi.md`](docs/wiki/guncelleme-sistemi.md).
 
@@ -829,7 +829,7 @@ Uygulamanın sorunsuz, taşınabilir ve güvenilir bir biçimde derlenmesi için
 | `--add-data=...` | QML arayüz dosyaları (`src/qml_ui/qml`), arayüz simgeleri ve `resources/` (kurallar, profiller, ikon); eksik klasör derlemeyi durdurur |
 | `--collect-submodules=src.analyzers` | Kendini kaydeden analizörlerin pakete girmesini sağlar |
 
-EXE ve kurulum dosyası imzasızdır: Windows SmartScreen "tanınmayan uygulama" uyarısı gösterebilir (**Ek bilgi → Yine de çalıştır**) ve Windows 11 Akıllı Uygulama Denetimi bazı derlemeleri tümüyle engelleyebilir; bu yüzden dağıtımdan önce `build_installer.py` dosyayı dener. Kalıcı çözüm kod imzalamadır ([rehber](docs/wiki/windows-exe-dagitim.md)).
+EXE ve kurulum dosyası imzasızdır: Windows SmartScreen "tanınmayan uygulama" uyarısı gösterebilir (**Ek bilgi → Yine de çalıştır**) ve Windows 11 Akıllı Uygulama Denetimi bilinmeyen dosyaları engelleyebilir. Bu yüzden exe her sürümde **bayt bayt aynı** üretilir (`packaging/launcher.sha256` onay kapısı; derleme özet değişirse durur) ve `build_installer.py` dosyaları dağıtımdan önce dener ([rehber](docs/wiki/exe-dagitim-rehberi.md)).
 
 ---
 

@@ -101,7 +101,7 @@ def pyinstaller_arguments(root_dir: Path, entry_point: Path):
         str(entry_point),
         f"--paths={root_dir}",                 # giriş betiği packaging/ altında: `src` paketi kökten bulunur
         "--name=GitCleanArchiver",
-        "--onedir",            # Klasör (exe + _internal): Inno Setup tüm klasörü paketler. --onefile Akıllı Uygulama Denetimi'ne takılıyordu (docs/wiki/windows-exe-dagitim.md)
+        "--onedir",            # Klasör (exe + _internal): Inno Setup tüm klasörü paketler. --onefile Akıllı Uygulama Denetimi'ne takılıyordu (docs/wiki/exe-dagitim-rehberi.md)
         "--windowed",          # Konsol penceresini gizle
         "--clean",             # Önbelleği temizle
         "--noconfirm",         # Onay sorma

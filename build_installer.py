@@ -3,7 +3,7 @@ ve SHA-256 özeti yazar. Sürüm `src/version.py`'den gelir.
 
 Exe KARARLIDIR (özeti sürümler arasında değişmez; build_exe.py): Windows Akıllı Uygulama Denetimi onayladığı exe'yi sonraki sürümlerde de çalıştırır.
 Her sürümde yeni olan tek çalıştırılabilir dosya kurulum dosyasıdır; uygulama içi güncelleme onu engel kalkana dek bekleyip yeniden dener.
-CI dışında derlenen exe ve kurulum dosyası bu makinede denenir (build_verify.py). Ayrıntı: docs/wiki/windows-exe-dagitim.md.
+CI dışında derlenen exe ve kurulum dosyası bu makinede denenir (build_verify.py). Ayrıntı: docs/wiki/exe-dagitim-rehberi.md.
 
 Kullanım:
     python build_installer.py                 # derler, exe'yi dener, kurulum dosyasını üretir ve dener
@@ -71,7 +71,7 @@ def build_installer(skip_build: bool = False, verify: bool = True, update_launch
         print("\n[*] Derlenen exe bu makinede deneniyor...")
         if not build_verify.launch_check(EXE):
             sys.exit("[X] Kararlı exe Windows tarafından engellendi. Özeti değiştirmek için build_exe.LAUNCHER_EPOCH değerini değiştirip yeniden derleyin, "
-                     "açılan özeti `--update-launcher-hash` ile onaylayın (docs/wiki/windows-exe-dagitim.md).")
+                     "açılan özeti `--update-launcher-hash` ile onaylayın (docs/wiki/exe-dagitim-rehberi.md).")
     installer = compile_installer(iscc)
     if verify:
         print("\n[*] Kurulum dosyası sessizce kurulup kaldırılarak deneniyor...")
