@@ -190,3 +190,114 @@ def test_corrupt_preferences_fall_back_to_safe_defaults(tmp_path, content):
     path = tmp_path / "updates.json"
     path.write_text(content, encoding="utf-8")
     assert svc.load_preferences(path) == svc.UpdatePreferences(True, "")
+
+
+# ---- indirme, doğrulama ve kurulum (uygulama içi güncelleme) ----------------------------------------------------------------
+
+INSTALLER_NAME = "GitCleanArchiver-Setup-2.1.0.exe"
+INSTALLER_BYTES = b"MZ" + b"installer-bytes" * 200
+
+
+def sha(data: bytes) -> str:
+    import hashlib
+    return hashlib.sha256(data).hexdigest()
+
+
+def info_for(data: bytes = INSTALLER_BYTES, **overrides):
+    values = dict(version="2.1.0", tag="v2.1.0", page_url=f"{BASE}/releases/tag/v2.1.0",
+                  download_url=f"{BASE}/releases/download/v2.1.0/{INSTALLER_NAME}", asset_name=INSTALLER_NAME, size=len(data),
+                  notes="", published="2026-10-11", sha256=sha(data), checksum_url="")
+    values.update(overrides)
+    return svc.UpdateInfo(**values)
+
+
+def serving(files: dict):
+    """URL -> bayt sözlüğünden yanıt veren sahte `urlopen` (adres sonradan yönlendirilmiş gibi `geturl` döner)."""
+    requested = []
+
+    def opener(request, timeout=None):
+        requested.append(request.full_url)
+        data, final = files[request.full_url]
+        return FakeResponse(data, url=final)
+    opener.requested = requested
+    return opener
+
+
+def plain(data: bytes, url: str):
+    return {url: (data, url)}
+
+
+def test_release_record_carries_the_digest_and_the_checksum_asset():
+    data = release()
+    data["assets"][1]["digest"] = "sha256:" + "AB" * 32
+    info = svc.release_to_update(data, "2.0.0", REPO)
+    assert info.sha256 == "ab" * 32 and info.checksum_url.endswith("GitCleanArchiver-Setup-2.1.0.exe.sha256")
+    assert svc.release_to_update(release(), "2.0.0", REPO).sha256 == ""                 # digest yok: .sha256 dosyası kullanılır
+
+
+@pytest.mark.parametrize("text,expected", [(("ab" * 32) + " *GitCleanArchiver-Setup-2.1.0.exe\n", "ab" * 32), (("AB" * 32), "ab" * 32),
+                                           ("kısa", ""), ("", ""), (("zz" * 32) + " x", "")])
+def test_parse_checksum_file(text, expected):
+    assert svc.parse_checksum_file(text) == expected
+
+
+def test_download_verifies_size_and_sha256_and_reports_progress(tmp_path):
+    info = info_for()
+    opener = serving(plain(INSTALLER_BYTES, info.download_url))
+    steps = []
+    path = svc.download_installer(info, steps.append, opener=opener, directory=tmp_path)
+    assert path == tmp_path / INSTALLER_NAME and path.read_bytes() == INSTALLER_BYTES
+    assert steps[-1] == 100 and steps == sorted(steps)
+
+
+def test_download_uses_the_checksum_asset_when_github_gave_no_digest(tmp_path):
+    checksum_url = f"{BASE}/releases/download/v2.1.0/{INSTALLER_NAME}.sha256"
+    info = info_for(sha256="", checksum_url=checksum_url)
+    files = {**plain(INSTALLER_BYTES, info.download_url), **plain(f"{sha(INSTALLER_BYTES)} *{INSTALLER_NAME}\n".encode(), checksum_url)}
+    assert svc.download_installer(info, opener=serving(files), directory=tmp_path).is_file()
+
+
+def test_download_is_refused_without_any_checksum(tmp_path):
+    info = info_for(sha256="", checksum_url="")
+    opener = serving(plain(INSTALLER_BYTES, info.download_url))
+    with pytest.raises(UpdateCheckError, match="SHA-256 özeti bulunamadı"):
+        svc.download_installer(info, opener=opener, directory=tmp_path)
+    assert opener.requested == [] and list(tmp_path.iterdir()) == []                   # hiçbir şey indirilmedi
+
+
+@pytest.mark.parametrize("data,overrides,message", [
+    (INSTALLER_BYTES[:-1] + b"X", {}, "özet uyuşmuyor"),                              # içerik bozuk (boyut aynı)
+    (INSTALLER_BYTES[:100], {"sha256": sha(INSTALLER_BYTES[:100])}, "boyut uyuşmuyor"),   # eksik indirme
+    (INSTALLER_BYTES + b"fazla", {"size": len(INSTALLER_BYTES), "sha256": sha(INSTALLER_BYTES + b"fazla")}, "büyük"),   # beklenenden fazla
+])
+def test_a_bad_download_is_deleted_and_reported(tmp_path, data, overrides, message):
+    info = info_for(**overrides)
+    with pytest.raises(UpdateCheckError, match=message):
+        svc.download_installer(info, opener=serving(plain(data, info.download_url)), directory=tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_download_rejects_a_redirect_to_an_untrusted_host_and_unknown_assets(tmp_path):
+    info = info_for()
+    evil = {info.download_url: (INSTALLER_BYTES, "https://evil.example/x.exe")}
+    with pytest.raises(UpdateCheckError, match="yönlendirildi"):
+        svc.download_installer(info, opener=serving(evil), directory=tmp_path)
+    cdn = {info.download_url: (INSTALLER_BYTES, "https://release-assets.githubusercontent.com/abc/installer.exe")}
+    assert svc.download_installer(info, opener=serving(cdn), directory=tmp_path).is_file()       # GitHub'ın kendi CDN'i kabul edilir
+    for bad in (info_for(download_url=""), info_for(asset_name="../../evil.exe"), info_for(asset_name="malware.exe")):
+        with pytest.raises(UpdateCheckError, match="kurulum dosyası yok"):
+            svc.download_installer(bad, opener=serving({}), directory=tmp_path)
+
+
+def test_launch_installer_uses_fixed_arguments_without_a_shell(tmp_path, monkeypatch):
+    installer = tmp_path / INSTALLER_NAME
+    installer.write_bytes(b"MZ")
+    calls = []
+    svc.launch_installer(installer, popen=lambda cmd, **kw: calls.append((cmd, kw)))
+    command, options = calls[0]
+    assert command == [str(installer), "/SILENT", "/SUPPRESSMSGBOXES", "/CLOSEAPPLICATIONS", f"/LOG={tmp_path / 'install.log'}"]
+    assert options["close_fds"] is True and "shell" not in options                      # kabuk yok: argümanlar komut olarak yorumlanmaz
+    for bad in (tmp_path / "evil.exe", tmp_path / "yok" / INSTALLER_NAME):
+        bad.parent.mkdir(exist_ok=True)
+        with pytest.raises(UpdateCheckError, match="bulunamadı"):
+            svc.launch_installer(bad, popen=lambda *a, **kw: pytest.fail("başlatılmamalı"))

@@ -42,6 +42,7 @@ ApplicationWindow {
     Connections {
         target: updateVM
         function onPopupRequested() { updateDialog.open() }
+        function onQuitRequested() { Qt.quit() }                       // kurulum başladı: uygulama kapanır, kurulum üstüne yazar
     }
 
     // Klasör Seçim Diyaloğu

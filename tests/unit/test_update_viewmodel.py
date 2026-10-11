@@ -122,23 +122,88 @@ def test_a_second_check_while_one_runs_is_ignored(qapp, tmp_path):
     assert calls == [1]
 
 
-def test_download_opens_the_installer_in_the_browser_and_falls_back_to_the_release_page(qapp, tmp_path, monkeypatch):
+def make_updating_vm(tmp_path, download, launcher):
+    return UpdateViewModel(check=lambda: info(), preferences_file=tmp_path / "updates.json", download=download, launcher=launcher)
+
+
+def test_update_downloads_verifies_launches_the_installer_and_asks_the_app_to_quit(qapp, tmp_path):
+    launched, quits, states = [], [], []
+
+    def download(update_info, progress):
+        for percent in (10, 60, 100):
+            progress(percent)
+        return tmp_path / "GitCleanArchiver-Setup-99.0.0.exe"
+    vm = make_updating_vm(tmp_path, download, launched.append)
+    vm.quitRequested.connect(lambda: quits.append(True))
+    vm.stateChanged.connect(lambda: states.append(vm.downloadProgress))
+    run_check(vm, manual=True)
+    assert vm.canInstall is True and vm.isDownloading is False
+    vm.startUpdate()
+    assert vm.isDownloading is True
+    assert pump_until(lambda: quits)
+    assert launched == [tmp_path / "GitCleanArchiver-Setup-99.0.0.exe"] and {10, 60, 100} <= set(states)
+
+
+def test_a_failed_download_shows_the_error_and_neither_launches_nor_quits(qapp, tmp_path):
+    launched, quits = [], []
+
+    def download(update_info, progress):
+        raise UpdateCheckError("İndirilen dosya doğrulanamadı; özet uyuşmuyor.")
+    vm = make_updating_vm(tmp_path, download, launched.append)
+    vm.quitRequested.connect(lambda: quits.append(True))
+    run_check(vm, manual=True)
+    vm.startUpdate()
+    assert pump_until(lambda: vm.errorMessage != "")
+    assert vm.errorMessage == "İndirilen dosya doğrulanamadı; özet uyuşmuyor." and vm.isDownloading is False
+    assert launched == [] and quits == []
+    vm.startUpdate()                                                                   # yeniden denenebilir
+    assert vm.isDownloading is True and vm.errorMessage == ""
+    assert pump_until(lambda: vm.errorMessage != "")
+
+
+def test_a_launcher_failure_is_reported_and_the_app_stays_open(qapp, tmp_path):
+    quits = []
+
+    def launcher(path):
+        raise UpdateCheckError("Kurulum dosyası bulunamadı.")
+    vm = make_updating_vm(tmp_path, lambda i, p: tmp_path / "GitCleanArchiver-Setup-99.0.0.exe", launcher)
+    vm.quitRequested.connect(lambda: quits.append(True))
+    run_check(vm, manual=True)
+    vm.startUpdate()
+    assert pump_until(lambda: vm.errorMessage != "")
+    assert vm.errorMessage == "Kurulum dosyası bulunamadı." and quits == []
+
+
+def test_update_without_an_installer_asset_opens_the_release_page_and_never_downloads(qapp, tmp_path, monkeypatch):
     opened = []
     monkeypatch.setattr(module.QDesktopServices, "openUrl", staticmethod(lambda url: opened.append(url.toString())))
-    vm = make_vm(tmp_path, info())
-    vm.openDownload()
-    assert opened == []                                                         # bilgi yokken hiçbir şey açılmaz
-    run_check(vm, manual=True)
-    vm.openDownload()
-    assert opened[-1].endswith("GitCleanArchiver-Setup-99.0.0.exe")
-    vm.openReleasePage()
-    assert opened[-1].endswith("/releases/tag/v99.0.0")
     no_asset = info()
     object.__setattr__(no_asset, "download_url", "")
-    vm = make_vm(tmp_path, no_asset)
+    vm = UpdateViewModel(check=lambda: no_asset, preferences_file=tmp_path / "updates.json",
+                         download=lambda i, p: pytest.fail("indirilmemeli"), launcher=lambda p: pytest.fail("başlatılmamalı"))
+    vm.startUpdate()
+    assert opened == []                                                                # bilgi yokken hiçbir şey açılmaz
     run_check(vm, manual=True)
-    vm.openDownload()
-    assert opened[-1].endswith("/releases/tag/v99.0.0") and "tarayıcıda açılır" in vm.installerLabel
+    vm.startUpdate()
+    assert opened[-1].endswith("/releases/tag/v99.0.0") and vm.canInstall is False and vm.isDownloading is False
+
+
+def test_a_second_start_while_downloading_is_ignored(qapp, tmp_path):
+    import threading
+    release_download, started = threading.Event(), []
+
+    def download(update_info, progress):
+        started.append(1)
+        release_download.wait(10)
+        return tmp_path / "GitCleanArchiver-Setup-99.0.0.exe"
+    vm = make_updating_vm(tmp_path, download, lambda path: None)
+    run_check(vm, manual=True)
+    vm.startUpdate()
+    vm.startUpdate()
+    pump_until(lambda: started, timeout=3)
+    release_download.set()
+    assert pump_until(lambda: vm._worker.isFinished())
+    assert started == [1]                                                              # ikinci tık ikinci indirme başlatmadı
 
 
 # ---- gerçek pencerede -----------------------------------------------------------------------------------------------------
@@ -176,6 +241,7 @@ def test_popup_shows_the_new_version_and_the_buttons_act_on_the_view_model(qapp,
     assert window.findChild(QObject, "updateHeadline").property("text") == "GitClean Archiver v99.0.0 yayınlandı"
     dialog_source = (Path(__file__).resolve().parents[2] / "src/qml_ui/qml/components/UpdateDialog.qml").read_text(encoding="utf-8")
     assert "textFormat: Text.PlainText" in dialog_source                          # sürüm notunda biçim / bağlantı çalışmaz
+    assert window.findChild(QObject, "downloadButton").property("text") == "Güncelle"
     QMetaObject.invokeMethod(window.findChild(QObject, "skipVersionButton"), "clicked")
     for _ in range(40):
         QCoreApplication.processEvents()
@@ -218,3 +284,22 @@ def test_settings_page_has_a_manual_check_button_and_shows_the_status(qapp, monk
     for _ in range(20):
         QCoreApplication.processEvents()
     assert find("updateStatus").property("text") == f"Güncelsiniz: v{__version__} en son sürüm."
+
+
+def test_update_button_starts_the_download_and_the_dialog_cannot_be_dismissed_meanwhile(qapp, monkeypatch, tmp_path):
+    import threading
+    engine, window, vm = open_app(qapp, monkeypatch)
+    hold, launched = threading.Event(), []
+    vm._preferences_file = tmp_path / "updates.json"
+    vm._info = info()
+    vm._download = lambda update_info, progress: (progress(40), hold.wait(10), tmp_path / "GitCleanArchiver-Setup-99.0.0.exe")[2]
+    vm._launcher = launched.append
+    vm.stateChanged.emit()
+    vm.popupRequested.emit()
+    pump_until(lambda: window.findChild(QObject, "updateDialog").property("opened") is True, timeout=5)
+    QMetaObject.invokeMethod(window.findChild(QObject, "downloadButton"), "clicked")
+    assert pump_until(lambda: vm.downloadProgress == 40)
+    assert window.findChild(QObject, "downloadButton").property("text") == "İndiriliyor… %40"
+    assert window.findChild(QObject, "laterButton").property("enabled") is False and window.findChild(QObject, "downloadProgress").property("visible") is True
+    hold.set()
+    assert pump_until(lambda: launched)
