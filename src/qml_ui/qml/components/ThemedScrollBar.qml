@@ -10,6 +10,13 @@ ScrollBar {
     implicitWidth: AppTheme.scrollGutter - 4
     minimumSize: 0.08
 
+    // ScrollView'a atanan özel çubuğa Qt varsayılan konumlandırmayı uygulamaz (çubuk sol üstte 10x4 px kalırdı);
+    // sağ kenara ve içerik yüksekliğine kendimiz oturturuz. ListView / Flickable'da Qt zaten konumlandırır.
+    readonly property bool inScrollView: parent !== null && parent.availableHeight !== undefined
+    Binding { target: root; property: "x"; value: root.parent.width - root.width; when: root.inScrollView }
+    Binding { target: root; property: "y"; value: root.parent.topPadding; when: root.inScrollView }
+    Binding { target: root; property: "height"; value: root.parent.availableHeight; when: root.inScrollView }
+
     // XP kaydırma çubuğu: açık mavi gövde, ince mavi kenar; üzerine gelince turuncu
     contentItem: Rectangle {
         implicitWidth: AppTheme.scrollGutter - 4
