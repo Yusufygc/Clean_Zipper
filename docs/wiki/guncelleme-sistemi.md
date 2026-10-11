@@ -15,6 +15,13 @@ uygulama kapanır ve kurulum dosyası sessiz kurulumla üstüne yazar; uygulama 
 5. **Kurulum:** `/SILENT /SUPPRESSMSGBOXES /CLOSEAPPLICATIONS /LOG=<klasör>\install.log` ile bağımsız süreç başlatılır (kabuk yok), `quitRequested` ile uygulama kapanır.
    `packaging/GitCleanArchiver.iss` içindeki `Check: RelaunchAfterUpdate` kurulumdan sonra uygulamayı yeniden açar (`/VERYSILENT` olan derleme sonrası denemede açmaz).
 
+### Windows başlatmayı engellerse
+
+`launch_installer` önce doğrudan süreç oluşturur (`CreateProcess`), `WinError 4551` (Akıllı Uygulama Denetimi) gelirse Gezgin'in çift tıklama yolunu (`ShellExecute`) dener; ikisi de engellenirse
+`InstallerBlockedError` fırlatır. `UpdateViewModel` bu durumda **otomatik yeniden dener**: 15 sn aralıkla en çok 40 kez (10 dk), pencerede "Windows bekleniyor…" yazar ve **Beklemeyi Bırak** düğmesi çıkar; engel kalkınca kurulum kendiliğinden başlar ve uygulama kapanır (tam otomatik yol). Süre dolarsa ya da kullanıcı beklemeyi bırakırsa dosya **Gezgin'de seçili gösterilir** ve pencere şunu yazar: "Windows kurulum dosyasını şimdilik engelledi... çift tıklayarak kurabilirsiniz;
+olmazsa birkaç dakika sonra yeniden deneyin" (**Sürüm Sayfası** düğmesi de çıkar). Yani otomatik yol engellenirse akış P013'teki elle kuruluma (indir, çift tıkla) düşer. Neden: 2026-10-11'de CI'da derlenen v2.1.1 kurulum dosyası
+uygulamadan başlatılınca engellendi (olay 3077, başlatan süreç kurulu `GitCleanArchiver.exe`); yaklaşık 10 dakika sonra **aynı dosya** (aynı SHA-256) hem Gezgin'den hem `CreateProcess` ile başladı ([[windows-exe-dagitim]]).
+
 ## Katmanlar
 
 `UpdateDialog.qml` → `UpdateViewModel` (`src/qml_ui/viewmodels/update_viewmodel.py`) → `update_service` (`src/services/update_service.py`; projeden bağımsız, `ProjectService` kullanmaz).
@@ -43,3 +50,4 @@ Tercihler ayrı dosyada (`~/.gitclean/updates.json`: açılış denetimi, atlana
 - Yalnızca Windows.
 - Release iş akışı ve uygulama içi indirme / kurulum zinciri gerçek bir Release ile hiç koşmadı (doğrulanan: birim testleri, sahte sunucu ile indirme / doğrulama, kurulum dosyasının sessiz kurulumu, `RelaunchAfterUpdate`'in derlenmesi).
 - İndirme sürerken pencere kapatılamaz; iptal düğmesi yok.
+- Engelin kalkması zamana ya da başlatan sürece bağlı olabilir; hangisi olduğu ayrıştırılamadı (tek gözlem: ~10 dk). Otomatik yeniden deneme bu gözleme dayanır ve gerçek engelde denenmedi; engel sürerse kullanıcı dosyayı elle çalıştırır.
