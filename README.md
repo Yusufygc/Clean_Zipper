@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
 [![CI](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml/badge.svg)](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/Version-2.1.0-orange.svg)]()
+[![Version](https://img.shields.io/badge/Version-2.1.1-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
