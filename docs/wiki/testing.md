@@ -51,6 +51,13 @@ Birim testleri tek başına yetmez: her aşamada sonuçlar, **farklı bir araçl
 | Ajan görevleri | öğe sayısı = bulgu kalemleri toplamı (30 depo, 379 görev, 1911 öğe); kopya projede 29 basit import elle silinip `verify` ile kapanış; sır değeri sızıntısı taraması | 0 uyuşmazlık, 29/29 kapandı, yeni bulgu 0, gerçek sızıntı 0 |
 | Rapor sayıları | analiz bulgularının `Counter`'ı, 44 sır bulgusunun kaynak satırı | birebir; 0 sızıntı |
 
+## Uçtan uca QA ve erişilebilirlik
+- `QA_RAPORU.md` (kök dizin) gerçek QML penceresi + `QTest.mouseClick` ile yapılan uçtan uca denetimin kaydıdır; düzeltmelerin gerileme testleri `tests/unit/test_qa_fixes.py` içindedir.
+- **QML ekli özellikleri (`Accessible.name`) `item.property(...)` ile okunamaz;** ölçüm için `QAccessible.setActive(True)` + `QAccessible.queryAccessibleInterface(item).text(QAccessible.Text.Name)` kullanılır. İlk QA turunda yanlış yöntemle "0 öğe" sayılmıştı (kaynakta gerçekten `Accessible` yoktu, sonuç doğru çıktı, yöntem yanlıştı).
+- Pencere nesnesi `contentItem()` / `grabWindow` gibi `QQuickWindow` yöntemlerini yalnızca `QtQuick` modülü uygulamadan **önce** içe aktarılmışsa sunar (aksi hâlde `QWindow` olarak çözülür).
+- Ekransız (`offscreen`) modda SVG simgeleri boş çizilir ve Qt, stil özelleştirmesi hakkında uyarı verir; görsel ve uyarı kontrolü gerçek platformda (`QT_QPA_PLATFORM=windows`) yapılır. İlk QA turundaki 48 uyarı yalnızca ekransız ortam artefaktıydı.
+- "Kaldı" çıkan bir kontrol hata sayılmadan önce bağımsız bir kaynakla doğrulanır: ilk turdaki 15 başarısızlığın 6'sı test düzeneğinin hatası ya da beklenen davranıştı.
+
 ## Davranış korunumu (refactor oracle)
 Refactor öncesi commit `git worktree` ile ayrı bir klasöre alınır; aynı betik iki kod tabanında 8 gerçek projede çalıştırılır ve tam teşhis çıktısı (her bulgunun kategori, öncelik, başlık, dosya, açıklama, tüm metadata'sı, skorlar, dil istatistikleri, atlananlar) anahtarları sıralanmış JSON olarak `cmp` ile karşılaştırılır. Her adımdan sonra tekrarlanır; sonuç 8/8 birebir olmalıdır. `build_exe.py` gibi dış araca bağlı betikler sahte modülle (örn. sahte `PyInstaller`) eski ve yeni sürümde çalıştırılıp argüman ve çıktı karşılaştırılır.
 

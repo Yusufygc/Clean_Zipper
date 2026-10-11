@@ -80,6 +80,15 @@ Item {
                     Rectangle {
                         readonly property bool isCur: root.activeMode === modelData.idx
                         implicitWidth: modeRow.implicitWidth + 20
+                        activeFocusOnTab: true
+                        Accessible.role: Accessible.Button
+                        Accessible.name: modelData.label
+                        Accessible.checked: isCur
+                        Accessible.onPressAction: root.activeMode = modelData.idx
+                        Keys.onReturnPressed: root.activeMode = modelData.idx
+                        Keys.onEnterPressed: root.activeMode = modelData.idx
+                        Keys.onSpacePressed: root.activeMode = modelData.idx
+                        FocusRing {}
                         implicitHeight: 34
                         radius: AppTheme.radiusBase
                         color: isCur ? AppTheme.surfaceActive : (modeMouse.containsMouse ? AppTheme.surfaceHover : AppTheme.surface)
@@ -158,7 +167,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 6
                     radius: 3
-                    color: AppTheme.isDark ? "#1E293B" : "#E2E8F0"
+                    color: AppTheme.trackBg
 
                     Rectangle {
                         width: parent.width * (archiveVM.progressPercent / 100)
@@ -189,7 +198,9 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
+            rightPadding: AppTheme.scrollGutter
             contentWidth: availableWidth
+            ScrollBar.vertical: ThemedScrollBar { }
             // Uçlarda dur: içerik uçtan öteye sürüklenip bırakılınca geri sıçramasın
             Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
             // İçerik yüksekliği düzenin gerçek yüksekliğidir; aksi hâlde son satır kesik kalır (kaydırma ucu erken biter)
@@ -244,6 +255,15 @@ Item {
                                         readonly property bool isSel: archiveVM.selectedProfile === modelData.name
                                         Layout.fillWidth: true
                                         implicitHeight: profCol.implicitHeight + 20
+                                        activeFocusOnTab: true
+                                        Accessible.role: Accessible.RadioButton
+                                        Accessible.name: modelData.name
+                                        Accessible.checked: isSel
+                                        Accessible.onPressAction: archiveVM.selectProfile(modelData.name)
+                                        Keys.onReturnPressed: archiveVM.selectProfile(modelData.name)
+                                        Keys.onEnterPressed: archiveVM.selectProfile(modelData.name)
+                                        Keys.onSpacePressed: archiveVM.selectProfile(modelData.name)
+                                        FocusRing {}
                                         radius: AppTheme.radiusBase
                                         color: isSel ? AppTheme.surfaceActive : (profMouse.containsMouse ? AppTheme.surfaceHover : AppTheme.surface)
                                         border.color: isSel ? AppTheme.accent : AppTheme.border
@@ -639,6 +659,40 @@ Item {
                                 renderType: Text.NativeRendering
                             }
                             Item { Layout.fillWidth: true }
+                        }
+
+                        // Hassas dosya uyarısı: paylaşılacak zip / kopyaya .env, özel anahtar gibi dosyalar girdiyse
+                        ColumnLayout {
+                            objectName: "sensitiveWarning"
+                            Layout.fillWidth: true
+                            spacing: 4
+                            visible: archiveVM.lastResult.sensitiveCount > 0
+
+                            Text {
+                                text: "Uyarı: bu çıktı " + archiveVM.lastResult.sensitiveCount + " hassas dosya içeriyor. " +
+                                      "Paylaşmadan önce 'Müşteri Teslimi' profilini düşünün ya da bu dosyaları çıkarın:"
+                                color: AppTheme.warning
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSizeSmall
+                                font.bold: true
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                renderType: Text.NativeRendering
+                            }
+
+                            Repeater {
+                                model: archiveVM.lastResult.sensitiveFiles
+
+                                Text {
+                                    text: "- " + modelData
+                                    color: AppTheme.textSecondary
+                                    font.family: AppTheme.fontFamily
+                                    font.pixelSize: 12
+                                    elide: Text.ElideMiddle
+                                    Layout.fillWidth: true
+                                    renderType: Text.NativeRendering
+                                }
+                            }
                         }
 
                         // Eklenemeyen Hatalı Dosyalar Listesi (Varsa)

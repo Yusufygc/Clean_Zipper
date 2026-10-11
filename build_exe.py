@@ -30,7 +30,10 @@ def clean_build_artifacts(root_dir: Path):
     """Eski build / dist klasörlerini ve .spec dosyasını siler."""
     build_dir = root_dir / "build"
     dist_dir = root_dir / "dist"
-    spec_file = root_dir / "GitCleanArchiverPro.spec"
+    spec_files = [
+        root_dir / "GitCleanArchiver.spec",
+        root_dir / "GitCleanArchiverPro.spec",
+    ]
 
     print("\n[*] Cleaning old build directories...")
     for path in [build_dir, dist_dir]:
@@ -40,12 +43,13 @@ def clean_build_artifacts(root_dir: Path):
                 print(f"  - Cleaned directory: {path.name}")
             except Exception as e:
                 print(f"  - Warning cleaning {path.name}: {e}")
-    if spec_file.exists():
-        try:
-            spec_file.unlink()
-            print("  - Cleaned old .spec file.")
-        except Exception as e:
-            print(f"  - Warning cleaning .spec file: {e}")
+    for spec_file in spec_files:
+        if spec_file.exists():
+            try:
+                spec_file.unlink()
+                print(f"  - Cleaned old .spec file: {spec_file.name}")
+            except Exception as e:
+                print(f"  - Warning cleaning .spec file: {e}")
 
 
 # (kaynak, paketteki hedef): QML arayüzü dosyaları, arayüz simgeleri ve uygulama kaynakları (kurallar, profiller, simge).
@@ -82,7 +86,7 @@ def pyinstaller_arguments(root_dir: Path, entry_point: Path):
     version_info_path = root_dir / "version_info.txt"
     arguments = [
         str(entry_point),
-        "--name=GitCleanArchiverPro",
+        "--name=GitCleanArchiver",
         "--onefile",           # Tek dosya (dist klasörüne bağımlılığı kaldırır)
         "--windowed",          # Konsol penceresini gizle
         "--clean",             # Önbelleği temizle
@@ -109,7 +113,7 @@ def run_pyinstaller(arguments, dist_dir: Path):
         print("\n" + "=" * 60)
         print("[OK] BUILD COMPLETED SUCCESSFULLY!")
         print(f"[*] Output Directory: {dist_dir}")
-        print(f"[*] Executable File: {dist_dir / 'GitCleanArchiverPro.exe'}")
+        print(f"[*] Executable File: {dist_dir / 'GitCleanArchiver.exe'}")
         print("=" * 60)
     except Exception as e:
         print(f"\n[X] Compilation failed: {e}")
@@ -118,7 +122,7 @@ def run_pyinstaller(arguments, dist_dir: Path):
 
 def build_executable():
     print("=" * 60)
-    print("      GitClean Archiver Pro - EXE Build Wizard      ")
+    print("      GitClean Archiver - EXE Build Wizard      ")
     print("=" * 60)
 
     # Project root directory

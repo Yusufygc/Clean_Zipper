@@ -39,6 +39,8 @@ Item {
         anchors.margins: 20
         contentWidth: availableWidth
         clip: true
+        rightPadding: AppTheme.scrollGutter
+        ScrollBar.vertical: ThemedScrollBar { }
         // Uçlarda dur: içerik uçtan öteye sürüklenip bırakılınca geri sıçramasın
         Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
         // İçerik yüksekliği düzenin gerçek yüksekliğidir; aksi hâlde son satır kesik kalır (kaydırma ucu erken biter)
@@ -132,6 +134,7 @@ Item {
                     spacing: 12
 
                     AppCheckBox {
+                        accessibleName: ".gitignore kurallarını uygula"
                         checked: settingsVM.respectGitignore
                         onToggled: settingsVM.setRespectGitignore(checked)
                     }
@@ -314,6 +317,7 @@ Item {
                                     spacing: 10
 
                                     AppCheckBox {
+                                        accessibleName: modelData.name
                                         checked: modelData.enabled
                                         onToggled: settingsVM.toggleAnalyzer(modelData.id, checked)
                                     }

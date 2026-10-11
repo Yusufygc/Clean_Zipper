@@ -52,16 +52,29 @@ ApplicationWindow {
 
         // ══════════════════════════════════════════════════════════
         // 1. ÜST BAŞLIK & GEZİNME ÇUBUĞU (HEADER & NAVIGATION)
+        // Windows XP (Luna): mavi gradyan başlık; seçili sekme içerikle aynı bej, üstünde turuncu çizgi
         // ══════════════════════════════════════════════════════════
         Rectangle {
+            id: header
             Layout.fillWidth: true
             Layout.preferredHeight: 56
-            color: AppTheme.surfaceElevated
-            border.color: AppTheme.border
-            border.width: 1
+            border.width: 0
 
-            Behavior on color { ColorAnimation { duration: AppTheme.animFast } }
-            Behavior on border.color { ColorAnimation { duration: AppTheme.animFast } }
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: AppTheme.titleTop }
+                GradientStop { position: 0.45; color: AppTheme.titleMid }
+                GradientStop { position: 1.0; color: AppTheme.titleBottom }
+            }
+
+            // Sekmelerin altındaki ayırıcı çizgi; seçili sekme bunu kapatarak içeriğe kaynaşır
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 1
+                color: AppTheme.border
+                z: 0
+            }
 
             Item {
                 id: headerBar
@@ -79,33 +92,35 @@ ApplicationWindow {
                     SvgIcon {
                         source: AppIcons.shield
                         size: 24
-                        color: AppTheme.accent
+                        color: AppTheme.titleText
                     }
 
                     Text {
                         visible: !window.compactHeader
                         text: AppStrings.appTitle
-                        color: AppTheme.textPrimary
+                        color: AppTheme.titleText
                         font.family: AppTheme.fontFamily
                         font.pixelSize: AppTheme.fontSizeMedium
                         font.bold: true
+                        style: Text.Raised                      // XP başlık yazısındaki hafif gölge
+                        styleColor: "#0A2A7A"
                         renderType: Text.NativeRendering
                     }
 
                     Badge {
                         visible: !window.compactHeader
                         text: AppStrings.appVersion
-                        textColor: AppTheme.accent
-                        badgeColor: AppTheme.surfaceActive
+                        textColor: AppTheme.titleText
+                        badgeColor: Qt.rgba(1, 1, 1, 0.2)
+                        borderColor: Qt.rgba(1, 1, 1, 0.45)
                     }
                 }
 
-                // Orta: Sekme Menüsü (Segmented Nav)
-                // Orta: çubuğun tam ortasında; solda / sağda yer yoksa komşularına çarpmayacak kadar kayar
+                // Orta: XP sekmeleri; çubuğun alt kenarına oturur, yer yoksa komşularına çarpmayacak kadar kayar
                 RowLayout {
                     id: tabNav
                     objectName: "tabNav"
-                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.bottom: parent.bottom
                     x: Math.max(headerLeft.x + headerLeft.width + headerBar.gap,
                                 Math.min((headerBar.width - width) / 2, headerRight.x - width - headerBar.gap))
                     spacing: window.compactHeader ? 2 : 4
@@ -125,21 +140,65 @@ ApplicationWindow {
                             readonly property bool isHovered: tabMouse.containsMouse
 
                             implicitWidth: tabRow.implicitWidth
-                            implicitHeight: 34
-                            radius: AppTheme.radiusBase
+                            implicitHeight: 36
+                            radius: 0
+                            topLeftRadius: 5
+                            topRightRadius: 5
+                            z: isActive ? 2 : 1
 
-                            color: isActive 
-                                   ? AppTheme.surfaceActive 
-                                   : (isHovered ? AppTheme.surfaceHover : "transparent")
+                            // Klavye ve erişilebilirlik: Tab ile odaklanır, Enter / Boşluk sekmeyi açar
+                            activeFocusOnTab: true
+                            Accessible.role: Accessible.PageTab
+                            Accessible.name: modelData.title
+                            Accessible.selected: isActive
+                            Accessible.onPressAction: window.currentTab = modelData.idx
+                            Keys.onReturnPressed: window.currentTab = modelData.idx
+                            Keys.onEnterPressed: window.currentTab = modelData.idx
+                            Keys.onSpacePressed: window.currentTab = modelData.idx
+                            FocusRing {}
 
-                            border.color: isActive ? AppTheme.border : "transparent"
+                            // Seçili: içerikle aynı bej. Pasif: mavi gradyan (üzerine gelince açılır)
+                            color: isActive ? AppTheme.tabActiveBg : "transparent"
+                            gradient: isActive ? null : idleGradient
+                            property Gradient idleGradient: Gradient {
+                                GradientStop { position: 0.0; color: tabBtn.isHovered ? AppTheme.tabIdleHover : AppTheme.tabIdleTop }
+                                GradientStop { position: 1.0; color: AppTheme.tabIdleBottom }
+                            }
+
+                            border.color: isActive ? AppTheme.border : AppTheme.tabIdleBorder
                             border.width: 1
 
-                            Behavior on color { ColorAnimation { duration: AppTheme.animFast } }
+                            // Seçili sekmenin alt kenarlığını kapatır (içeriğe kaynaşma)
+                            Rectangle {
+                                visible: tabBtn.isActive
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                anchors.leftMargin: 1
+                                anchors.rightMargin: 1
+                                height: 2
+                                color: AppTheme.tabActiveBg
+                            }
+
+                            // XP seçili sekme üst vurgusu
+                            Rectangle {
+                                visible: tabBtn.isActive
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.leftMargin: 1
+                                anchors.rightMargin: 1
+                                anchors.topMargin: 1
+                                height: 3
+                                topLeftRadius: 4
+                                topRightRadius: 4
+                                color: AppTheme.tabActiveLine
+                            }
 
                             RowLayout {
                                 id: tabRow
                                 anchors.centerIn: parent
+                                anchors.verticalCenterOffset: tabBtn.isActive ? 1 : 2
                                 spacing: 8
 
                                 // İç boşluk satırın kendi içinde: sekme genişliği düzey değişiminden bağımsız hesaplanır
@@ -148,20 +207,16 @@ ApplicationWindow {
                                 SvgIcon {
                                     source: modelData.icon
                                     size: 16
-                                    color: tabBtn.isActive 
-                                           ? AppTheme.accent 
-                                           : (tabBtn.isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
+                                    color: tabBtn.isActive ? AppTheme.accent : AppTheme.tabIdleText
                                 }
 
                                 Text {
                                     visible: tabBtn.isActive || !window.iconOnlyTabs
                                     text: modelData.title
-                                    color: tabBtn.isActive 
-                                           ? AppTheme.textPrimary 
-                                           : (tabBtn.isHovered ? AppTheme.textPrimary : AppTheme.textSecondary)
+                                    color: tabBtn.isActive ? AppTheme.tabActiveText : AppTheme.tabIdleText
                                     font.family: AppTheme.fontFamily
                                     font.pixelSize: AppTheme.fontSizeBase
-                                    font.bold: tabBtn.isActive
+                                    font.bold: true
                                     renderType: Text.NativeRendering
                                 }
 
@@ -187,7 +242,7 @@ ApplicationWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 12
 
-                    // Proje Seçim Butonu
+                    // Proje Seçim Butonu: proje yokken yeşil "Başlat" düğmesi, varken bej düğme
                     CustomButton {
                         objectName: "projectButton"
                         // Uzun proje adı başlığı taşırmasın
@@ -202,8 +257,11 @@ ApplicationWindow {
                     // Canlı Tema Değiştirme Butonu
                     IconButton {
                         objectName: "themeButton"
+                        tooltip: AppTheme.isDark ? "Açık temaya geç" : "Koyu temaya geç"
                         iconSource: AppTheme.isDark ? AppIcons.sun : AppIcons.moon
-                        iconColor: AppTheme.accent
+                        iconColor: AppTheme.titleText
+                        color: isHovered ? Qt.rgba(1, 1, 1, 0.22) : "transparent"
+                        border.color: isHovered ? Qt.rgba(1, 1, 1, 0.6) : "transparent"
                         onClicked: AppTheme.toggleTheme()
                     }
                 }

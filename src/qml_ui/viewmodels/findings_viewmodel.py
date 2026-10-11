@@ -7,12 +7,22 @@ from PySide6.QtCore import (
     QObject, QThread, Signal, Slot, Property,
     QAbstractListModel, QModelIndex, Qt, QByteArray
 )
+from src.qml_ui.viewmodels.findings_groups import FindingsRowsModel
 from src.models.analysis_models import AnalysisResult, ProjectAnalysis
 from src.services import audit_evidence as source_evidence
 from src.services.project_service import ProjectService
 from src.services.audit_catalog import RULE_EFFORT, DEFAULT_EFFORT, CATEGORY_NAMES, RULE_LABELS
 
 logger = logging.getLogger(__name__)
+
+
+_TURKISH_FOLD = str.maketrans("ıüöçşğ", "iuocsg")
+
+
+def fold_turkish(text: str) -> str:
+    """Arama için Türkçe duyarlı katlama: `İ`→`i`, `I`→`ı` (Python'un `lower()`'ı `İ`'yi `i̇` yapar, `I`'yı `i`),
+    sonra aksan duyarsız (`ş→s`, `ı→i` ...): `ŞİFRE`, `Şifre`, `şifre` ve `sifre` aynı şeyi bulur."""
+    return (text or "").replace("İ", "i").replace("I", "ı").lower().translate(_TURKISH_FOLD)
 
 
 def is_sensitive_finding(finding: AnalysisResult) -> bool:
@@ -137,6 +147,15 @@ class FindingsListModel(QAbstractListModel):
                 cls.ApproximateRole: "approximate", cls.RelPathRole: "relPath",
                 cls.RuleLabelRole: "ruleLabel"}
 
+    @property
+    def filtered_items(self) -> List[Dict[str, Any]]:
+        """Süzgeçlerden geçen bulgular (gruplanmış görünüm modeli bunu kullanır)."""
+        return self._filtered_items
+
+    @property
+    def filters_active(self) -> bool:
+        return self._severity_filter != "ALL" or self._category_filter != "ALL" or bool(self._search_query)
+
     def set_items(self, items: List[Dict[str, Any]]):
         self._all_items = items
         self._apply_filter()
@@ -150,7 +169,7 @@ class FindingsListModel(QAbstractListModel):
         self._apply_filter()
 
     def set_search_query(self, query: str):
-        self._search_query = (query or "").strip().lower()
+        self._search_query = fold_turkish((query or "").strip())
         self._apply_filter()
 
     def _apply_filter(self):
@@ -167,7 +186,7 @@ class FindingsListModel(QAbstractListModel):
 
             # 3. Metin araması
             if self._search_query:
-                haystack = f"{it['title']} {it['description']} {it['fileName']} {it['rule']}".lower()
+                haystack = fold_turkish(f"{it['title']} {it['description']} {it['fileName']} {it['rule']}")
                 if self._search_query not in haystack:
                     continue
 
@@ -216,6 +235,7 @@ class FindingsViewModel(QObject):
         self.service = project_service
         self._worker: Optional[DiagnoseWorker] = None
         self._model = FindingsListModel(self)
+        self._rows = FindingsRowsModel(self._model, self)
 
         self._is_diagnosing = False
         self._progress_pct = 0
@@ -237,6 +257,11 @@ class FindingsViewModel(QObject):
     @Property(QObject, constant=True)
     def model(self) -> FindingsListModel:
         return self._model
+
+    @Property(QObject, constant=True)
+    def rows(self) -> FindingsRowsModel:
+        """Listenin görünüm modeli: kurala göre gruplanmış başlık ve bulgu satırları."""
+        return self._rows
 
     @Property(bool, notify=diagnosingChanged)
     def isDiagnosing(self) -> bool:

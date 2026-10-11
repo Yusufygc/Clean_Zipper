@@ -184,7 +184,7 @@ class ScanViewModel(QObject):
 
     def _on_finished(self, data: Dict[str, Any]):
         self._is_scanning = False
-        self._health_score = int(data.get("health_score", 0))
+        self._health_score = int(round(float(data.get("health_score", 0))))      # kırpma değil yuvarlama (rapor ile aynı)
         self._health_status = str(data.get("health_status", "—"))
         self._total_files = int(data.get("total_files", 0))
         self._total_size_mb = float(data.get("total_size_mb", 0.0))

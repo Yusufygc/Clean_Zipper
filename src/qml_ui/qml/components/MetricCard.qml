@@ -10,7 +10,7 @@ CardFrame {
     property string subtitle: ""
     property url iconSource: ""
     property color iconColor: AppTheme.accent
-    property color iconBg: AppTheme.isDark ? "#111827" : "#F1F5F9"
+    property color iconBg: AppTheme.tileBg
 
     padding: 16
     implicitHeight: 92

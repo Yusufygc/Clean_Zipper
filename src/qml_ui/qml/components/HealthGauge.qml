@@ -47,7 +47,7 @@ Item {
             // 1. Arka plan çemberi
             ctx.beginPath()
             ctx.arc(centerX, centerY, radius, startAngle, endAngle, false)
-            ctx.strokeStyle = AppTheme.isDark ? "#1E293B" : "#E2E8F0"
+            ctx.strokeStyle = AppTheme.trackBg.toString()
             ctx.lineWidth = lineWidth
             ctx.lineCap = "round"
             ctx.stroke()
@@ -63,6 +63,12 @@ Item {
                 ctx.stroke()
             }
         }
+    }
+
+    // Canvas yalnızca çizimde tema rengini okur; tema değişince kendiliğinden yeniden çizilmez (iz ve yay eski temada kalırdı)
+    Connections {
+        target: AppTheme
+        function onIsDarkChanged() { canvas.requestPaint() }
     }
 
     // Merkez Bilgi Bloğu
@@ -95,7 +101,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.status !== "" ? root.status : "—"
             textColor: root.scoreColor
-            badgeColor: AppTheme.isDark ? "#111827" : "#F1F5F9"
+            badgeColor: AppTheme.tileBg
             borderColor: root.scoreColor
             fontSize: 12
         }

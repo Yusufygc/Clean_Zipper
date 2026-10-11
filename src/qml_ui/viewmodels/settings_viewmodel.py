@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QObject, Signal, Slot, Property
+from src.core.errors import GitCleanError
 from src.core.registry import default_registry, load_builtin_analyzers
 from src.doctors.project_doctor import ProjectDoctor
 from src.services import app_settings
@@ -167,11 +168,14 @@ class SettingsViewModel(QObject):
     def resetToDefaults(self):
         """Tüm ayarları (eşikler, analizörler, kapatılan kurallar, ajan ayarları) varsayılana döndürür ve uygular."""
         self._settings = AppSettings()
-        self._apply("Ayarlar varsayılana döndürüldü.")
+        if self._apply("Ayarlar varsayılana döndürüldü."):
+            self.rulesChanged.emit()                  # eşikler değişti: sonuçlar yeniden hesaplanır
 
     @Slot()
     def applySettings(self):
-        self._apply("Ayarlar kaydedildi ve uygulandı. Sonuçları görmek için analizi yenileyin.")
+        refresh = " Analiz yenileniyor." if self.service.current_project else ""
+        if self._apply("Ayarlar kaydedildi ve uygulandı." + refresh):
+            self.rulesChanged.emit()                  # eşikler / .gitignore / analizörler değişti: sonuçlar yeniden hesaplanır
 
     # ── Slots: kural açma / kapama ──
 
@@ -253,7 +257,7 @@ class SettingsViewModel(QObject):
         try:
             result = self.service.verify_agent_tasks(target)
         except Exception as e:
-            logger.error("Ajan görevleri doğrulanırken hata: %s", e, exc_info=True)
+            logger.warning("Ajan görevleri doğrulanamadı: %s", e, exc_info=not isinstance(e, GitCleanError))
             self.taskExportError.emit(f"Doğrulama yapılamadı: {e}")
             return
         totals = result.get("totals", {})

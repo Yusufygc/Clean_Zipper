@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional, Callable, Dict, List, Mapping, Tuple
 
 from src.core.exclusions import is_excluded_dir, is_link
+from src.core.path_rules import secret_kind
 from src.services.archive_profiles import ArchiveProfile, load_profiles
 from src.utils.git_info import tracked_paths
 from src.utils.gitignore_parser import GitignoreParser
@@ -86,6 +87,11 @@ class ArchiveService:
         return not (is_excluded_dir(path, name, sibling_names) or (skip_dir is not None and Path(path) == skip_dir)
                     or self._is_ignored_dir(path))
 
+    @staticmethod
+    def _sensitive(files: List[Tuple[Path, Path]]) -> List[str]:
+        """Arşive / kopyaya giren hassas dosyalar (`.env`, özel anahtar ...): paylaşmadan önce kullanıcıya gösterilir."""
+        return sorted(rp.as_posix() for _, rp in files if secret_kind(rp.as_posix()))
+
     def _is_filtered(self, path: Path, relative: Path, profile: ArchiveProfile, skip_file: Optional[Path]) -> bool:
         """Dosya arşive girmeyecek mi: hedef zip'in kendisi, .gitignore kuralı ya da profil deseni."""
         if skip_file is not None and path.resolve() == skip_file:
@@ -126,7 +132,7 @@ class ArchiveService:
         output_path = Path(output_path).resolve()
 
         result = {'success': False, 'complete': False, 'total_files': 0, 'added_files': 0,
-                  'skipped_files': 0, 'failed_files': [], 'error': None, 'skipped_links': []}
+                  'skipped_files': 0, 'failed_files': [], 'error': None, 'skipped_links': [], 'sensitive_files': []}
         profile = self._resolve_profile(profile_name, result)
         if profile is None or self._refuse_if_gitignore_unreadable(result):
             return result
@@ -143,6 +149,7 @@ class ArchiveService:
         if self._refuse_if_gitignore_unreadable(result):             # iç içe .gitignore yürüyüşte yüklendi
             return result
         result['total_files'] = len(files_to_add)
+        result['sensitive_files'] = self._sensitive(files_to_add)
 
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -179,7 +186,7 @@ class ArchiveService:
         target_dir = Path(target_dir).resolve()
 
         result = {'success': False, 'complete': False, 'copied_files': 0,
-                  'skipped_files': 0, 'failed_files': [], 'error': None, 'skipped_links': []}
+                  'skipped_files': 0, 'failed_files': [], 'error': None, 'skipped_links': [], 'sensitive_files': []}
         if self._refuse_if_target_contains_source(source_dir, target_dir, result):
             return result
         profile = self._resolve_profile(profile_name, result)
@@ -191,6 +198,7 @@ class ArchiveService:
         if self._refuse_if_gitignore_unreadable(result):
             return result
         total = len(files_to_copy)
+        result['sensitive_files'] = self._sensitive(files_to_copy)
 
         try:
             target_dir.mkdir(parents=True, exist_ok=True)

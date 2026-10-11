@@ -1,11 +1,11 @@
-# 🚀 GitClean Archiver Pro
+# 🚀 GitClean Archiver
 
 > **Profesyonel Proje Yönetim, Analiz ve Optimizasyon Aracı**
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
 [![CI](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml/badge.svg)](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/Version-2.0.0-orange.svg)]()
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
+[![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)]()
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## 🎯 Genel Bakış
 
-**GitClean Archiver Pro**, yazılım projelerinizi analiz eden, gereksiz dosyaları tespit eden, `.gitignore` kurallarına uygun arşivleme yapan ve proje sağlığınızı puanlayan kapsamlı bir proje yönetim aracıdır.
+**GitClean Archiver**, yazılım projelerinizi analiz eden, gereksiz dosyaları tespit eden, `.gitignore` kurallarına uygun arşivleme yapan ve proje sağlığınızı puanlayan kapsamlı bir proje yönetim aracıdır.
 
 ### 🎪 Kullanım Senaryoları
 
@@ -172,12 +172,13 @@ gitclean-archiver-pro/
 │   └── fixtures/                 #    Test verileri
 │
 ├── resources/                    # 📦 Kaynaklar
-│   ├── icons/                    #    Uygulama ikonları
+│   ├── icons/                    #    Uygulama ikonu (app.svg kaynak, app.png, app_icon.ico)
 │   ├── templates/                #    Rapor şablonları
 │   └── profiles/                 #    Arşiv profilleri (JSON, gitignore sözdizimi)
 │
 ├── main.py                       # 🚀 Ana giriş noktası (QML arayüzü)
 ├── build_exe.py                  # 🔨 Build script'i
+├── build_icons.py                # 🎨 Uygulama ikonunu vektörden (app.svg) üretir: app.png + çok boyutlu app_icon.ico
 ├── requirements.txt              # 📋 Çalışma zamanı bağımlılıkları (tam sabit sürümler)
 ├── requirements-dev.txt          # 🧪 + test ve lint (pytest, ruff)
 ├── ruff.toml                     # 🧹 Lint ayarı (yalnızca kesin hatalar)
@@ -211,16 +212,16 @@ Kullanıcı → QML arayüzü (MainView.qml + ViewModel'ler)
 
 ### Gereksinimler
 
-- **Python** 3.8 veya üstü
+- **Python** 3.10 veya üstü
 - **pip** (Python paket yöneticisi)
-- **İşletim Sistemi**: Windows 10/11, Linux, macOS
+- **İşletim Sistemi**: Windows 10/11 (CI ve elle test bu platformda yapılır; Linux ve macOS doğrulanmadı, bağ / junction denetimi Windows'a özgü ayrıntılar içerir)
 
 ### Adım Adım Kurulum
 
 ```bash
 # 1. Projeyi klonlayın veya indirin
-git clone https://github.com/gitclean/archiver-pro.git
-cd gitclean-archiver-pro
+git clone https://github.com/Yusufygc/Clean_Zipper.git
+cd Clean_Zipper
 
 # 2. Sanal ortam oluşturun
 python -m venv venv
@@ -228,7 +229,7 @@ python -m venv venv
 # 3. Sanal ortamı aktifleştirin
 # Windows:
 venv\Scripts\activate
-# Linux/Mac:
+# Linux/Mac (doğrulanmadı):
 source venv/bin/activate
 
 # 4. Bağımlılıkları yükleyin
@@ -252,7 +253,7 @@ python -m venv venv && venv\Scripts\activate && pip install -r requirements.txt 
 
 ### 1. Proje Açma
 
-1. Uygulamayı başlatın (`python main.py` ya da `GitCleanArchiverPro.exe`)
+1. Uygulamayı başlatın (`python main.py` ya da `GitCleanArchiver.exe`)
 2. Sağ üstteki **Proje Dizini Aç** düğmesine tıklayın
 3. Analiz etmek istediğiniz proje dizinini seçin
 4. Gösterge Paneli ve Sorunlar sayfası otomatik olarak tek bir teşhisle dolar
@@ -779,7 +780,7 @@ Doğrulama yöntemi (bağımsız araçlarla karşılaştırma, refactor öncesi/
 python build_exe.py
 ```
 
-**Çıktı:** `dist/GitCleanArchiverPro.exe`
+**Çıktı:** `dist/GitCleanArchiver.exe`
 
 ### PyInstaller Parametreleri
 

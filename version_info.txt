@@ -15,12 +15,12 @@ VSVersionInfo(
       StringTable(
         u'040904B0',
         [StringStruct(u'CompanyName', u'GitClean Archiver'),
-        StringStruct(u'FileDescription', u'GitClean Archiver Pro'),
+        StringStruct(u'FileDescription', u'GitClean Archiver'),
         StringStruct(u'FileVersion', u'2.0.0'),
-        StringStruct(u'InternalName', u'GitCleanArchiverPro'),
+        StringStruct(u'InternalName', u'GitCleanArchiver'),
         StringStruct(u'LegalCopyright', u'Copyright (C) 2026'),
-        StringStruct(u'OriginalFilename', u'GitCleanArchiverPro.exe'),
-        StringStruct(u'ProductName', u'GitClean Archiver Pro'),
+        StringStruct(u'OriginalFilename', u'GitCleanArchiver.exe'),
+        StringStruct(u'ProductName', u'GitClean Archiver'),
         StringStruct(u'ProductVersion', u'2.0.0')])
       ]), 
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])

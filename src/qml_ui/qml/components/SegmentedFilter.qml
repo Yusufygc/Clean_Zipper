@@ -33,6 +33,16 @@ Rectangle {
                 implicitWidth: content.implicitWidth + 20
                 implicitHeight: 28
                 radius: AppTheme.radiusSmall + 2
+
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: modelData.label + " " + modelData.count
+                Accessible.checked: isActive
+                Accessible.onPressAction: root.selected(modelData.key)
+                Keys.onReturnPressed: root.selected(modelData.key)
+                Keys.onEnterPressed: root.selected(modelData.key)
+                Keys.onSpacePressed: root.selected(modelData.key)
+                FocusRing {}
                 color: isActive ? AppTheme.surfaceActive : (isHovered ? AppTheme.surfaceHover : "transparent")
                 Behavior on color { ColorAnimation { duration: AppTheme.animFast } }
 

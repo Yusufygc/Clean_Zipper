@@ -8,8 +8,16 @@ Rectangle {
     property int iconSize: 18
     property color iconColor: isHovered ? AppTheme.accent : AppTheme.textSecondary
     property string tooltip: ""
-    property bool enabled: true
     signal clicked()
+
+    activeFocusOnTab: root.enabled
+    Accessible.role: Accessible.Button
+    Accessible.name: root.tooltip
+    Accessible.onPressAction: if (root.enabled) root.clicked()
+    Keys.onReturnPressed: if (root.enabled) root.clicked()
+    Keys.onEnterPressed: if (root.enabled) root.clicked()
+    Keys.onSpacePressed: if (root.enabled) root.clicked()
+    FocusRing {}
 
     implicitWidth: 36
     implicitHeight: 36

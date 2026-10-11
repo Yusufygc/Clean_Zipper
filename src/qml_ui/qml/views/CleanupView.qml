@@ -98,7 +98,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 6
                     radius: 3
-                    color: AppTheme.isDark ? "#1E293B" : "#E2E8F0"
+                    color: AppTheme.trackBg
 
                     Rectangle {
                         width: parent.width * (cleanupVM.progressPercent / 100)
@@ -160,6 +160,7 @@ Item {
                     RowLayout {
                         spacing: 10
                         AppCheckBox {
+                            accessibleName: "Python önbelleği"
                             checked: cleanupVM.categoryPythonCache
                             onToggled: cleanupVM.setCategory("python_cache", checked)
                         }
@@ -187,6 +188,7 @@ Item {
                     RowLayout {
                         spacing: 10
                         AppCheckBox {
+                            accessibleName: "Geçici dosyalar"
                             checked: cleanupVM.categoryTempFiles
                             onToggled: cleanupVM.setCategory("temp_files", checked)
                         }
@@ -214,6 +216,7 @@ Item {
                     RowLayout {
                         spacing: 10
                         AppCheckBox {
+                            accessibleName: "Log dosyaları"
                             checked: cleanupVM.categoryLogs
                             onToggled: cleanupVM.setCategory("logs", checked)
                         }
@@ -241,6 +244,7 @@ Item {
                     RowLayout {
                         spacing: 10
                         AppCheckBox {
+                            accessibleName: "Yedek dosyaları"
                             checked: cleanupVM.categoryBackups
                             onToggled: cleanupVM.setCategory("backups", checked)
                         }
@@ -274,7 +278,7 @@ Item {
             Layout.fillWidth: true
             implicitHeight: 38
             radius: AppTheme.radiusSmall
-            color: AppTheme.isDark ? "#111827" : "#F8FAFC"
+            color: AppTheme.codeBg
             border.color: AppTheme.border
             border.width: 1
 
@@ -335,7 +339,7 @@ Item {
 
                     // Önizleme Bilgi Rozetleri
                     Badge {
-                        text: cleanupVM.previewCount + " dosya tespit edildi"
+                        text: cleanupVM.previewCount + " öğe tespit edildi"
                         textColor: AppTheme.accent
                         badgeColor: AppTheme.surfaceActive
                         visible: cleanupVM.previewCount > 0
@@ -400,7 +404,7 @@ Item {
                     visible: cleanupVM.previewFiles.length > 0
 
                     delegate: Rectangle {
-                        width: cleanListView.width
+                        width: cleanListView.width - AppTheme.scrollGutter
                         implicitHeight: 36
                         radius: AppTheme.radiusSmall
                         color: AppTheme.surfaceHover
@@ -448,7 +452,7 @@ Item {
                             }
 
                             Badge {
-                                text: modelData.sizeKb + " KB"
+                                text: modelData.sizeKb < 1 ? "< 1 KB" : modelData.sizeKb + " KB"
                                 textColor: AppTheme.textSecondary
                                 badgeColor: AppTheme.surfaceActive
                                 fontSize: 12
@@ -456,10 +460,7 @@ Item {
                         }
                     }
 
-                    ScrollBar.vertical: ScrollBar {
-                        active: true
-                        policy: ScrollBar.AsNeeded
-                    }
+                    ScrollBar.vertical: ThemedScrollBar { active: true }
                 }
             }
         }

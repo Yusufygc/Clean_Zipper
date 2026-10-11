@@ -216,7 +216,7 @@ Item {{
         width: 700
         title: "Başlık"; description: "Açıklama"; severity: "LOW"; categoryName: "Ölü kod"; fileName: "a.py"
         relPath: "pkg/a.py"; filePath: "C:/proje/pkg/a.py"; line: {line}; rule: "{rule}"; isSecret: {str(secret).lower()}
-        suggestion: "Silin"; codeVisible: {str(visible_code).lower()}; codeText: "3: import os\n4: x = 1"
+        suggestion: "Silin"; detailOpen: true; codeVisible: {str(visible_code).lower()}; codeText: "3: import os\n4: x = 1"
     }}
 }}
 """
@@ -405,7 +405,8 @@ def test_dashboard_rows_are_symmetric_equal_columns_with_equal_heights(qapp, mon
         _, window = open_tab(qapp, monkeypatch, 0, width=width, height=1000)
         grid = find_item(window, "metricGrid")
         cards = [c for c in grid.childItems() if c.width() > 0]
-        assert len(cards) == 4 and len({round(c.width()) for c in cards}) == 1, (width, [c.width() for c in cards])
+        widths = [c.width() for c in cards]                       # kesirli genişlik: ekranda 1 px yuvarlama farkı simetriyi bozmaz
+        assert len(cards) == 4 and max(widths) - min(widths) <= 1, (width, widths)
         for row_name in ("healthRow", "distributionRow", "insightRow"):
             row = find_item(window, row_name)
             left, right = [c for c in row.childItems() if c.width() > 0]
@@ -489,3 +490,16 @@ def test_tab_navigation_is_centred_in_the_header_when_it_fits(qapp, monkeypatch)
         edges = header_edges(window, width)
         nav = edges["tabNav"]
         assert abs((nav[0] + nav[1]) / 2 - width / 2) <= 1, (width, nav)
+
+
+def test_scroll_views_place_their_themed_scrollbar_on_the_right_edge(qapp, monkeypatch):
+    """QA bulgusu: özel çubuk ScrollView'a atanınca Qt konumlandırmıyordu; çubuk sol üstte 10x4 px'lik bir parça kalıyordu."""
+    for tab in (0, 2, 4):
+        _, window = open_tab(qapp, monkeypatch, tab, width=1400, height=700)
+        bars = [i for i in all_items(window.contentItem()) if i.metaObject().className().startswith("ThemedScrollBar")
+                and i.parentItem() is not None and i.parentItem().metaObject().className().startswith("ScrollView")]
+        assert bars, tab
+        for bar in bars:
+            view = bar.parentItem()
+            assert abs(bar.x() + bar.width() - view.width()) <= 1, (tab, bar.x(), bar.width(), view.width())
+            assert bar.height() >= view.height() - 2, (tab, bar.height(), view.height())
