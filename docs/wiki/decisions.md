@@ -31,6 +31,10 @@ Her karar: ne seçildi, neden, nasıl uygulanır. Bulgu durumları için [[roadm
 - **BOM'suz UTF-16 sezgisi** (2026-10-10): NUL baytların en az %90'ı tek (LE) ya da çift (BE) konumlarda ve öbür konumlarda hiç NUL yoksa, çözülebiliyorsa metin. `C:\2UYGULAMALAR`'da NUL içeren ~152 bin BOM'suz dosyanın 13'ünü yakaladı, hepsi gerçek UTF-16 metin (gece günlükleri, Chrome profil dosyası); biri başı UTF-8 sonu UTF-16 karışık günlük, ilk 60 baytı bozuk okunur (önceden tümü atlanıyordu).
 - **Boş klasör iç içe hesaplanır** (2026-10-10): yalnızca en üstteki raporlanır (`nested_empty` alt klasör sayısı); indekse girmeyen (dışlanan / ignore'lu) alt klasör boş sayılmaz.
 
+- **Bayat sonuç bırakılmaz** (2026-10-11, QA): projeyi değiştiren işlemden (gerçek temizlik, proje içine yazılan zip / kopya) sonra ve analizi etkileyen ayarlar uygulanınca arayüz analizi kendiliğinden yeniler. Yedek ve proje dışına yazılan çıktı yenilemeyi tetiklemez.
+- **Arayüz klavyeyle ve ekran okuyucuyla kullanılabilir olmalıdır** (2026-10-11, QA): tıklanabilir her öğe Tab ile odaklanır, Enter / Boşluk çalıştırır, odak halkası gösterir ve erişilebilirlik adı / rolü taşır (`CustomButton`, `IconButton`, sekmeler, süzgeç segmentleri, mod düğmeleri, profil kartları, `AppCheckBox.accessibleName`). Beyaz yazılı düğme gradyanlarının her ucu ve durum renkleri en az 4,5:1 kontrastlıdır (testle zorunlu); üzerine gelince dolgu açılmaz, yalnızca turuncu çerçeve çıkar. Uygulama `QQuickStyle.setStyle("Basic")` seçer.
+- **Aramada Türkçe katlama** (2026-10-11, QA): `İ→i`, `I→ı`, aksan duyarsız (`fold_turkish`). Python'un `lower()`'ı `İ`'yi `i` + birleştirici noktaya çevirir ve `ŞİFRE` / `AÇIK` bulgu aramasında sonuç vermiyordu.
+
 ## Güvenlik
 - **Sır değeri asla yazılmaz:** bulguda yalnızca maskeli önek ve uzunluk; denetim raporunda sır içerebilecek bulguların ve dosyaların (`.env`, `*.pem`, `*.key`, `id_rsa`) kaynak satırı gösterilmez. Test: 44 sır bulgusu, 0 sızıntı.
 - **Silme kalıcı değil:** temizlik Geri Dönüşüm Kutusu'na taşır (`send2trash`); `venv`, `node_modules` gibi klasörlerin içine girilmez; `cleanup` varsayılanı `dry_run=True`.

@@ -55,6 +55,7 @@ UI bunları kullanıcıya göstermelidir (sessiz kısmi sonuç yok):
 - Arşiv, `.gitignore` okunamıyorsa gizli dosyaları sızdırmamak için işlemi reddeder (`error` dolu, `success=False`).
 - Kopya, hedef kaynağın kendisi ya da üst klasörüyse hiçbir dosyaya dokunmadan reddeder (`error` dolu, `success=False`). Hedef kaynağın içindeyse (`src/out/yedek`) yalnızca hedef klasörün kendisi atlanır, üst klasörleri kopyalanır.
 - Arşiv, kopya ve yedek bağ klasörlerine girmez; dosya bağları içeriğe konmaz ve `skipped_links` (proje köküne göre yol listesi) ile bildirilir.
+- Arşiv ve kopya sonucu `sensitive_files` (köke göre yol listesi) taşır: çıktıya giren `.env`, özel anahtar vb. (`path_rules.secret_kind`; `.env.example` hariç). Arayüz sonuç kartında uyarı gösterir; Müşteri Teslimi profili `.env` dosyalarını zaten eler.
 - UI `complete=False` ve `failed_files`'ı kullanıcıya göstermelidir.
 
 ## Temizlik
@@ -80,7 +81,7 @@ Arayüz: bir "ajan görevleri olarak dışa aktar" düğmesi yalnızca `export_a
 ## Kalıcı ayarlar
 `src/services/app_settings.py`: `AppSettings` (`respect_gitignore`, `disabled_analyzers`, `disabled_rules`, 9 eşik, `agent_batch_size`, `agent_output_dir`, `max_backups`) `~/.gitclean/settings.json` dosyasında saklanır (`load_settings`, `save_settings`, atomik yazım). Bozuk / eksik dosya, bilinmeyen anahtar ve sınır dışı değer güvenle varsayılana döner (uygulama açılışı bozulmaz). Eşik varsayılanları `QualityThresholds`'tan gelir (tek kaynak), en küçük değerler `THRESHOLD_LIMITS` içindedir. Ajan görevleri için varsayılan çıktı klasörü `~/.gitclean/agent-tasks/<proje>` (projenin **dışında**: analiz görev dosyalarını bulgu saymasın).
 
-`SettingsViewModel` açılışta kayıtlı ayarları `ProjectService.doctor`'a uygular; `applySettings` / `resetToDefaults` / `disableRule` / `enableRule` / `adjustMaxBackups` diske yazar (`adjustMaxBackups` teşhisi yenilemez). `disabled_rules` tüm analizörlerin `metadata['rule']` kimlikli bulgularını eler (`ProjectDoctor._without_disabled_rules`; skor da bunlarsız hesaplanır), yalnızca SAST kurallarını değil.
+`SettingsViewModel` açılışta kayıtlı ayarları `ProjectService.doctor`'a uygular; `applySettings` / `resetToDefaults` / `disableRule` / `enableRule` / `adjustMaxBackups` diske yazar (`adjustMaxBackups` teşhisi yenilemez). `applySettings` ve `resetToDefaults` ayrıca `rulesChanged` yayar: arayüz analizi yeniden başlatır (eşikler, `.gitignore`, analizörler sonuçları değiştirir). Aynı şekilde `CleanupViewModel.projectModified` (gerçek temizlik bitti) ve `ArchiveViewModel.projectModified` (zip / kopya proje içine yazıldı) analizi yeniler; bayat dashboard kalmaz. `disabled_rules` tüm analizörlerin `metadata['rule']` kimlikli bulgularını eler (`ProjectDoctor._without_disabled_rules`; skor da bunlarsız hesaplanır), yalnızca SAST kurallarını değil.
 
 ## Arayüz (QML) ViewModel haritası
 | ViewModel | Arayüzde karşılığı |

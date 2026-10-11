@@ -1,5 +1,22 @@
 # Değişiklik Günlüğü
 
+## [2026-10-11] [FIX] | QA bulgularının tamamı düzeltildi (`QA_RAPORU.md` Bölüm 9)
+- **Analiz bayat kalmaz (QA-02, QA-10):** gerçek temizlik, proje içine yazılan zip / kopya (`projectModified`) ve analizi etkileyen ayarların uygulanması (`applySettings`, `resetToDefaults` artık `rulesChanged` yayar) analizi otomatik yeniler. Yedek ve proje dışı çıktı yenilemez.
+- **Türkçe arama (QA-03):** `fold_turkish` (`İ→i`, `I→ı`, aksan duyarsız); `ŞİFRE`, `AÇIK`, `sifre` artık bulur.
+- **Erişilebilirlik (QA-04, QA-05):** düğmeler, sekmeler, süzgeç segmentleri, mod düğmeleri, profil kartları, onay kutuları: Tab odağı, Enter / Boşluk, `FocusRing`, `Accessible` rol ve ad. Gerçek erişilebilirlik ağacında onay kutularının adı boştu; `AppCheckBox.accessibleName` eklendi. Düğme gradyanları ve koyu tema `primary` / `danger` en az 4,5:1; üzerine gelince dolgu açılmaz.
+- **Hassas dosya uyarısı (QA-08):** zip ve kopya sonucu `sensitive_files`; sonuç kartında uyarı.
+- **Diğer:** analizör adları ve başlıklarında Türkçe karakterler (QA-06), README adresi / platform / Python sürümü (QA-07), puan yuvarlama (QA-09), önizleme etiketi "öğe" ve "< 1 KB" (QA-11), beklenen "görev dosyası yok" hatası traceback'siz uyarı, `enabled` özelliği yeniden tanımlanmaz, `QQuickStyle.setStyle("Basic")` (QA-12).
+- **Doğrulama:** 25 yeni gerileme testi (`test_qa_fixes.py`); refresh testleri `app.py` / `settings_viewmodel.py` olmadan, klavye testi `CustomButton` / `MainView` olmadan kırmızı. Uçtan uca QA yeniden koşuldu: 137 kontrol, 122 geçti, 4 kaldı (hepsi test düzeneği / beklenen davranış). Gerçek platformda 0 Qt uyarısı.
+- **Ders:** ilk QA turundaki "0 erişilebilirlik adı" ölçümü QML ekli özelliklerini `property()` ile okumaya çalıştığı için geçersizdi; doğru yöntem `QAccessible` ([[testing]]).
+- **Doğrulanmadı / yapılmadı:** düzeltmeler gerçek EXE'de denenmedi (EXE yeniden derlenmedi); EXE boyutu küçültülmedi (ayrıştırıldı: `QA_RAPORU.md`); ekran okuyucuyla gerçek deneme yok; klavye odak halkasının gerçek pencerede görünümü elle bakılmalı.
+
+## [2026-10-11] [QA] | Uygulamanın kendi kendini denetlemesi ve uçtan uca QA (`QA_RAPORU.md`)
+- **Yöntem:** uygulama kendi deposunu denetledi (216 dosya, skor 86/100); ayrıca gerçek QML penceresi gerçek fare tıklamalarıyla, yalıtılmış kullanıcı klasörleriyle ve junction içeren örnek projeyle sürüldü (135 kontrol), şüpheli sonuçlar ikinci turda ayrıştırıldı, gerçek Windows platformunda çizim ve derlenmiş EXE denendi. Rapor kök dizinde `QA_RAPORU.md`, ekranlar `docs/qa/`.
+- **Bulundu ve düzeltildi (benim gerilemem):** `ThemedScrollBar` bir `ScrollView`'a atanınca Qt konumlandırmıyordu; Gösterge Paneli, Arşiv ve Ayarlar'da çubuk görünmüyor, ilk kartın köşesinde 10x4 px artefakt kalıyordu. Çubuk artık `ScrollView` içinde sağ kenara oturur; yeni test eski kodda kırmızı.
+- **Açık bulgular:** temizlikten sonra panel bayat; Türkçe büyük harfle arama (`ŞİFRE`, `AÇIK`) sonuç vermiyor; klavye ve erişilebilirlik adı yok; XP temasında bazı düğme yazılarının kontrastı düşük; 5 analizörde Türkçe karaktersiz metin; README klonlama adresi yanlış; Geliştirici profili `.env`'i zip'e uyarısız koyar.
+- **Yanlış alarm dersi:** ilk turda 15 "kaldı"nın 6'sı harness hatası ya da beklenen davranıştı (pencere dışı düğme seçimi, LICENSE politikası, Türkçe arayüze İngilizce arama, yenileme beklentisi); ekransız modda görülen 48 Qt uyarısı gerçek platformda 0'dı. Önce gerçek platformda ve bağımsız oracle ile doğrulamadan hata sayılmamalı.
+- **Doğrulanmadı:** yerel klasör seçme pencereleri, ekran okuyucu, yüksek DPI, Linux / macOS, 20 bin+ dosyalı depo. Dal henüz `main`'e alınmadı.
+
 ## [2026-10-11] [UI] | Uygulama ikonu: Gemini çıktısı vektörden XP stilinde yeniden çizildi
 - **Girdi:** kullanıcının Gemini ile ürettiği ikon (mavi-mor gradyanlı kalkan, fermuarlı klasör + "G" tutacağı, Git elması, süpürge). Raster bulanık parlamalar ve artefakt içeriyordu, 16-32 px'te okunmuyordu. Yapı ve içerik aynen korundu.
 - **Çıktı:** `build_icons.py` vektör çizimi (`resources/icons/app.svg`) üretir ve ondan `app.png` (1024) ile 7 boyutlu `app_icon.ico` (16, 24, 32, 48, 64, 128, 256; PNG gömülü, 32 bit saydam) yazar. Stil: kalın lacivert dış çizgi, Luna mavi gövde, beyaz iç hat, üst yansıma, XP sarısı klasör; mor ve parıltı gürültüsü kaldırıldı. 16-32 px için sadeleştirilmiş çizim (fermuar dişleri ve parıltı yok). Yeniden üretmek için: `python build_icons.py`.

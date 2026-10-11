@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
 [![CI](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml/badge.svg)](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/Version-2.0.0-orange.svg)]()
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
+[![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)]()
 
 ---
 
@@ -212,16 +212,16 @@ Kullanıcı → QML arayüzü (MainView.qml + ViewModel'ler)
 
 ### Gereksinimler
 
-- **Python** 3.8 veya üstü
+- **Python** 3.10 veya üstü
 - **pip** (Python paket yöneticisi)
-- **İşletim Sistemi**: Windows 10/11, Linux, macOS
+- **İşletim Sistemi**: Windows 10/11 (CI ve elle test bu platformda yapılır; Linux ve macOS doğrulanmadı, bağ / junction denetimi Windows'a özgü ayrıntılar içerir)
 
 ### Adım Adım Kurulum
 
 ```bash
 # 1. Projeyi klonlayın veya indirin
-git clone https://github.com/gitclean/archiver-pro.git
-cd gitclean-archiver-pro
+git clone https://github.com/Yusufygc/Clean_Zipper.git
+cd Clean_Zipper
 
 # 2. Sanal ortam oluşturun
 python -m venv venv
@@ -229,7 +229,7 @@ python -m venv venv
 # 3. Sanal ortamı aktifleştirin
 # Windows:
 venv\Scripts\activate
-# Linux/Mac:
+# Linux/Mac (doğrulanmadı):
 source venv/bin/activate
 
 # 4. Bağımlılıkları yükleyin
