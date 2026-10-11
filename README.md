@@ -172,12 +172,13 @@ gitclean-archiver-pro/
 │   └── fixtures/                 #    Test verileri
 │
 ├── resources/                    # 📦 Kaynaklar
-│   ├── icons/                    #    Uygulama ikonları
+│   ├── icons/                    #    Uygulama ikonu (app.svg kaynak, app.png, app_icon.ico)
 │   ├── templates/                #    Rapor şablonları
 │   └── profiles/                 #    Arşiv profilleri (JSON, gitignore sözdizimi)
 │
 ├── main.py                       # 🚀 Ana giriş noktası (QML arayüzü)
 ├── build_exe.py                  # 🔨 Build script'i
+├── build_icons.py                # 🎨 Uygulama ikonunu vektörden (app.svg) üretir: app.png + çok boyutlu app_icon.ico
 ├── requirements.txt              # 📋 Çalışma zamanı bağımlılıkları (tam sabit sürümler)
 ├── requirements-dev.txt          # 🧪 + test ve lint (pytest, ruff)
 ├── ruff.toml                     # 🧹 Lint ayarı (yalnızca kesin hatalar)

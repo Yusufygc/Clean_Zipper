@@ -1,0 +1,166 @@
+"""Uygulama ikonunu vektörden (SVG) üretir: `resources/icons/app.svg`, `app.png` (1024) ve çok boyutlu `app_icon.ico`.
+
+Tasarım: Windows XP (Luna) stili. Kalkan + fermuarlı klasör (tutacakta "G") + Git elması + süpürge.
+Çalıştırma: python build_icons.py
+Küçük boyutlar (16-32 px) sadeleştirilmiş çizimle üretilir; ayrıntılı çizim okunmaz.
+"""
+import os
+import struct
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+ICON_DIR = ROOT / "resources" / "icons"
+ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
+DETAIL_FROM = 48                      # bu boyuttan itibaren ayrıntılı çizim
+
+NAVY = "#0A2A7A"                      # XP'nin kalın lacivert dış çizgisi
+SHIELD = ("M512 40 C620 118 772 160 908 170 L908 520 C908 760 744 900 512 988 "
+          "C280 900 116 760 116 520 L116 170 C252 160 404 118 512 40 Z")
+
+
+def _teeth(x: float, top: float, bottom: float) -> str:
+    """Fermuar dişleri: orta çizginin iki yanında dönüşümlü küçük dikdörtgenler."""
+    out, y, left = [], top, True
+    while y + 16 <= bottom:
+        out.append(f'<rect x="{x - 21 if left else x + 3}" y="{y}" width="18" height="12" rx="3" '
+                   f'fill="#DCE4F2" stroke="#4A5A7C" stroke-width="3"/>')
+        y += 22
+        left = not left
+    return "".join(out)
+
+
+def svg(detail: bool = True) -> str:
+    teeth = _teeth(392, 410, 640) if detail else ""
+    sparkles = ('<path d="M820 200 l9 24 24 9 -24 9 -9 24 -9 -24 -24 -9 24 -9z" fill="#FFFFFF" opacity="0.95"/>'
+                '<path d="M700 168 l6 16 16 6 -16 6 -6 16 -6 -16 -16 -6 16 -6z" fill="#FFFFFF" opacity="0.8"/>'
+                if detail else "")
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+  <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#6AAAFF"/><stop offset="0.45" stop-color="#2C6FE3"/><stop offset="1" stop-color="#0B3A9E"/>
+  </linearGradient>
+  <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.62"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.04"/>
+  </linearGradient>
+  <linearGradient id="folderBack" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#E0A81C"/><stop offset="1" stop-color="#B57A06"/>
+  </linearGradient>
+  <linearGradient id="folderFront" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFE98F"/><stop offset="0.55" stop-color="#FFCB45"/><stop offset="1" stop-color="#F0A810"/>
+  </linearGradient>
+  <linearGradient id="diamond" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DDEC"/>
+  </linearGradient>
+  <linearGradient id="straw" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFE27A"/><stop offset="1" stop-color="#D8981A"/>
+  </linearGradient>
+  <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#C98A3E"/><stop offset="0.5" stop-color="#E9B567"/><stop offset="1" stop-color="#9C6424"/>
+  </linearGradient>
+</defs>
+
+<!-- gölge -->
+<path d="{SHIELD}" transform="translate(14 22)" fill="#000000" opacity="0.18"/>
+<path d="{SHIELD}" transform="translate(8 12)" fill="#000000" opacity="0.18"/>
+
+<!-- kalkan: koyu lacivert dış çizgi, Luna mavi gövde, beyaz iç hat, parlak üst yansıma -->
+<path d="{SHIELD}" fill="url(#shield)"/>
+<path d="M512 40 C620 118 772 160 908 170 L908 392 C770 334 520 330 116 424 L116 170 C252 160 404 118 512 40 Z"
+      fill="url(#gloss)"/>
+<path d="{SHIELD}" fill="none" stroke="{NAVY}" stroke-width="34" stroke-linejoin="round"/>
+<path d="{SHIELD}" transform="translate(512 520) scale(0.925) translate(-512 -520)" fill="none"
+      stroke="#FFFFFF" stroke-width="9" stroke-opacity="0.7" stroke-linejoin="round"/>
+
+<!-- klasör: arka panel + beyaz sayfa + ön panel -->
+<path d="M272 312 Q272 272 312 272 L452 272 L492 316 L726 316 Q762 316 762 352 L762 626 Q762 662 726 662 L308 662 Q272 662 272 626 Z"
+      fill="url(#folderBack)" stroke="{NAVY}" stroke-width="16" stroke-linejoin="round"/>
+<rect x="312" y="336" width="410" height="110" rx="12" fill="#FFFFFF" stroke="#8FA3C9" stroke-width="8"/>
+<path d="M282 424 Q282 394 312 394 L520 394 Q542 394 556 380 L568 368 Q580 358 600 358 L726 358 Q752 358 752 384 L752 628
+         Q752 654 726 654 L308 654 Q282 654 282 628 Z"
+      fill="url(#folderFront)" stroke="{NAVY}" stroke-width="16" stroke-linejoin="round"/>
+
+<!-- fermuar -->
+<rect x="379" y="394" width="26" height="262" fill="#9AA9C6" stroke="#4A5A7C" stroke-width="4"/>
+{teeth}
+<path d="M392 420 m-34 0 a34 34 0 0 1 68 0 L426 508 Q426 542 392 542 Q358 542 358 508 Z"
+      fill="#EEF2FA" stroke="#3C4B6E" stroke-width="10" stroke-linejoin="round"/>
+<ellipse cx="392" cy="432" rx="10" ry="13" fill="#3C4B6E"/>
+<path d="M408.9 485.9 A22 22 0 1 0 414 500 L398 500" fill="none" stroke="{NAVY}" stroke-width="10" stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+<!-- Git elması -->
+<g transform="translate(580 516) rotate(45)">
+  <rect x="-80" y="-80" width="160" height="160" rx="26" fill="url(#diamond)" stroke="{NAVY}" stroke-width="14"/>
+</g>
+<g transform="translate(580 516)" stroke="{NAVY}" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none">
+  <path d="M-22 -50 L-8 -34 L-8 44"/>
+  <path d="M-8 -34 L34 -4"/>
+  <circle cx="34" cy="-4" r="14" fill="{NAVY}"/>
+  <circle cx="-8" cy="44" r="14" fill="{NAVY}"/>
+</g>
+
+<!-- süpürge: sap, bağ halkası, saman -->
+<path d="M840 262 L722 584" stroke="{NAVY}" stroke-width="54" stroke-linecap="round"/>
+<path d="M840 262 L722 584" stroke="url(#wood)" stroke-width="34" stroke-linecap="round"/>
+<path d="M742 556 L706 600 L760 626 L788 576 Z" fill="#B9C6DE" stroke="{NAVY}" stroke-width="12" stroke-linejoin="round"/>
+<path d="M700 604 C640 640 548 676 506 706 C540 722 540 736 580 752 C610 770 640 776 670 770 C716 762 748 712 762 628 Z"
+      fill="url(#straw)" stroke="{NAVY}" stroke-width="14" stroke-linejoin="round"/>
+<path d="M712 622 C690 668 650 712 604 748 M738 634 C728 686 706 728 668 764 M690 616 C640 654 580 690 530 714"
+      stroke="#8A5A10" stroke-width="9" stroke-linecap="round" fill="none" opacity="0.8"/>
+{sparkles}
+</svg>
+'''
+
+
+def render_png(svg_text: str, size: int):
+    from PySide6.QtCore import QByteArray
+    from PySide6.QtGui import QImage, QPainter
+    from PySide6.QtSvg import QSvgRenderer
+
+    renderer = QSvgRenderer(QByteArray(svg_text.encode("utf-8")))
+    image = QImage(size, size, QImage.Format.Format_ARGB32)
+    image.fill(0)
+    painter = QPainter(image)
+    painter.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform
+                           | QPainter.RenderHint.TextAntialiasing)
+    renderer.render(painter)
+    painter.end()
+    return image
+
+
+def png_bytes(image) -> bytes:
+    from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+    data = QByteArray()
+    buffer = QBuffer(data)
+    buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+    image.save(buffer, "PNG")
+    return bytes(data)
+
+
+def build_ico(entries) -> bytes:
+    """PNG gömülü çok boyutlu ICO (Windows Vista+; 256 px zaten PNG)."""
+    header = struct.pack("<HHH", 0, 1, len(entries))
+    offset = 6 + 16 * len(entries)
+    directory, blobs = b"", b""
+    for size, blob in entries:
+        directory += struct.pack("<BBBBHHII", size % 256, size % 256, 0, 0, 1, 32, len(blob), offset + len(blobs))
+        blobs += blob
+    return header + directory + blobs
+
+
+def main() -> int:
+    from PySide6.QtGui import QGuiApplication
+    os.environ.setdefault("QT_QPA_FONTDIR", "C:/Windows/Fonts")
+    app = QGuiApplication.instance() or QGuiApplication(["build_icons", "-platform", "offscreen"])
+    full, simple = svg(True), svg(False)
+    (ICON_DIR / "app.svg").write_text(full, encoding="utf-8")
+    (ICON_DIR / "app.png").write_bytes(png_bytes(render_png(full, 1024)))
+    entries = [(s, png_bytes(render_png(full if s >= DETAIL_FROM else simple, s))) for s in ICO_SIZES]
+    (ICON_DIR / "app_icon.ico").write_bytes(build_ico(entries))
+    print("yazıldı:", ", ".join(f"{s}px {len(b) // 1024} KB" for s, b in entries))
+    return 0 if app is not None else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
