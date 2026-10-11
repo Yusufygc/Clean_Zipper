@@ -42,6 +42,7 @@ RestartApplications=no
 OutputDir=..\dist\installer
 OutputBaseFilename=GitCleanArchiver-Setup-{#AppVersion}
 SetupIconFile=..\resources\icons\app_icon.ico
+LicenseFile=..\LICENSE
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
 WizardStyle=modern
@@ -60,6 +61,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 ; onedir derlemesi: exe + _internal (Qt DLL'leri, QML, kaynaklar); klasörün tamamı {app}'e.
 Source: "..\dist\GitCleanArchiver\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Lisans ve üçüncü taraf bildirimleri (Qt LGPL, MPL, BSD, MIT) uygulamayla birlikte dağıtılır.
+Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; AppUserModelID uygulamadaki değerle aynıdır (src/qml_ui/app.py): görev çubuğu sabitlemesi kısayolla eşleşir.
