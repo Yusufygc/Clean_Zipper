@@ -34,6 +34,16 @@ ApplicationWindow {
         height = Math.round(Math.min(Math.max(Screen.desktopAvailableHeight * 0.85, minimumHeight), 1000, Screen.desktopAvailableHeight))
         x = Math.round((Screen.desktopAvailableWidth - width) / 2)
         y = Math.round((Screen.desktopAvailableHeight - height) / 2)
+        installVM.requestPromptIfNeeded()
+    }
+
+    // İndirilen exe kurulu değilse açılışta kurma önerisi (kurulu kopya başlatılır, bu kopya kapanır)
+    InstallDialog { id: installDialog }
+
+    Connections {
+        target: installVM
+        function onPromptRequested() { installDialog.open() }
+        function onFinished() { Qt.quit() }
     }
 
     // Yeni sürüm bulununca açılan pencere (açılışta sessiz denetim; ayarlardan elle denetim)

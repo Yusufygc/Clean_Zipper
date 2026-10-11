@@ -15,6 +15,7 @@ from src.qml_ui.viewmodels.scan_viewmodel import ScanViewModel
 from src.qml_ui.viewmodels.findings_viewmodel import FindingsViewModel
 from src.qml_ui.viewmodels.archive_viewmodel import ArchiveViewModel
 from src.qml_ui.viewmodels.cleanup_viewmodel import CleanupViewModel
+from src.qml_ui.viewmodels.install_viewmodel import InstallViewModel
 from src.qml_ui.viewmodels.settings_viewmodel import SettingsViewModel
 from src.qml_ui.viewmodels.update_viewmodel import UpdateViewModel
 from src.utils.logging_config import setup_logging
@@ -41,7 +42,7 @@ def _configure_application() -> QApplication:
 
 
 def _create_view_models() -> Dict[str, QObject]:
-    """Yedi ViewModel'i kurar ve birbirine bağlar; anahtarlar QML'deki context property adlarıdır."""
+    """Sekiz ViewModel'i kurar ve birbirine bağlar; anahtarlar QML'deki context property adlarıdır."""
     app_vm = AppViewModel()
     scan_vm = ScanViewModel(app_vm.service)
     findings_vm = FindingsViewModel(app_vm.service)
@@ -68,7 +69,8 @@ def _create_view_models() -> Dict[str, QObject]:
 
     # Güncelleme denetimi projeden bağımsızdır: `ProjectService` kullanmaz, kendi servisiyle konuşur
     return {"appVM": app_vm, "scanVM": scan_vm, "findingsVM": findings_vm,
-            "archiveVM": archive_vm, "cleanupVM": cleanup_vm, "settingsVM": settings_vm, "updateVM": UpdateViewModel()}
+            "archiveVM": archive_vm, "cleanupVM": cleanup_vm, "settingsVM": settings_vm, "updateVM": UpdateViewModel(),
+            "installVM": InstallViewModel()}
 
 
 def create_qml_app():

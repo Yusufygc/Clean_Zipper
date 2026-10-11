@@ -90,6 +90,7 @@ Arayüz: bir "ajan görevleri olarak dışa aktar" düğmesi yalnızca `export_a
 | `scanVM` | Gösterge paneli: skor, kategori puanları, dosya türü ve **dil dağılımı**, öneriler, analiz bütünlüğü (hata veren analizör, `.gitignore`, **atlanan dosya nedenleri**), HTML / denetim raporu |
 | `findingsVM` | Sorunlar: şiddet ve **kategori** süzgeci, arama, **göreli yol + satır**, **tembel kaynak kodu** (sırlarda hiç gösterilmez), **"Bu Kuralı Kapat"**, **kurala göre gruplu liste** (`rows`: `FindingsRowsModel`; `toggleGroup`, `toggleDetail`, `setAllGroupsExpanded`, `resultCount`) |
 | `updateVM` | Güncelleme: `currentVersion`, `startupCheck` / `checkNow` (arka plan iş parçacığı), `popupRequested` ("Yeni sürüm var" penceresi), `skipVersion`, `openDownload`, `setCheckEnabled`. `update_service` işlevlerini kullanır (projeden bağımsız; `ProjectService` üzerinden geçmez) |
+| `installVM` | Kur / Güncelle penceresi (`promptNeeded`, `mode`, `installDir`, `install`, `decline`), Ayarlar'da `canUninstall` + `uninstall`; `finished` → uygulama kapanır. Projeden bağımsız (`install_service`) |
 | `archiveVM`, `cleanupVM` | Arşiv / kopya / yedek, temizlik |
 | `settingsVM` | 9 eşik, analizör seçimi (tümünü aç / kapat), kapatılan kurallar, `.gitignore`, ajan görevleri (klasör seçimi, parti, dışa aktarma, **sayılı doğrulama sonucu**), varsayılana sıfırlama; kalıcı |
 

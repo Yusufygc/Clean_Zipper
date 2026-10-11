@@ -102,8 +102,8 @@ def test_installer_script_is_consistent_with_the_app_and_the_build():
     script = read("packaging/GitCleanArchiver.iss")
     assert "#error" in script and "AppVersion" in script                         # sürüm dışarıdan verilmezse derleme durur
     assert 'AppUserModelID: "gitclean.archiver.qml"' in script
-    assert "OutputBaseFilename=GitCleanArchiver-Setup-{#AppVersion}" in script   # güncelleme denetimi bu adı arar
-    assert 'GitCleanArchiver-Setup-' in read("src/services/update_service.py")
+    assert "OutputBaseFilename=GitCleanArchiver-InnoSetup-{#AppVersion}" in script   # güncelleme denetimi bu çıktıyı önermez
+    assert 'GitCleanArchiver-' in read("src/services/update_service.py")
     assert "PrivilegesRequired=lowest" in script and "CloseApplications=yes" in script
     assert re.search(r"AppId=\{\{[0-9A-F-]{36}\}", script)
     for relative in ("resources/icons/app_icon.ico", "packaging/wizard_large.bmp", "packaging/wizard_small.bmp"):
@@ -113,8 +113,9 @@ def test_installer_script_is_consistent_with_the_app_and_the_build():
 
 def test_installer_asset_name_pattern_matches_what_the_installer_produces():
     from src.services.update_service import INSTALLER_PATTERN
-    assert INSTALLER_PATTERN.match(f"GitCleanArchiver-Setup-{__version__}.exe")
-    assert not INSTALLER_PATTERN.match(f"GitCleanArchiver-Setup-{__version__}.exe.sha256")
+    assert INSTALLER_PATTERN.match(f"GitCleanArchiver-{__version__}.exe")
+    assert not INSTALLER_PATTERN.match(f"GitCleanArchiver-InnoSetup-{__version__}.exe")    # imzasız Inno çıktısı önerilmez
+    assert not INSTALLER_PATTERN.match(f"GitCleanArchiver-{__version__}.exe.sha256")
 
 
 def test_wizard_images_have_the_sizes_inno_setup_expects():

@@ -114,7 +114,7 @@ Popup {
             }
 
             Text {
-                text: "Kurulum dosyası: " + updateVM.installerLabel
+                text: "İndirilecek dosya: " + updateVM.installerLabel
                 color: AppTheme.textSecondary
                 font.family: AppTheme.fontFamily
                 font.pixelSize: AppTheme.fontSizeSmall
@@ -124,7 +124,7 @@ Popup {
             }
 
             Text {
-                text: "Dosya tarayıcınızda açılır; kurulumu siz başlatırsınız. Uygulama kendi kendine bir şey indirmez ya da çalıştırmaz."
+                text: "Dosya tarayıcınızda açılır; indirince çalıştırın, uygulama sizi güncellemeye yönlendirir. Uygulama kendi kendine bir şey indirmez ya da çalıştırmaz."
                 color: AppTheme.textMuted
                 font.family: AppTheme.fontFamily
                 font.pixelSize: AppTheme.fontSizeSmall

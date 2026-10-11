@@ -1,6 +1,6 @@
-# Yayın: `vX.Y.Z` etiketi itilince testleri koşar, kurulum sihirbazını derler ve GitHub Release olarak yayınlar.
+# Yayın: `vX.Y.Z` etiketi itilince testleri koşar, kendini kuran exe'yi derler ve GitHub Release olarak yayınlar.
 # Etiket `python tools/release.py X.Y.Z` ile oluşturulur (sürüm dosyalarını yükseltir, commit atar, etiketler).
-# Uygulamanın güncelleme denetimi bu Release'in `GitCleanArchiver-Setup-X.Y.Z.exe` dosyasını ve sürüm notunu kullanır.
+# Uygulamanın güncelleme denetimi bu Release'in `GitCleanArchiver-X.Y.Z.exe` dosyasını ve sürüm notunu kullanır.
 name: Release
 
 on:
@@ -41,13 +41,7 @@ jobs:
         env:
           PYTHONWARNDEFAULTENCODING: "1"
         run: python -m pytest -q
-      - name: Inno Setup
-        shell: pwsh
-        run: |
-          if (-not (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
-            choco install innosetup -y --no-progress
-          }
-      - name: Kurulum dosyasını derle
+      - name: Exe'yi derle
         run: python build_installer.py
       - name: GitHub Release
         shell: pwsh
