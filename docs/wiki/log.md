@@ -1,5 +1,13 @@
 # Değişiklik Günlüğü
 
+## [2026-10-11] [FEAT] | Kurulum sihirbazı, sürüm etiketi ve güncelleme bildirimi
+- **Birleştirme:** `ui/xp-retro-tema` → `main` (`21ceda2`, `--no-ff`); dal silinmedi.
+- **Sürüm tek kaynak:** `src/version.py` (`__version__`, `RELEASE_REPO`). AppUserModelID sürümsüz (`gitclean.archiver.qml`; eskisi `2.0.0` içeriyordu, güncellemede görev çubuğu sabitlemesini bozardı). `AppStrings.appVersion` kaldırıldı, başlık `updateVM.currentVersion` gösterir.
+- **Kurulum sihirbazı:** `packaging/GitCleanArchiver.iss` (Inno Setup 6, Türkçe + İngilizce, kullanıcıya özel kurulum, XP mavisi sihirbaz görselleri `make_wizard_images.py`), `build_installer.py` (EXE + ISCC + SHA-256). Çıktı `dist/installer/GitCleanArchiver-Setup-<sürüm>.exe`.
+- **Yayın etiketi:** `tools/release.py X.Y.Z` (sürüm dosyalarını yükseltir, commit + etiket; itmez), `.github/workflows/release.yml` (`v*` etiketinde: sürüm uyumu, ruff, pytest, kurulum dosyası, `gh release create`; etiket ortam değişkeniyle geçer).
+- **Güncelleme denetimi:** `src/services/update_service.py` (sürüm karşılaştırma, GitHub kaydı doğrulama, ağ hataları, tercihler), `UpdateViewModel`, `UpdateDialog.qml` ("Yeni sürüm var": notlar, İndir / Sonra / Bu Sürümü Atla), Ayarlar'da "Güncellemeler" kartı. Ayrıntı ve güvenlik kararları: [[decisions]].
+- **Doğrulama:** 69 yeni test (sürüm ayrıştırma, sahte adres / ön sürüm / taslak reddi, ağ hataları, boyut sınırı, yönlendirme, tercih dosyası, ViewModel akışları, gerçek pencerede popup + düğmeler, uygulama kurulurken ağ isteği yok, sürüm kaynakları tutarlılığı, yayın aracı, `.iss` ile uygulama uyumu).
+
 ## [2026-10-11] [FEAT] | Sorunlar sayfası: kurala göre gruplu, kompakt, satır içi açılan liste
 - **Sorun (kullanıcı):** her bulgu ~170 px'lik tam genişlik kartı; 43 bulgu ≈ 8 ekran kaydırma, bilgiler iki kenara yığılı, ortada boşluk, aynı öneri her kartta tekrar.
 - **Çözüm:** `FindingsRowsModel` (`src/qml_ui/viewmodels/findings_groups.py`, `findingsVM.rows`): bulgular kurala göre gruplanır; ≥ 2 bulgulu her kural katlanabilir başlık alır (şiddet, kural adı, "N bulgu", kategori, "Bu Kuralı Kapat", açıkken ortak öneri bir kez), tek bulgulu kurallar "Diğer bulgular" başlığında toplanır (başlıksız satır üstündeki gruba aitmiş gibi görünüyordu). Bulgu satırı 38 px: şiddet, başlık (%40), kategori, konum, efor; tıklayınca açıklama / öneri / kod / eylemler satır içinde açılır.

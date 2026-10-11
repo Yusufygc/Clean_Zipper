@@ -14,6 +14,8 @@ PySide6 tabanlı proje analiz, temizlik ve arşivleme aracı. Python 3.10, `venv
 ./venv/Scripts/python.exe -m ruff check .    # lint (CI'da da koşar)
 ./venv/Scripts/python.exe -m py_compile <dosya>
 ./venv/Scripts/python.exe main.py            # uygulama (QML arayüzü, src/qml_ui)
+./venv/Scripts/python.exe build_installer.py # EXE + Inno Setup kurulum sihirbazı (dist/installer); sürüm: src/version.py
+./venv/Scripts/python.exe tools/release.py X.Y.Z  # sürüm yükselt + commit + etiket (push elle)
 pip install -r requirements.txt              # yalnızca çalıştırmak için (dev: requirements-dev.txt, derleme: requirements-build.txt)
 ```
 

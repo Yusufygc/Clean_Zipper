@@ -178,11 +178,15 @@ gitclean-archiver-pro/
 │
 ├── main.py                       # 🚀 Ana giriş noktası (QML arayüzü)
 ├── build_exe.py                  # 🔨 Build script'i
+├── build_installer.py            # 📦 EXE + Inno Setup kurulum sihirbazı (dist/installer)
+├── packaging/                    # 📦 Inno Setup betiği (GitCleanArchiver.iss) ve sihirbaz görselleri
+├── tools/release.py              # 🏷️ Sürüm yükseltme + etiket (tag) aracı
 ├── build_icons.py                # 🎨 Uygulama ikonunu vektörden (app.svg) üretir: app.png + çok boyutlu app_icon.ico
 ├── requirements.txt              # 📋 Çalışma zamanı bağımlılıkları (tam sabit sürümler)
 ├── requirements-dev.txt          # 🧪 + test ve lint (pytest, ruff)
 ├── ruff.toml                     # 🧹 Lint ayarı (yalnızca kesin hatalar)
 ├── .github/workflows/ci.yml      # 🤖 CI: Windows'ta ruff, pytest, pip-audit
+├── .github/workflows/release.yml # 🚀 vX.Y.Z etiketinde: test, kurulum dosyası, GitHub Release
 ├── requirements-build.txt        # 🔨 + EXE derleme (pyinstaller)
 ├── .gitattributes / .editorconfig # ↩️ Satır sonu (LF) ve kodlama (UTF-8) politikası
 └── README.md                     # 📖 Bu doküman
@@ -240,6 +244,12 @@ pip install -r requirements-build.txt    # + EXE derleme (python build_exe.py)
 # 5. Uygulamayı başlatın
 python main.py
 ```
+
+### Kurulum Sihirbazı (önerilen, Windows)
+
+[Releases](https://github.com/Yusufygc/Clean_Zipper/releases) sayfasından `GitCleanArchiver-Setup-X.Y.Z.exe` dosyasını indirip çalıştırın. Yönetici hakkı gerekmez (varsayılan: kullanıcıya özel kurulum); Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve kaldırıcı eklenir. Yeni sürümün üstüne kurulum eski sürümü günceller; ayarlarınız (`~/.gitclean`) korunur. Dosyanın yanındaki `.sha256` ile özetini doğrulayabilirsiniz. Kurulum dosyası imzasızdır: SmartScreen uyarısında **Ek bilgi → Yine de çalıştır**.
+
+Uygulama açılışta GitHub'a yalnızca "en son sürüm nedir" diye sorar; daha yeni bir sürüm varsa sürüm notlarıyla bir pencere açar (**İndir** kurulum dosyasını tarayıcıda açar, **Sonra**, **Bu Sürümü Atla**). Hiçbir şey kendiliğinden indirilip çalıştırılmaz, proje ya da kişisel veri gönderilmez. Kapatmak için **Ayarlar → Güncellemeler** ya da ortam değişkeni `GITCLEAN_NO_UPDATE_CHECK=1`.
 
 ### Tek Komutla Kurulum (Windows)
 
@@ -781,6 +791,26 @@ python build_exe.py
 ```
 
 **Çıktı:** `dist/GitCleanArchiver.exe`
+
+### Kurulum Sihirbazı (Inno Setup)
+
+```bash
+# Önce: Inno Setup 6 (https://jrsoftware.org/isdl.php) ve pip install -r requirements-build.txt
+python build_installer.py                 # EXE'yi derler, sonra dist/installer/GitCleanArchiver-Setup-<sürüm>.exe + .sha256 üretir
+python build_installer.py --skip-build    # dist/GitCleanArchiver.exe hazırsa yalnızca sihirbaz
+```
+
+Sürüm tek kaynaktan gelir: `src/version.py`. Sihirbaz Türkçe ve İngilizcedir; `AppId` sabittir (sürümler birbirinin üstüne kurulur, değiştirmeyin).
+
+### Sürüm Yayınlama (etiket)
+
+```bash
+python tools/release.py 2.1.0             # src/version.py, version_info.txt, README rozetini yükseltir; "chore(release): v2.1.0" commit'i ve v2.1.0 etiketi
+git push origin main
+git push origin v2.1.0                    # etiket itilince Release iş akışı çalışır
+```
+
+`.github/workflows/release.yml`: etiket sürümle uyumlu mu denetler, `ruff` + `pytest` koşar, kurulum dosyasını derler ve GitHub Release olarak yayınlar (sürüm notları otomatik üretilir; `v2.1.0-rc1` gibi etiketler ön sürüm olur ve güncelleme denetimi onları yok sayar). Uygulamanın güncelleme penceresi en son **yayınlanmış, ön sürüm olmayan** Release'i kullanır.
 
 ### PyInstaller Parametreleri
 
