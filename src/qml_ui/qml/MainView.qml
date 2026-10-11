@@ -146,6 +146,17 @@ ApplicationWindow {
                             topRightRadius: 5
                             z: isActive ? 2 : 1
 
+                            // Klavye ve erişilebilirlik: Tab ile odaklanır, Enter / Boşluk sekmeyi açar
+                            activeFocusOnTab: true
+                            Accessible.role: Accessible.PageTab
+                            Accessible.name: modelData.title
+                            Accessible.selected: isActive
+                            Accessible.onPressAction: window.currentTab = modelData.idx
+                            Keys.onReturnPressed: window.currentTab = modelData.idx
+                            Keys.onEnterPressed: window.currentTab = modelData.idx
+                            Keys.onSpacePressed: window.currentTab = modelData.idx
+                            FocusRing {}
+
                             // Seçili: içerikle aynı bej. Pasif: mavi gradyan (üzerine gelince açılır)
                             color: isActive ? AppTheme.tabActiveBg : "transparent"
                             gradient: isActive ? null : idleGradient
@@ -246,6 +257,7 @@ ApplicationWindow {
                     // Canlı Tema Değiştirme Butonu
                     IconButton {
                         objectName: "themeButton"
+                        tooltip: AppTheme.isDark ? "Açık temaya geç" : "Koyu temaya geç"
                         iconSource: AppTheme.isDark ? AppIcons.sun : AppIcons.moon
                         iconColor: AppTheme.titleText
                         color: isHovered ? Qt.rgba(1, 1, 1, 0.22) : "transparent"

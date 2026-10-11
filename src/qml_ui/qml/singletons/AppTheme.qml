@@ -40,7 +40,7 @@ QtObject {
     readonly property color textInverse: isDark ? "#0F172A" : "#FFFFFF"
 
     // ── Vurgu ──
-    readonly property color primary: isDark ? "#3B82F6" : "#316AC5"           // XP seçim mavisi
+    readonly property color primary: isDark ? "#5B9BFF" : "#316AC5"           // XP seçim mavisi
     readonly property color primaryHover: isDark ? "#60A5FA" : "#1F4FA0"
     readonly property color accent: isDark ? "#38BDF8" : "#0A55D8"            // Luna mavisi
     readonly property color accentHover: isDark ? "#7DD3FC" : "#0842A8"
@@ -48,21 +48,21 @@ QtObject {
     readonly property color success: isDark ? "#10B981" : "#2E7D32"
     readonly property color successBg: isDark ? "#064E3B" : "#E4F3E4"
     readonly property color warning: isDark ? "#F59E0B" : "#B45309"
-    readonly property color danger: isDark ? "#EF4444" : "#C0392B"
+    readonly property color danger: isDark ? "#F87171" : "#C0392B"
     readonly property color dangerBg: isDark ? "#7F1D1D" : "#FBE7E3"
     readonly property color info: isDark ? "#6366F1" : "#4F46E5"
 
     // ── Başlık çubuğu: Luna mavi gradyan (koyu temada lacivert) ──
     readonly property color titleTop: isDark ? "#1B3A78" : "#0A5BEB"
-    readonly property color titleMid: isDark ? "#142C5C" : "#2F8BFF"
+    readonly property color titleMid: isDark ? "#142C5C" : "#1C72E8"
     readonly property color titleBottom: isDark ? "#0E1F45" : "#0B4FD0"
     readonly property color titleBorder: isDark ? "#0A1530" : "#0831A0"
     readonly property color titleText: "#FFFFFF"
 
     // ── Sekmeler: pasif sekme mavi, seçili sekme içerikle aynı bej (içeriğe kaynaşır), üstte turuncu çizgi ──
-    readonly property color tabIdleTop: isDark ? "#223B6E" : "#5C9CFF"
-    readonly property color tabIdleBottom: isDark ? "#182C55" : "#2F6FE0"
-    readonly property color tabIdleHover: isDark ? "#2D4A87" : "#82B4FF"
+    readonly property color tabIdleTop: isDark ? "#223B6E" : "#2F6FE0"
+    readonly property color tabIdleBottom: isDark ? "#182C55" : "#1F58C4"
+    readonly property color tabIdleHover: isDark ? "#2D4A87" : "#3571E3"
     readonly property color tabIdleBorder: isDark ? "#0A1530" : "#0831A0"
     readonly property color tabIdleText: "#FFFFFF"
     readonly property color tabActiveBg: bg
@@ -75,13 +75,24 @@ QtObject {
     readonly property color btnPressTop: isDark ? "#1E293B" : "#CBC7BA"
     readonly property color btnPressBottom: isDark ? "#334155" : "#E7E3D6"
     readonly property color btnHoverBorder: "#F8B330"                         // XP turuncu üzerine gelme çerçevesi
-    readonly property color btnDisabledText: isDark ? "#64748B" : "#8E8B7D"
+    readonly property color btnDisabledText: isDark ? "#8A9BB4" : "#6F6C60"
     readonly property color btnDisabledFill: isDark ? "#1A2234" : "#F4F2EA"
     readonly property color btnDisabledBorder: isDark ? "#2E3B4E" : "#C9C6B6"
 
-    readonly property color startTop: "#74D874"                               // yeşil "Başlat" düğmesi (birincil eylem)
-    readonly property color startBottom: "#2E9A2E"
-    readonly property color startBorder: "#1D6B1D"
+    readonly property color startTop: "#278527"                               // yeşil "Başlat" düğmesi (birincil eylem); beyaz yazıyla en az 4.5:1
+    readonly property color startBottom: "#1F6B1F"
+    readonly property color startBorder: "#14501C"
+
+    // Vurgu (mavi) ve tehlike (kırmızı) düğmeleri: beyaz yazıyla her iki uçta en az 4.5:1
+    readonly property color accentBtnTop: "#2A6FDB"
+    readonly property color accentBtnBottom: "#1550B8"
+    readonly property color accentBtnBorder: "#0A3A99"
+    readonly property color dangerBtnTop: "#CC4A32"
+    readonly property color dangerBtnBottom: "#A8321A"
+    readonly property color dangerBtnBorder: "#8E2A12"
+
+    // Klavye odak halkası (Tab ile odaklanan öğenin çevresi)
+    readonly property color focusRing: isDark ? "#FFFFFF" : "#101010"
 
     // ── Geometri: XP köşeleri küçük yarıçaplıdır ──
     readonly property int radiusSmall: 3

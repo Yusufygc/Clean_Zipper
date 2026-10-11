@@ -134,6 +134,7 @@ Item {
                     spacing: 12
 
                     AppCheckBox {
+                        accessibleName: ".gitignore kurallarını uygula"
                         checked: settingsVM.respectGitignore
                         onToggled: settingsVM.setRespectGitignore(checked)
                     }
@@ -316,6 +317,7 @@ Item {
                                     spacing: 10
 
                                     AppCheckBox {
+                                        accessibleName: modelData.name
                                         checked: modelData.enabled
                                         onToggled: settingsVM.toggleAnalyzer(modelData.id, checked)
                                     }

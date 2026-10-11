@@ -10,8 +10,18 @@ Rectangle {
     property url iconSource: ""
     property int iconSize: 18
     property string variant: "primary" // "primary" | "secondary" | "ghost" | "danger" | "accent"
-    property bool enabled: true
     signal clicked()
+
+    // Klavye ve erişilebilirlik: Tab ile odaklanır, Enter / Boşluk tıklar, ekran okuyucuya düğme olarak görünür
+    // (`enabled`, Item'ın kendi özelliğidir; yeniden tanımlamak temel sınıfı eziyordu)
+    activeFocusOnTab: root.enabled
+    Accessible.role: Accessible.Button
+    Accessible.name: root.text
+    Accessible.onPressAction: if (root.enabled) root.clicked()
+    Keys.onReturnPressed: if (root.enabled) root.clicked()
+    Keys.onEnterPressed: if (root.enabled) root.clicked()
+    Keys.onSpacePressed: if (root.enabled) root.clicked()
+    FocusRing {}
 
     implicitWidth: Math.max(contentRow.implicitWidth + 28, 90)
     implicitHeight: 34
@@ -25,17 +35,18 @@ Rectangle {
     readonly property color topColor: {
         if (!root.enabled) return AppTheme.btnDisabledFill
         if (flat) return isPressed ? AppTheme.surfaceActive : (isHovered ? AppTheme.surfaceHover : "transparent")
-        if (variant === "primary") return isPressed ? AppTheme.startBottom : (isHovered ? Qt.lighter(AppTheme.startTop, 1.08) : AppTheme.startTop)
-        if (variant === "accent") return isPressed ? "#1F5FD6" : (isHovered ? "#7DB3FF" : "#5EA3FF")
-        if (variant === "danger") return isPressed ? "#C8401F" : (isHovered ? "#F59A82" : "#F0876B")
+        // Üzerine gelince dolgu değişmez (yalnızca turuncu çerçeve): açılan dolgu beyaz yazının kontrastını düşürürdü
+        if (variant === "primary") return isPressed ? AppTheme.startBottom : AppTheme.startTop
+        if (variant === "accent") return isPressed ? AppTheme.accentBtnBottom : AppTheme.accentBtnTop
+        if (variant === "danger") return isPressed ? AppTheme.dangerBtnBottom : AppTheme.dangerBtnTop
         return isPressed ? AppTheme.btnPressTop : AppTheme.btnTop
     }
     readonly property color bottomColor: {
         if (!root.enabled) return AppTheme.btnDisabledFill
         if (flat) return topColor
         if (variant === "primary") return isPressed ? AppTheme.startTop : AppTheme.startBottom
-        if (variant === "accent") return isPressed ? "#5EA3FF" : "#1F5FD6"
-        if (variant === "danger") return isPressed ? "#F0876B" : "#C8401F"
+        if (variant === "accent") return isPressed ? AppTheme.accentBtnTop : AppTheme.accentBtnBottom
+        if (variant === "danger") return isPressed ? AppTheme.dangerBtnTop : AppTheme.dangerBtnBottom
         return isPressed ? AppTheme.btnPressBottom : AppTheme.btnBottom
     }
 
@@ -50,8 +61,8 @@ Rectangle {
         if (flat) return AppTheme.border
         if (isHovered && !isPressed) return AppTheme.btnHoverBorder       // XP: üzerine gelince turuncu çerçeve
         if (variant === "primary") return AppTheme.startBorder
-        if (variant === "accent") return "#0A3A99"
-        if (variant === "danger") return "#8E2A12"
+        if (variant === "accent") return AppTheme.accentBtnBorder
+        if (variant === "danger") return AppTheme.dangerBtnBorder
         return AppTheme.borderStrong
     }
 

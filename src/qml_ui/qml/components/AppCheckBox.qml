@@ -6,6 +6,10 @@ import "../singletons"
 CheckBox {
     id: control
 
+    // Etiket ayrı bir Text ile yazıldığı için ekran okuyucunun okuyacağı ad buradan verilir
+    property string accessibleName: ""
+    Accessible.name: control.accessibleName
+
     implicitWidth: 24
     implicitHeight: 24
     padding: 0
@@ -18,8 +22,8 @@ CheckBox {
         y: (control.height - height) / 2
         radius: 5
         color: control.checked ? AppTheme.accent : (control.hovered ? AppTheme.surfaceHover : AppTheme.bgSecondary)
-        border.color: control.checked || control.hovered || control.visualFocus ? AppTheme.accent : AppTheme.border
-        border.width: 1
+        border.color: control.visualFocus ? AppTheme.focusRing : (control.checked || control.hovered ? AppTheme.accent : AppTheme.border)
+        border.width: control.visualFocus ? 2 : 1
 
         Behavior on color { ColorAnimation { duration: AppTheme.animFast } }
 
