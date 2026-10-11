@@ -1,5 +1,14 @@
 # Değişiklik Günlüğü
 
+## [2026-10-11] [FEAT] | Sorunlar sayfası: kurala göre gruplu, kompakt, satır içi açılan liste
+- **Sorun (kullanıcı):** her bulgu ~170 px'lik tam genişlik kartı; 43 bulgu ≈ 8 ekran kaydırma, bilgiler iki kenara yığılı, ortada boşluk, aynı öneri her kartta tekrar.
+- **Çözüm:** `FindingsRowsModel` (`src/qml_ui/viewmodels/findings_groups.py`, `findingsVM.rows`): bulgular kurala göre gruplanır; ≥ 2 bulgulu her kural katlanabilir başlık alır (şiddet, kural adı, "N bulgu", kategori, "Bu Kuralı Kapat", açıkken ortak öneri bir kez), tek bulgulu kurallar "Diğer bulgular" başlığında toplanır (başlıksız satır üstündeki gruba aitmiş gibi görünüyordu). Bulgu satırı 38 px: şiddet, başlık (%40), kategori, konum, efor; tıklayınca açıklama / öneri / kod / eylemler satır içinde açılır.
+- **Davranış:** Kritik ve Yüksek gruplar açık başlar, kalanı kapalı; kullanıcının seçimi yeni analizden sonra korunur; süzgeç ya da arama açıkken tüm gruplar açılır ve katlama kilitlenir (sonuç gizlenmesin); "Grupları Genişlet / Daralt"; grup katlama `rowsInserted/Removed` ile kısmi güncellenir (kaydırma konumu bozulmaz); satır ayrıntı durumu modelde tutulur (kaydırınca kaybolmaz). `FindingsListModel` (süzülmüş bulgular, sayım, arama) aynen kaldı; `resultCount` bulguları sayar, başlıkları saymaz.
+- **Erişilebilirlik:** satır ve başlık Tab ile odaklanır, Enter / Boşluk açar, ekran okuyucuya düğme olarak başlık + durum okunur; odak çerçevesi satırın içinde. Şiddet rozeti (`SeverityBadge`): yazı rengi `AppTheme.onSeverity` (açık temada beyaz, koyuda koyu); YÜKSEK rengi `severityHigh` (eski `#EA580C` beyazla 3,6:1'di).
+- **Kapsam dışı:** ana-detay (sol liste + sağ panel) düzeni yapılmadı; ihtiyaç olursa aynı `rows` modeli üzerine kurulabilir.
+- **Doğrulama:** `tests/unit/test_findings_groups.py` (16 test: gruplama, sıralama, açık / kapalı varsayılanlar, kısmi ekleme / silme, süzgeçte kilit, ortak öneri, ayrıntı durumu, sır grubunda kural kapatma yok; gerçek pencerede satır yüksekliği 38 px, 900 / 1400 / 1920 genişlikte taşma yok, fareyle ve klavyeyle açma, `QAccessible` adı); iki mutasyon (süzgeç kilidi, başlık genişliği) testleri kırdı. Bu repo üzerinde 58 bulgu 10 başlıkla tek ekrana sığdı (1920x1030). Tam paket 834 geçti.
+- **Doğrulanmadı:** koyu temada elle bakış (yalnızca kontrast testi), gerçek ekran okuyucu, EXE.
+
 ## [2026-10-11] [FIX] | QA bulgularının tamamı düzeltildi (`QA_RAPORU.md` Bölüm 9)
 - **Analiz bayat kalmaz (QA-02, QA-10):** gerçek temizlik, proje içine yazılan zip / kopya (`projectModified`) ve analizi etkileyen ayarların uygulanması (`applySettings`, `resetToDefaults` artık `rulesChanged` yayar) analizi otomatik yeniler. Yedek ve proje dışı çıktı yenilemez.
 - **Türkçe arama (QA-03):** `fold_turkish` (`İ→i`, `I→ı`, aksan duyarsız); `ŞİFRE`, `AÇIK`, `sifre` artık bulur.

@@ -15,3 +15,5 @@ SegmentedFilter 1.0 SegmentedFilter.qml
 FilterComboBox 1.0 FilterComboBox.qml
 ThemedScrollBar 1.0 ThemedScrollBar.qml
 FocusRing 1.0 FocusRing.qml
+SeverityBadge 1.0 SeverityBadge.qml
+FindingGroupHeader 1.0 FindingGroupHeader.qml

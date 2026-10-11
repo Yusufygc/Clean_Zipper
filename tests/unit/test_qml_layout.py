@@ -216,7 +216,7 @@ Item {{
         width: 700
         title: "Başlık"; description: "Açıklama"; severity: "LOW"; categoryName: "Ölü kod"; fileName: "a.py"
         relPath: "pkg/a.py"; filePath: "C:/proje/pkg/a.py"; line: {line}; rule: "{rule}"; isSecret: {str(secret).lower()}
-        suggestion: "Silin"; codeVisible: {str(visible_code).lower()}; codeText: "3: import os\n4: x = 1"
+        suggestion: "Silin"; detailOpen: true; codeVisible: {str(visible_code).lower()}; codeText: "3: import os\n4: x = 1"
     }}
 }}
 """

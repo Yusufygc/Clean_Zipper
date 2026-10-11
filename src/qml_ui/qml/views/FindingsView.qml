@@ -192,7 +192,7 @@ Item {
                 options: [
                     { key: "ALL", label: "Tümü", count: findingsVM.totalCount, color: AppTheme.accent },
                     { key: "CRITICAL", label: "Kritik", count: findingsVM.criticalCount, color: AppTheme.danger },
-                    { key: "HIGH", label: "Yüksek", count: findingsVM.highCount, color: "#EA580C" },
+                    { key: "HIGH", label: "Yüksek", count: findingsVM.highCount, color: AppTheme.severityHigh },
                     { key: "MEDIUM", label: "Orta", count: findingsVM.mediumCount, color: AppTheme.warning },
                     { key: "LOW", label: "Düşük", count: findingsVM.lowCount, color: AppTheme.primary },
                     { key: "INFO", label: "Bilgi", count: findingsVM.infoCount, color: AppTheme.success }
@@ -220,11 +220,19 @@ Item {
 
             Text {
                 objectName: "resultCount"
-                text: findingsList.count + " sonuç"
+                text: findingsVM.rows.resultCount + " sonuç"
                 color: AppTheme.textSecondary
                 font.family: AppTheme.fontFamily
                 font.pixelSize: AppTheme.fontSizeSmall
                 renderType: Text.NativeRendering
+            }
+
+            CustomButton {
+                objectName: "toggleGroups"
+                text: findingsVM.rows.allExpanded ? "Grupları Daralt" : "Grupları Genişlet"
+                variant: "secondary"
+                visible: findingsVM.rows.groupCount > 0 && !findingsVM.rows.groupsLocked
+                onClicked: findingsVM.rows.setAllGroupsExpanded(!findingsVM.rows.allExpanded)
             }
 
             CustomButton {
@@ -280,33 +288,78 @@ Item {
                 }
             }
 
-            // Liste
+            // Liste: kurala göre gruplanmış başlık ve bulgu satırları (görünüm modeli: findingsVM.rows)
+            Rectangle {
+                anchors.fill: parent
+                color: AppTheme.surface
+                border.color: AppTheme.border
+                border.width: 1
+                visible: findingsList.count > 0
+            }
+
             ListView {
                 id: findingsList
+                objectName: "findingsList"
                 boundsBehavior: Flickable.StopAtBounds
                 anchors.fill: parent
+                anchors.margins: 1
                 clip: true
-                spacing: 10
-                model: findingsVM.model
+                spacing: 0
+                model: findingsVM.rows
                 visible: findingsList.count > 0
 
-                delegate: FindingCard {
+                delegate: Item {
+                    id: cell
                     width: findingsList.width - AppTheme.scrollGutter
-                    title: model.title
-                    description: model.description
-                    severity: model.severity
-                    categoryName: model.categoryName
-                    fileName: model.fileName
-                    filePath: model.filePath
-                    relPath: model.relPath
-                    line: model.line
-                    suggestion: model.suggestion
-                    rule: model.rule
-                    ruleLabel: model.ruleLabel
-                    effort: model.effort
-                    isSecret: model.isSecret
-                    approximate: model.approximate
-                    onDisableRuleRequested: function(ruleId) { settingsVM.disableRule(ruleId) }
+                    height: loader.item ? loader.item.implicitHeight : 0
+
+                    Loader {
+                        id: loader
+                        width: parent.width
+                        sourceComponent: model.kind === "header" ? headerComponent : rowComponent
+                    }
+
+                    Component {
+                        id: headerComponent
+                        FindingGroupHeader {
+                            title: model.title
+                            severity: model.severity
+                            categoryName: model.categoryName
+                            suggestion: model.suggestion
+                            rule: model.rule
+                            count: model.count
+                            expanded: model.expanded
+                            collapsible: model.collapsible
+                            canDisable: model.canDisable
+                            onToggleRequested: findingsVM.rows.toggleGroup(model.groupKey)
+                            onDisableRuleRequested: function(ruleId) { settingsVM.disableRule(ruleId) }
+                        }
+                    }
+
+                    Component {
+                        id: rowComponent
+                        FindingCard {
+                            title: model.title
+                            description: model.description
+                            severity: model.severity
+                            categoryName: model.categoryName
+                            fileName: model.fileName
+                            filePath: model.filePath
+                            relPath: model.relPath
+                            line: model.line
+                            suggestion: model.suggestion
+                            rule: model.rule
+                            ruleLabel: model.ruleLabel
+                            effort: model.effort
+                            isSecret: model.isSecret
+                            approximate: model.approximate
+                            grouped: model.grouped
+                            mixed: model.mixed
+                            detailOpen: model.detailOpen
+                            onToggleRequested: findingsVM.rows.toggleDetail(model.rowKey)
+                            onDisableRuleRequested: function(ruleId) { settingsVM.disableRule(ruleId) }
+                        }
+                    }
                 }
 
                 ScrollBar.vertical: ThemedScrollBar { active: true }

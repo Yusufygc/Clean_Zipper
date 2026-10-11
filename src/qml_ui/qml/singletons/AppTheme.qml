@@ -94,6 +94,20 @@ QtObject {
     // Klavye odak halkası (Tab ile odaklanan öğenin çevresi)
     readonly property color focusRing: isDark ? "#FFFFFF" : "#101010"
 
+    // Şiddet renkleri: rozet yazısı (onSeverity) her zeminle en az 4,5:1 (açık: beyaz yazı koyu zemin, koyu: koyu yazı açık zemin)
+    readonly property color severityHigh: isDark ? "#FB923C" : "#C2410C"
+    readonly property color onSeverity: isDark ? "#0F172A" : "#FFFFFF"
+
+    function severityColor(name) {
+        switch (String(name).toUpperCase()) {
+        case "CRITICAL": return danger
+        case "HIGH": return severityHigh
+        case "MEDIUM": return warning
+        case "LOW": return primary
+        default: return success
+        }
+    }
+
     // ── Geometri: XP köşeleri küçük yarıçaplıdır ──
     readonly property int radiusSmall: 3
     readonly property int radiusBase: 3

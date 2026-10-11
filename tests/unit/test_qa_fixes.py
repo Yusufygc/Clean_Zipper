@@ -255,6 +255,13 @@ def test_status_colors_have_aa_contrast_on_surfaces_in_both_themes():
         assert _ratio(_token(theme, "textMuted", dark), _token(theme, "bg", dark)) >= 4.5
 
 
+def test_severity_badge_text_has_aa_contrast_on_every_severity_color_in_both_themes():
+    theme = (ROOT / "src/qml_ui/qml/singletons/AppTheme.qml").read_text(encoding="utf-8")
+    for dark in (False, True):
+        for name in ("danger", "severityHigh", "warning", "primary", "success"):
+            assert _ratio(_token(theme, "onSeverity", dark), _token(theme, name, dark)) >= 4.5, (name, dark)
+
+
 # ---- QA-06: Türkçe karakterler ----------------------------------------------------------------
 
 def test_analyzer_names_and_titles_use_turkish_characters(tmp_path):

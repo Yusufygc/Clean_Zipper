@@ -88,7 +88,7 @@ Arayüz: bir "ajan görevleri olarak dışa aktar" düğmesi yalnızca `export_a
 |---|---|
 | `appVM` | Proje açma, durum çubuğu (hatalar da buraya yazılır), `openPath` (klasörü Gezgin'de aç) |
 | `scanVM` | Gösterge paneli: skor, kategori puanları, dosya türü ve **dil dağılımı**, öneriler, analiz bütünlüğü (hata veren analizör, `.gitignore`, **atlanan dosya nedenleri**), HTML / denetim raporu |
-| `findingsVM` | Sorunlar: şiddet ve **kategori** süzgeci, arama, **göreli yol + satır**, **tembel kaynak kodu** (sırlarda hiç gösterilmez), **"Bu Kuralı Kapat"** |
+| `findingsVM` | Sorunlar: şiddet ve **kategori** süzgeci, arama, **göreli yol + satır**, **tembel kaynak kodu** (sırlarda hiç gösterilmez), **"Bu Kuralı Kapat"**, **kurala göre gruplu liste** (`rows`: `FindingsRowsModel`; `toggleGroup`, `toggleDetail`, `setAllGroupsExpanded`, `resultCount`) |
 | `archiveVM`, `cleanupVM` | Arşiv / kopya / yedek, temizlik |
 | `settingsVM` | 9 eşik, analizör seçimi (tümünü aç / kapat), kapatılan kurallar, `.gitignore`, ajan görevleri (klasör seçimi, parti, dışa aktarma, **sayılı doğrulama sonucu**), varsayılana sıfırlama; kalıcı |
 
