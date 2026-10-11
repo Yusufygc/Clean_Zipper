@@ -27,7 +27,7 @@ API_HOST = "api.github.com"
 TIMEOUT_SECONDS = 8
 MAX_RESPONSE_BYTES = 1_000_000
 MAX_NOTES_CHARS = 4000
-INSTALLER_PATTERN = re.compile(r"^GitCleanArchiver-[0-9]+\.[0-9]+\.[0-9]+\.exe$")
+INSTALLER_PATTERN = re.compile(r"^GitCleanArchiver-Setup-[0-9.]+\.exe$")
 _VERSION = re.compile(r"v?(\d+)\.(\d+)\.(\d+)")
 OPT_OUT_ENV = "GITCLEAN_NO_UPDATE_CHECK"
 

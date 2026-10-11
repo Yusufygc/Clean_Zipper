@@ -26,8 +26,8 @@ def qapp():
 def info(version="99.0.0"):
     base = "https://github.com/Yusufygc/Clean_Zipper"
     return UpdateInfo(version=version, tag="v" + version, page_url=f"{base}/releases/tag/v{version}",
-                      download_url=f"{base}/releases/download/v{version}/GitCleanArchiver-{version}.exe",
-                      asset_name=f"GitCleanArchiver-{version}.exe", size=50 * 1024 * 1024, notes="Yenilikler:\n- gruplu liste",
+                      download_url=f"{base}/releases/download/v{version}/GitCleanArchiver-Setup-{version}.exe",
+                      asset_name=f"GitCleanArchiver-Setup-{version}.exe", size=50 * 1024 * 1024, notes="Yenilikler:\n- gruplu liste",
                       published="2026-10-11")
 
 
@@ -64,7 +64,7 @@ def test_startup_check_opens_the_popup_when_a_newer_version_exists(qapp, tmp_pat
     vm = make_vm(tmp_path, info())
     assert run_check(vm, manual=False) == [True]
     assert vm.updateAvailable and vm.latestVersion == "99.0.0" and "gruplu liste" in vm.releaseNotes
-    assert vm.installerLabel == "GitCleanArchiver-99.0.0.exe, 50 MB" and vm.publishedDate == "2026-10-11"
+    assert vm.installerLabel == "GitCleanArchiver-Setup-99.0.0.exe, 50 MB" and vm.publishedDate == "2026-10-11"
 
 
 def test_startup_check_is_silent_when_up_to_date_or_when_the_network_fails(qapp, tmp_path):
@@ -130,7 +130,7 @@ def test_download_opens_the_installer_in_the_browser_and_falls_back_to_the_relea
     assert opened == []                                                         # bilgi yokken hiçbir şey açılmaz
     run_check(vm, manual=True)
     vm.openDownload()
-    assert opened[-1].endswith("GitCleanArchiver-99.0.0.exe")
+    assert opened[-1].endswith("GitCleanArchiver-Setup-99.0.0.exe")
     vm.openReleasePage()
     assert opened[-1].endswith("/releases/tag/v99.0.0")
     no_asset = info()

@@ -18,4 +18,3 @@ FocusRing 1.0 FocusRing.qml
 SeverityBadge 1.0 SeverityBadge.qml
 FindingGroupHeader 1.0 FindingGroupHeader.qml
 UpdateDialog 1.0 UpdateDialog.qml
-InstallDialog 1.0 InstallDialog.qml
