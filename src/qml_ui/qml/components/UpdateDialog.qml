@@ -153,7 +153,7 @@ Popup {
                 objectName: "updateError"
                 visible: updateVM.errorMessage !== ""
                 text: updateVM.errorMessage
-                color: AppTheme.danger
+                color: updateVM.isWaitingForWindows ? AppTheme.textSecondary : AppTheme.danger
                 font.family: AppTheme.fontFamily
                 font.pixelSize: AppTheme.fontSizeSmall
                 font.bold: true
@@ -178,6 +178,22 @@ Popup {
                 Item { Layout.fillWidth: true }
 
                 CustomButton {
+                    objectName: "stopWaitingButton"
+                    visible: updateVM.isWaitingForWindows
+                    text: "Beklemeyi Bırak"
+                    variant: "secondary"
+                    onClicked: updateVM.stopWaiting()
+                }
+
+                CustomButton {
+                    objectName: "releasePageButton"
+                    visible: updateVM.errorMessage !== ""
+                    text: "Sürüm Sayfası"
+                    variant: "ghost"
+                    onClicked: updateVM.openReleasePage()
+                }
+
+                CustomButton {
                     objectName: "laterButton"
                     enabled: !updateVM.isDownloading
                     text: "Sonra"
@@ -188,7 +204,8 @@ Popup {
                 CustomButton {
                     objectName: "downloadButton"
                     enabled: !updateVM.isDownloading
-                    text: updateVM.isDownloading ? "İndiriliyor… %" + updateVM.downloadProgress : (updateVM.canInstall ? "Güncelle" : "Sürüm Sayfası")
+                    text: updateVM.isWaitingForWindows ? "Windows bekleniyor…"
+                          : (updateVM.isDownloading ? "İndiriliyor… %" + updateVM.downloadProgress : (updateVM.canInstall ? "Güncelle" : "Sürüm Sayfası"))
                     variant: "primary"
                     iconSource: AppIcons.download
                     onClicked: updateVM.startUpdate()

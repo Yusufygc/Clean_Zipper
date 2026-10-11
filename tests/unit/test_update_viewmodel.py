@@ -303,3 +303,65 @@ def test_update_button_starts_the_download_and_the_dialog_cannot_be_dismissed_me
     assert window.findChild(QObject, "laterButton").property("enabled") is False and window.findChild(QObject, "downloadProgress").property("visible") is True
     hold.set()
     assert pump_until(lambda: launched)
+
+
+def test_a_windows_block_reveals_the_verified_installer_and_explains_what_to_do(qapp, tmp_path):
+    from src.services.update_service import InstallerBlockedError
+    downloaded = tmp_path / "GitCleanArchiver-Setup-99.0.0.exe"
+    revealed, quits = [], []
+
+    def launcher(path):
+        raise InstallerBlockedError(path)
+    vm = UpdateViewModel(check=lambda: info(), preferences_file=tmp_path / "updates.json", download=lambda i, p: downloaded,
+                         launcher=launcher, revealer=revealed.append, retry_limit=0)
+    vm.quitRequested.connect(lambda: quits.append(True))
+    run_check(vm, manual=True)
+    vm.startUpdate()
+    assert pump_until(lambda: vm.errorMessage != "")
+    assert revealed == [downloaded] and quits == [] and vm.isDownloading is False
+    assert "Akıllı Uygulama Denetimi" in vm.errorMessage and "çift tıklayarak" in vm.errorMessage       # kullanıcıya ne yapacağı söylenir
+
+
+def blocked_then(tmp_path, blocked_times, **kwargs):
+    """İlk `blocked_times` başlatma engellenir, sonrakiler çalışır."""
+    from src.services.update_service import InstallerBlockedError
+    downloaded = tmp_path / "GitCleanArchiver-Setup-99.0.0.exe"
+    attempts, revealed, quits = [], [], []
+
+    def launcher(path):
+        attempts.append(path)
+        if len(attempts) <= blocked_times:
+            raise InstallerBlockedError(path)
+    vm = UpdateViewModel(check=lambda: info(), preferences_file=tmp_path / "updates.json", download=lambda i, p: downloaded,
+                         launcher=launcher, revealer=revealed.append, retry_interval_ms=20, **kwargs)
+    vm.quitRequested.connect(lambda: quits.append(True))
+    run_check(vm, manual=True)
+    return vm, attempts, revealed, quits
+
+
+def test_a_windows_block_is_retried_automatically_until_it_lifts_and_then_the_update_proceeds(qapp, tmp_path):
+    vm, attempts, revealed, quits = blocked_then(tmp_path, blocked_times=3, retry_limit=40)
+    vm.startUpdate()
+    assert pump_until(lambda: vm.isWaitingForWindows)
+    assert "denetliyor" in vm.errorMessage and vm.isDownloading is True               # bekleme sırasında pencere kilitli
+    assert pump_until(lambda: quits)
+    assert len(attempts) == 4 and revealed == [] and vm.isWaitingForWindows is False  # engel 3 denemede sürdü, 4.de kalktı
+
+
+def test_when_the_block_never_lifts_the_installer_is_revealed_for_manual_installation(qapp, tmp_path):
+    vm, attempts, revealed, quits = blocked_then(tmp_path, blocked_times=999, retry_limit=3)
+    vm.startUpdate()
+    assert pump_until(lambda: revealed)
+    assert len(attempts) == 4 and quits == [] and vm.isWaitingForWindows is False and vm.isDownloading is False
+    assert "çift tıklayarak" in vm.errorMessage
+
+
+def test_the_user_can_stop_waiting_and_install_by_hand(qapp, tmp_path):
+    vm, attempts, revealed, quits = blocked_then(tmp_path, blocked_times=999, retry_limit=1000)
+    vm.startUpdate()
+    assert pump_until(lambda: vm.isWaitingForWindows)
+    vm.stopWaiting()
+    assert vm.isWaitingForWindows is False and len(revealed) == 1 and quits == []
+    count = len(attempts)
+    pump_until(lambda: False, timeout=0.3)
+    assert len(attempts) == count                                                     # zamanlayıcı durdu, yeniden denenmiyor

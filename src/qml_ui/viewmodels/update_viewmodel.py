@@ -1,12 +1,13 @@
 import logging
+import subprocess
 from pathlib import Path
 from typing import Callable, Optional
 
-from PySide6.QtCore import Property, QObject, QThread, QUrl, Signal, Slot
+from PySide6.QtCore import Property, QObject, QThread, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices
 
 from src.services import update_service
-from src.services.update_service import UpdateCheckError, UpdateInfo
+from src.services.update_service import InstallerBlockedError, UpdateCheckError, UpdateInfo
 from src.version import RELEASE_REPO, __version__
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,15 @@ class UpdateWorker(QThread):
         except Exception as e:                                   # beklenmeyen hata arayüzü düşürmemeli
             logger.warning("Güncelleme denetimi beklenmedik şekilde başarısız: %s", e, exc_info=True)
             self.failed.emit("Güncelleme denetimi yapılamadı.")
+
+
+RETRY_INTERVAL_MS = 15_000          # Windows engeli bir süre sonra kalkabiliyor (gözlem): 15 sn'de bir yeniden dene
+RETRY_LIMIT = 40                    # 40 x 15 sn = 10 dk; sonra dosya Gezgin'de gösterilir
+
+
+def reveal_in_explorer(path: Path) -> None:
+    """Dosyayı Gezgin'de seçili gösterir (kabuk yok: tek komut dizesi, adres tırnaklı)."""
+    subprocess.Popen(f'explorer.exe /select,"{path}"')
 
 
 class DownloadWorker(QThread):
@@ -64,11 +74,19 @@ class UpdateViewModel(QObject):
 
     def __init__(self, check: Optional[Callable[[], Optional[UpdateInfo]]] = None, preferences_file: Optional[Path] = None,
                  download: Optional[Callable[[UpdateInfo, Callable[[int], None]], Path]] = None,
-                 launcher: Optional[Callable[[Path], None]] = None, parent: Optional[QObject] = None):
+                 launcher: Optional[Callable[[Path], None]] = None, revealer: Optional[Callable[[Path], None]] = None,
+                 retry_interval_ms: int = RETRY_INTERVAL_MS, retry_limit: int = RETRY_LIMIT, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._check = check or (lambda: update_service.check_for_update(__version__, RELEASE_REPO))
         self._download = download or update_service.download_installer
         self._launcher = launcher or update_service.launch_installer
+        self._revealer = revealer or reveal_in_explorer
+        self._retry_limit, self._retries_left = retry_limit, 0
+        self._waiting = False
+        self._pending: Optional[Path] = None
+        self._retry_timer = QTimer(self)
+        self._retry_timer.setInterval(retry_interval_ms)
+        self._retry_timer.timeout.connect(self._retry_launch)
         self._downloading = False
         self._progress = 0
         self._error = ""
@@ -135,6 +153,11 @@ class UpdateViewModel(QObject):
     @Property(str, notify=stateChanged)
     def errorMessage(self) -> str:
         return self._error
+
+    @Property(bool, notify=stateChanged)
+    def isWaitingForWindows(self) -> bool:
+        """Windows kurulum dosyasını engelledi; engel kalkana dek otomatik yeniden deneniyor."""
+        return self._waiting
 
     @Property(bool, notify=stateChanged)
     def canInstall(self) -> bool:
@@ -215,12 +238,51 @@ class UpdateViewModel(QObject):
         self.stateChanged.emit()
 
     def _on_downloaded(self, path: str) -> None:
+        self._pending, self._retries_left = Path(path), self._retry_limit
+        self._try_launch()
+
+    def _try_launch(self) -> None:
+        """Kurulumu başlatır. Windows engellerse (Akıllı Uygulama Denetimi) dosya indirilmiş ve doğrulanmış kalır: engel
+        kalkana dek aralıklarla yeniden denenir, süre dolarsa dosya Gezgin'de gösterilir (elle kurulum)."""
         try:
-            self._launcher(Path(path))
+            self._launcher(self._pending)
+        except InstallerBlockedError as e:
+            if self._retries_left > 0:
+                self._waiting, self._error = True, ("Windows (Akıllı Uygulama Denetimi) kurulum dosyasını denetliyor; engel kalkınca kurulum "
+                                                    "kendiliğinden başlayacak. Bekleniyor…")
+                self._retries_left -= 1
+                self._retry_timer.start()
+                self.stateChanged.emit()
+                return
+            self._give_up(e)
+            return
         except (UpdateCheckError, OSError) as e:
+            self._stop_waiting()
             self._on_download_failed(str(e) if isinstance(e, UpdateCheckError) else "Kurulum başlatılamadı.")
             return
+        self._stop_waiting()
         self.quitRequested.emit()
+
+    def _retry_launch(self) -> None:
+        self._try_launch()
+
+    def _stop_waiting(self) -> None:
+        self._retry_timer.stop()
+        self._waiting = False
+
+    def _give_up(self, error: InstallerBlockedError) -> None:
+        self._stop_waiting()
+        try:
+            self._revealer(error.path)
+        except OSError:
+            logger.debug("Gezgin açılamadı", exc_info=True)
+        self._on_download_failed(str(error))
+
+    @Slot()
+    def stopWaiting(self) -> None:
+        """Beklemeyi bırakır: dosya Gezgin'de gösterilir, kullanıcı elle kurar."""
+        if self._waiting and self._pending is not None:
+            self._give_up(InstallerBlockedError(self._pending))
 
     def _on_download_failed(self, message: str) -> None:
         self._downloading, self._error = False, message
