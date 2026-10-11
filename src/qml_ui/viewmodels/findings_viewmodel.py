@@ -15,6 +15,15 @@ from src.services.audit_catalog import RULE_EFFORT, DEFAULT_EFFORT, CATEGORY_NAM
 logger = logging.getLogger(__name__)
 
 
+_TURKISH_FOLD = str.maketrans("ıüöçşğ", "iuocsg")
+
+
+def fold_turkish(text: str) -> str:
+    """Arama için Türkçe duyarlı katlama: `İ`→`i`, `I`→`ı` (Python'un `lower()`'ı `İ`'yi `i̇` yapar, `I`'yı `i`),
+    sonra aksan duyarsız (`ş→s`, `ı→i` ...): `ŞİFRE`, `Şifre`, `şifre` ve `sifre` aynı şeyi bulur."""
+    return (text or "").replace("İ", "i").replace("I", "ı").lower().translate(_TURKISH_FOLD)
+
+
 def is_sensitive_finding(finding: AnalysisResult) -> bool:
     """Sır sızıntısı içerebilecek bulguları tespit eder."""
     rule = finding.metadata.get("rule", "")
@@ -150,7 +159,7 @@ class FindingsListModel(QAbstractListModel):
         self._apply_filter()
 
     def set_search_query(self, query: str):
-        self._search_query = (query or "").strip().lower()
+        self._search_query = fold_turkish((query or "").strip())
         self._apply_filter()
 
     def _apply_filter(self):
@@ -167,7 +176,7 @@ class FindingsListModel(QAbstractListModel):
 
             # 3. Metin araması
             if self._search_query:
-                haystack = f"{it['title']} {it['description']} {it['fileName']} {it['rule']}".lower()
+                haystack = fold_turkish(f"{it['title']} {it['description']} {it['fileName']} {it['rule']}")
                 if self._search_query not in haystack:
                     continue
 
