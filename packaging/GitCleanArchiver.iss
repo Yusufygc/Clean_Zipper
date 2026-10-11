@@ -1,6 +1,6 @@
 ; GitClean Archiver kurulum sihirbazı (Inno Setup 6).
 ; Derleme: python build_installer.py   (EXE'yi derler, sürümü src/version.py'den alıp bu betiği ISCC ile çalıştırır)
-; Elle:    ISCC /DAppVersion=2.1.0 packaging\GitCleanArchiver.iss   (önce dist\GitCleanArchiver.exe derlenmiş olmalı)
+; Elle:    ISCC /DAppVersion=2.1.0 packaging\GitCleanArchiver.iss   (önce dist\GitCleanArchiver\ klasörü derlenmiş olmalı)
 
 #ifndef AppVersion
   #error AppVersion tanımlı değil: ISCC /DAppVersion=X.Y.Z ile ya da build_installer.py ile derleyin.
@@ -25,6 +25,7 @@ VersionInfoProductName={#AppName}
 VersionInfoDescription={#AppName} Setup
 
 ; Yönetici hakkı gerekmez: varsayılan kullanıcıya özel kurulum (%LOCALAPPDATA%\Programs), sihirbaz "tüm kullanıcılar" seçeneği sunar.
+; (Yetki düzeyi Akıllı Uygulama Denetimi sonucunu etkilemedi; kullanıcıya özel kurulum UAC sormaz ve derleme sonrası sessiz denemeyi mümkün kılar.)
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 DefaultDirName={autopf}\{#AppName}
@@ -57,7 +58,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\dist\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
+; onedir derlemesi: exe + _internal (Qt DLL'leri, QML, kaynaklar); klasörün tamamı {app}'e.
+Source: "..\dist\GitCleanArchiver\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; AppUserModelID uygulamadaki değerle aynıdır (src/qml_ui/app.py): görev çubuğu sabitlemesi kısayolla eşleşir.

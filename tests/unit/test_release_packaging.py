@@ -104,7 +104,8 @@ def test_installer_script_is_consistent_with_the_app_and_the_build():
     assert 'AppUserModelID: "gitclean.archiver.qml"' in script
     assert "OutputBaseFilename=GitCleanArchiver-Setup-{#AppVersion}" in script   # güncelleme denetimi bu adı arar
     assert 'GitCleanArchiver-Setup-' in read("src/services/update_service.py")
-    assert "PrivilegesRequired=lowest" in script and "CloseApplications=yes" in script
+    assert "PrivilegesRequired=lowest" in script and "CloseApplications=yes" in script            # UAC sormaz, derleme sonrası sessiz deneme mümkün
+    assert r'Source: "..\dist\GitCleanArchiver\*"' in script and "recursesubdirs" in script       # klasörün tamamı paketlenir
     assert re.search(r"AppId=\{\{[0-9A-F-]{36}\}", script)
     for relative in ("resources/icons/app_icon.ico", "packaging/wizard_large.bmp", "packaging/wizard_small.bmp"):
         assert (ROOT / relative).is_file(), relative

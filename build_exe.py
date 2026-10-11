@@ -87,7 +87,7 @@ def pyinstaller_arguments(root_dir: Path, entry_point: Path):
     arguments = [
         str(entry_point),
         "--name=GitCleanArchiver",
-        "--onefile",           # Tek dosya (dist klasörüne bağımlılığı kaldırır)
+        "--onedir",            # Klasör (exe + _internal): Inno Setup tüm klasörü paketler. --onefile Akıllı Uygulama Denetimi'ne takılıyordu (docs/wiki/windows-exe-dagitim.md)
         "--windowed",          # Konsol penceresini gizle
         "--clean",             # Önbelleği temizle
         "--noconfirm",         # Onay sorma
@@ -113,7 +113,7 @@ def run_pyinstaller(arguments, dist_dir: Path):
         print("\n" + "=" * 60)
         print("[OK] BUILD COMPLETED SUCCESSFULLY!")
         print(f"[*] Output Directory: {dist_dir}")
-        print(f"[*] Executable File: {dist_dir / 'GitCleanArchiver.exe'}")
+        print(f"[*] Executable File: {dist_dir / 'GitCleanArchiver' / 'GitCleanArchiver.exe'}")
         print("=" * 60)
     except Exception as e:
         print(f"\n[X] Compilation failed: {e}")
