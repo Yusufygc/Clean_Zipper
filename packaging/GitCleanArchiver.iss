@@ -1,5 +1,7 @@
 ; GitClean Archiver kurulum sihirbazı (Inno Setup 6).
-; Derleme: python build_installer.py   (EXE'yi derler, sürümü src/version.py'den alıp bu betiği ISCC ile çalıştırır)
+; Derleme: python build_installer.py --inno   (EXE'yi derler, sürümü src/version.py'den alıp bu betiği ISCC ile çalıştırır)
+; DİKKAT: imzasız Inno kurulum dosyaları Windows Akıllı Uygulama Denetimi tarafından engellenir. Varsayılan dağıtım, kendini kuran
+; GitCleanArchiver-<sürüm>.exe dosyasıdır (src/services/install_service.py); bu betik yalnızca kod imzalama sertifikası olunca anlamlıdır.
 ; Elle:    ISCC /DAppVersion=2.1.0 packaging\GitCleanArchiver.iss   (önce dist\GitCleanArchiver.exe derlenmiş olmalı)
 
 #ifndef AppVersion
@@ -39,7 +41,7 @@ CloseApplications=yes
 RestartApplications=no
 
 OutputDir=..\dist\installer
-OutputBaseFilename=GitCleanArchiver-Setup-{#AppVersion}
+OutputBaseFilename=GitCleanArchiver-InnoSetup-{#AppVersion}
 SetupIconFile=..\resources\icons\app_icon.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}

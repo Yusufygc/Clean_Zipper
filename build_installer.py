@@ -1,9 +1,14 @@
-"""Kurulum sihirbazı üretir: EXE'yi derler (build_exe.py), Inno Setup ile `dist/installer/GitCleanArchiver-Setup-<sürüm>.exe`
-ve SHA-256 özeti yazar. Sürüm `src/version.py`'den gelir.
+"""Dağıtım dosyasını üretir: EXE'yi derler (build_exe.py) ve `dist/installer/` altına koyar. Sürüm `src/version.py`'den gelir.
+
+Varsayılan çıktı `GitCleanArchiver-<sürüm>.exe` (+ `.sha256`): uygulamanın kendisi, kendini kurar (src/services/install_service.py).
+Ayrı bir kurulum programı varsayılan DEĞİLDİR: Windows Akıllı Uygulama Denetimi, imzasız ve itibarı olmayan her yeni exe'yi
+(Inno Setup çıktısı dahil) engeller; PyInstaller ile paketlenmiş uygulama ise çalışır. Kod imzalama sertifikası olursa
+`--inno` ile imzalı bir Inno Setup sihirbazı da üretilebilir.
 
 Kullanım:
-    python build_installer.py                 # EXE'yi yeniden derler, sonra kurulum dosyasını üretir
-    python build_installer.py --skip-build    # dist/GitCleanArchiver.exe hazırsa yalnızca kurulum dosyası
+    python build_installer.py                 # EXE'yi yeniden derler, dist/installer/GitCleanArchiver-<sürüm>.exe
+    python build_installer.py --skip-build    # dist/GitCleanArchiver.exe hazırsa yalnızca kopyalar ve özet yazar
+    python build_installer.py --inno          # ek olarak Inno Setup sihirbazı (imzasız olarak Akıllı Uygulama Denetimi'ne takılır)
 """
 import hashlib
 import os
@@ -40,32 +45,49 @@ def sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
-def build_installer(skip_build: bool = False) -> Path:
+def write_checksum(artifact: Path) -> str:
+    checksum = sha256_of(artifact)
+    (artifact.parent / (artifact.name + ".sha256")).write_text(f"{checksum} *{artifact.name}\n", encoding="utf-8")
+    print(f"[OK] {artifact}  ({artifact.stat().st_size / (1024 * 1024):.1f} MB)")
+    print(f"[OK] SHA-256: {checksum}")
+    return checksum
+
+
+def package_executable() -> Path:
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    artifact = OUTPUT / f"GitCleanArchiver-{__version__}.exe"
+    shutil.copyfile(EXE, artifact)
+    return artifact
+
+
+def build_inno() -> Path:
     iscc = find_iscc()
     if iscc is None:
         sys.exit("[X] Inno Setup 6 bulunamadı (ISCC.exe). https://jrsoftware.org/isdl.php adresinden kurun ya da ISCC ortam değişkenini ayarlayın.")
+    print(f"\n[*] Inno Setup sihirbazı derleniyor (sürüm {__version__})...")
+    result = subprocess.run([str(iscc), f"/DAppVersion={__version__}", str(SCRIPT)], cwd=ROOT)
+    if result.returncode != 0:
+        sys.exit(f"[X] ISCC başarısız (çıkış kodu {result.returncode}).")
+    installer = OUTPUT / f"GitCleanArchiver-InnoSetup-{__version__}.exe"
+    if not installer.is_file():
+        sys.exit(f"[X] Beklenen çıktı yok: {installer}")
+    return installer
+
+
+def build_installer(skip_build: bool = False, inno: bool = False) -> Path:
     if not skip_build:
         import build_exe
         build_exe.build_executable()
     if not EXE.is_file():
         sys.exit(f"[X] {EXE} yok; önce `python build_exe.py` çalıştırın ya da --skip-build kullanmayın.")
-
-    print(f"\n[*] Kurulum sihirbazı derleniyor (sürüm {__version__})...")
-    result = subprocess.run([str(iscc), f"/DAppVersion={__version__}", str(SCRIPT)], cwd=ROOT)
-    if result.returncode != 0:
-        sys.exit(f"[X] ISCC başarısız (çıkış kodu {result.returncode}).")
-
-    installer = OUTPUT / f"GitCleanArchiver-Setup-{__version__}.exe"
-    if not installer.is_file():
-        sys.exit(f"[X] Beklenen çıktı yok: {installer}")
-    checksum = sha256_of(installer)
-    (OUTPUT / (installer.name + ".sha256")).write_text(f"{checksum} *{installer.name}\n", encoding="utf-8")
     print("=" * 60)
-    print(f"[OK] {installer}  ({installer.stat().st_size / (1024 * 1024):.1f} MB)")
-    print(f"[OK] SHA-256: {checksum}")
+    artifact = package_executable()
+    write_checksum(artifact)
+    if inno:
+        write_checksum(build_inno())
     print("=" * 60)
-    return installer
+    return artifact
 
 
 if __name__ == "__main__":
-    build_installer(skip_build="--skip-build" in sys.argv[1:])
+    build_installer(skip_build="--skip-build" in sys.argv[1:], inno="--inno" in sys.argv[1:])

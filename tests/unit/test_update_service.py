@@ -17,10 +17,10 @@ def release(tag="v2.1.0", **overrides):
         "tag_name": tag, "draft": False, "prerelease": False, "html_url": f"{BASE}/releases/tag/{tag}",
         "published_at": "2026-10-11T12:00:00Z", "body": "Yenilikler\n- gruplu liste",
         "assets": [
-            {"name": "GitCleanArchiver-Setup-2.1.0.exe.sha256", "size": 90,
-             "browser_download_url": f"{BASE}/releases/download/{tag}/GitCleanArchiver-Setup-2.1.0.exe.sha256"},
-            {"name": "GitCleanArchiver-Setup-2.1.0.exe", "size": 52_428_800,
-             "browser_download_url": f"{BASE}/releases/download/{tag}/GitCleanArchiver-Setup-2.1.0.exe"},
+            {"name": "GitCleanArchiver-2.1.0.exe.sha256", "size": 90,
+             "browser_download_url": f"{BASE}/releases/download/{tag}/GitCleanArchiver-2.1.0.exe.sha256"},
+            {"name": "GitCleanArchiver-2.1.0.exe", "size": 52_428_800,
+             "browser_download_url": f"{BASE}/releases/download/{tag}/GitCleanArchiver-2.1.0.exe"},
         ],
     }
     data.update(overrides)
@@ -47,8 +47,8 @@ def test_versions_compare_numerically_not_alphabetically():
 def test_a_newer_release_becomes_update_info_with_the_installer_asset():
     info = svc.release_to_update(release(), "2.0.0", REPO)
     assert info.version == "2.1.0" and info.tag == "v2.1.0" and info.published == "2026-10-11"
-    assert info.asset_name == "GitCleanArchiver-Setup-2.1.0.exe" and info.size == 52_428_800
-    assert info.download_url == f"{BASE}/releases/download/v2.1.0/GitCleanArchiver-Setup-2.1.0.exe"
+    assert info.asset_name == "GitCleanArchiver-2.1.0.exe" and info.size == 52_428_800
+    assert info.download_url == f"{BASE}/releases/download/v2.1.0/GitCleanArchiver-2.1.0.exe"
     assert info.page_url == f"{BASE}/releases/tag/v2.1.0" and "gruplu liste" in info.notes
 
 
@@ -75,9 +75,9 @@ def test_untrusted_release_page_addresses_are_rejected(url):
 
 def test_an_installer_asset_with_an_untrusted_address_or_name_is_ignored():
     tag = "v2.1.0"
-    assets = [{"name": "GitCleanArchiver-Setup-2.1.0.exe", "size": 1, "browser_download_url": "https://evil.example/a.exe"},
+    assets = [{"name": "GitCleanArchiver-2.1.0.exe", "size": 1, "browser_download_url": "https://evil.example/a.exe"},
               {"name": "malware.exe", "size": 1, "browser_download_url": f"{BASE}/releases/download/{tag}/malware.exe"},
-              {"name": "GitCleanArchiver-Setup-2.1.0.exe", "size": 1, "browser_download_url": "http://github.com/Yusufygc/Clean_Zipper/x.exe"}]
+              {"name": "GitCleanArchiver-2.1.0.exe", "size": 1, "browser_download_url": "http://github.com/Yusufygc/Clean_Zipper/x.exe"}]
     assert svc.release_to_update(release(assets=assets), "2.0.0", REPO).download_url == ""
 
 
