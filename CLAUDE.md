@@ -1,4 +1,4 @@
-# GitClean Archiver Pro
+# GitClean Archiver
 
 PySide6 tabanlı proje analiz, temizlik ve arşivleme aracı. Python 3.10, `venv/` kökte.
 

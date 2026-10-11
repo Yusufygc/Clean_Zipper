@@ -1,4 +1,4 @@
-# 🚀 GitClean Archiver Pro
+# 🚀 GitClean Archiver
 
 > **Profesyonel Proje Yönetim, Analiz ve Optimizasyon Aracı**
 
@@ -28,7 +28,7 @@
 
 ## 🎯 Genel Bakış
 
-**GitClean Archiver Pro**, yazılım projelerinizi analiz eden, gereksiz dosyaları tespit eden, `.gitignore` kurallarına uygun arşivleme yapan ve proje sağlığınızı puanlayan kapsamlı bir proje yönetim aracıdır.
+**GitClean Archiver**, yazılım projelerinizi analiz eden, gereksiz dosyaları tespit eden, `.gitignore` kurallarına uygun arşivleme yapan ve proje sağlığınızı puanlayan kapsamlı bir proje yönetim aracıdır.
 
 ### 🎪 Kullanım Senaryoları
 
@@ -252,7 +252,7 @@ python -m venv venv && venv\Scripts\activate && pip install -r requirements.txt 
 
 ### 1. Proje Açma
 
-1. Uygulamayı başlatın (`python main.py` ya da `GitCleanArchiverPro.exe`)
+1. Uygulamayı başlatın (`python main.py` ya da `GitCleanArchiver.exe`)
 2. Sağ üstteki **Proje Dizini Aç** düğmesine tıklayın
 3. Analiz etmek istediğiniz proje dizinini seçin
 4. Gösterge Paneli ve Sorunlar sayfası otomatik olarak tek bir teşhisle dolar
@@ -779,7 +779,7 @@ Doğrulama yöntemi (bağımsız araçlarla karşılaştırma, refactor öncesi/
 python build_exe.py
 ```
 
-**Çıktı:** `dist/GitCleanArchiverPro.exe`
+**Çıktı:** `dist/GitCleanArchiver.exe`
 
 ### PyInstaller Parametreleri
 

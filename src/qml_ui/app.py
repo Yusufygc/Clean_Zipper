@@ -23,15 +23,16 @@ logger = logging.getLogger(__name__)
 def _configure_application() -> QApplication:
     """Qt uygulama nesnesi, yazı tipi, simge ve Windows görev çubuğu kimliği (testlerde var olan örnek yeniden kullanılır)."""
     app = QApplication.instance() or QApplication(sys.argv)
-    app.setApplicationName("GitClean Archiver Pro")
+    app.setApplicationName("GitClean Archiver")
     app.setOrganizationName("GitClean")
     app.setFont(QFont("Segoe UI", 10))
 
-    icon_path = Path(__file__).resolve().parents[2] / "resources" / "icons" / "app_icon.ico"
+    base_dir = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
+    icon_path = base_dir / "resources" / "icons" / "app_icon.ico"
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
     try:
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("gitclean.archiver.pro.2.0.0.qml")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("gitclean.archiver.2.0.0.qml")
     except Exception:
         logger.debug("AppUserModelID ayarlanamadı", exc_info=True)
     return app

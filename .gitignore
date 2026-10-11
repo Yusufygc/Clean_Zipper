@@ -2,8 +2,10 @@
 # PROJEYE ÖZEL
 # ============================================
 
-# GitClean Archiver Pro
+# GitClean Archiver
+GitCleanArchiver.spec
 GitCleanArchiverPro.spec
+*.spec
 project_health_report.json
 *.pyc
 .eggs/

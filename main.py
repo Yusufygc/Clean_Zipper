@@ -1,4 +1,4 @@
-"""GitClean Archiver Pro giriş noktası (QML arayüzü)."""
+"""GitClean Archiver giriş noktası (QML arayüzü)."""
 import sys
 from pathlib import Path
 

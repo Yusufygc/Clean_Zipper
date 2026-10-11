@@ -6,7 +6,7 @@ QtObject {
     id: strings
 
     // Uygulama Genel
-    readonly property string appTitle: "GitClean Archiver Pro"
+    readonly property string appTitle: "GitClean Archiver"
     readonly property string appVersion: "v2.0.0"
 
     // Sekme Başlıkları
