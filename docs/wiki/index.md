@@ -11,3 +11,4 @@
 - [[backend-api]]: yeni arayüzün tüketeceği backend yüzeyi (`ProjectService`, sonuç sözlükleri).
 - [[testing]]: test düzeni, bağımsız doğrulama (oracle) yöntemleri, dogfooding, performans, araç tuzakları.
 - [[roadmap]]: denetim bulguları, durumları ve sonraki adaylar.
+- [[windows-exe-dagitim]]: Windows Akıllı Uygulama Denetimi, imzasız exe / kurulum dosyası dağıtımında dikkat edilecekler, teşhis ve kontrol listesi.
