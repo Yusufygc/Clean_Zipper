@@ -40,14 +40,13 @@ def _sub(path: Path, pattern: str, replacement: str, count_expected: int = 1) ->
 
 
 def bump_files(root: Path, version: str) -> None:
-    """Sürümü tek kaynakta (`src/version.py`) ve ondan türeyen dosyalarda (Windows sürüm bilgisi, README rozeti) yazar."""
-    major, minor, patch = as_tuple(version)
+    """Sürümü tek kaynakta (`src/version.py`) ve README rozetinde yazar.
+
+    exe'nin Windows sürüm kaynağı (`packaging/launcher_version_info.txt`) BİLEREK yükseltilmez: exe'nin SHA-256 özeti sürümler arasında sabit kalmalı
+    (Akıllı Uygulama Denetimi onayı); ürün sürümü Inno kaydında ve uygulamada görünür.
+    """
+    as_tuple(version)                                                    # biçimi doğrula
     _sub(root / "src" / "version.py", r'__version__ = "[^"]+"', f'__version__ = "{version}"')
-    info = root / "version_info.txt"
-    _sub(info, r"filevers=\(\d+, \d+, \d+, \d+\)", f"filevers=({major}, {minor}, {patch}, 0)")
-    _sub(info, r"prodvers=\(\d+, \d+, \d+, \d+\)", f"prodvers=({major}, {minor}, {patch}, 0)")
-    _sub(info, r"u'FileVersion', u'[^']+'", f"u'FileVersion', u'{version}'")
-    _sub(info, r"u'ProductVersion', u'[^']+'", f"u'ProductVersion', u'{version}'")
     _sub(root / "README.md", r"badge/Version-[0-9.]+-orange", f"badge/Version-{version}-orange")
 
 
@@ -84,7 +83,7 @@ def release(version: str, dry_run: bool) -> int:
         print("Deneme çalıştırması: hiçbir dosya değişmedi.")
         return 0
     bump_files(ROOT, version)
-    git("add", "src/version.py", "version_info.txt", "README.md")
+    git("add", "src/version.py", "README.md")
     git("commit", "-m", f"chore(release): v{version}")
     git("tag", "-a", tag, "-m", f"GitClean Archiver {version}")
     print(f"Hazır. GitHub'a göndermek için:\n  git push origin main\n  git push origin {tag}")

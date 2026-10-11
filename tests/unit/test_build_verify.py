@@ -105,34 +105,35 @@ def test_working_installer_is_installed_launched_and_uninstalled(monkeypatch, tm
     assert not (tmp_path / "work").exists()                                            # başarıda geçici klasör silinir
 
 
-def test_build_installer_retries_after_a_blocked_attempt_and_stops_when_one_passes(monkeypatch, tmp_path):
+def prepare_installer_build(monkeypatch, tmp_path, exe_ok, installer_ok):
     import build_installer
-    results = iter([None, None, tmp_path / "Setup.exe"])
-    attempts = []
     monkeypatch.setattr(build_installer, "find_iscc", lambda: Path("ISCC.exe"))
-    monkeypatch.setattr(build_installer, "attempt", lambda iscc, skip, verify: attempts.append(verify) or next(results))
     monkeypatch.setattr(build_installer, "OUTPUT", tmp_path)
-    (tmp_path / "Setup.exe").write_bytes(b"MZ")
-    assert build_installer.build_installer() == tmp_path / "Setup.exe"
-    assert attempts == [True, True, True] and (tmp_path / "Setup.exe.sha256").is_file()
+    monkeypatch.setattr(build_installer, "EXE", tmp_path / "GitCleanArchiver.exe")
+    (tmp_path / "GitCleanArchiver.exe").write_bytes(b"MZ")
+    (tmp_path / "Setup.exe").write_bytes(b"MZ-setup")
+    monkeypatch.setattr(build_installer, "compile_installer", lambda iscc: tmp_path / "Setup.exe")
+    monkeypatch.setattr(build_verify, "launch_check", lambda exe, seconds=8.0: exe_ok)
+    monkeypatch.setattr(build_verify, "installer_check", lambda installer, seconds=8.0: installer_ok)
+    return build_installer
 
 
-def test_build_installer_gives_up_after_the_maximum_attempts(monkeypatch):
-    import build_installer
-    monkeypatch.setattr(build_installer, "find_iscc", lambda: Path("ISCC.exe"))
-    monkeypatch.setattr(build_installer, "attempt", lambda iscc, skip, verify: None)
-    with pytest.raises(SystemExit, match="engellendi"):
-        build_installer.build_installer()
+def test_a_blocked_stable_exe_stops_the_build_with_the_epoch_instructions(monkeypatch, tmp_path):
+    build_installer = prepare_installer_build(monkeypatch, tmp_path, exe_ok=False, installer_ok=True)
+    with pytest.raises(SystemExit, match="LAUNCHER_EPOCH"):
+        build_installer.build_installer(skip_build=True)                              # yeniden derlemek aynı exe'yi verir: tekrar deneme yok
+    assert not (tmp_path / "Setup.exe.sha256").exists()
 
 
-def test_skip_build_makes_a_single_attempt(monkeypatch):
-    import build_installer
-    calls = []
-    monkeypatch.setattr(build_installer, "find_iscc", lambda: Path("ISCC.exe"))
-    monkeypatch.setattr(build_installer, "attempt", lambda iscc, skip, verify: calls.append(skip))
-    with pytest.raises(SystemExit):
-        build_installer.build_installer(skip_build=True)
-    assert calls == [True]
+def test_a_blocked_installer_only_warns_because_the_app_waits_for_windows_during_updates(monkeypatch, tmp_path, capsys):
+    build_installer = prepare_installer_build(monkeypatch, tmp_path, exe_ok=True, installer_ok=False)
+    assert build_installer.build_installer(skip_build=True) == tmp_path / "Setup.exe"
+    assert (tmp_path / "Setup.exe.sha256").is_file() and "UYARI" in capsys.readouterr().out
+
+
+def test_verification_is_skipped_on_request_and_the_installer_is_still_built(monkeypatch, tmp_path):
+    build_installer = prepare_installer_build(monkeypatch, tmp_path, exe_ok=False, installer_ok=False)
+    assert build_installer.build_installer(skip_build=True, verify=False) == tmp_path / "Setup.exe"
 
 
 # ---- gerçek kurulumun kaydı ve kısayolu korunur ---------------------------------------------------------------------------------

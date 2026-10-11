@@ -179,7 +179,7 @@ gitclean-archiver-pro/
 │
 ├── main.py                       # 🚀 Ana giriş noktası (QML arayüzü)
 ├── build_exe.py                  # 🔨 Build script'i
-├── build_installer.py            # 📦 EXE (onedir) + Inno Setup sihirbazı; bu makinede dener, engellenirse yeniden derler (dist/installer)
+├── build_installer.py            # 📦 EXE (onedir) + Inno Setup sihirbazı; bu makinede dener; exe her sürümde bayt bayt aynı (dist/installer)
 ├── build_verify.py               # ✅ Derleme sonrası deneme: exe açılıyor mu, kurulum dosyası sessizce kurulup kaldırılıyor mu
 ├── packaging/                    # 📦 Inno Setup betiği (GitCleanArchiver.iss) ve sihirbaz görselleri
 ├── tools/release.py              # 🏷️ Sürüm yükseltme + etiket (tag) aracı
@@ -798,7 +798,7 @@ python build_exe.py
 
 ```bash
 # Önce: Inno Setup 6 (https://jrsoftware.org/isdl.php) ve pip install -r requirements-build.txt
-python build_installer.py                 # EXE'yi derler, bu makinede dener (Akıllı Uygulama Denetimi engellerse en çok 6 kez yeniden derler), sonra dist/installer/GitCleanArchiver-Setup-<sürüm>.exe + .sha256
+python build_installer.py                 # EXE'yi derler, bu makinede dener (exe özeti onaylananla aynı olmalı: packaging/launcher.sha256), sonra dist/installer/GitCleanArchiver-Setup-<sürüm>.exe + .sha256
 python build_installer.py --no-verify     # denemeden (CI'da `CI` ortam değişkeniyle otomatik)
 python build_installer.py --skip-build    # dist/GitCleanArchiver/ hazırsa yalnızca sihirbaz (tek deneme)
 ```
@@ -808,7 +808,7 @@ Sürüm tek kaynaktan gelir: `src/version.py`. Sihirbaz Türkçe ve İngilizcedi
 ### Sürüm Yayınlama (etiket)
 
 ```bash
-python tools/release.py 2.1.0             # src/version.py, version_info.txt, README rozetini yükseltir; "chore(release): v2.1.0" commit'i ve v2.1.0 etiketi
+python tools/release.py 2.1.0             # src/version.py ve README rozetini yükseltir; "chore(release): v2.1.0" commit'i ve v2.1.0 etiketi
 git push origin main
 git push origin v2.1.0                    # etiket itilince Release iş akışı çalışır
 ```

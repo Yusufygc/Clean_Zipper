@@ -51,7 +51,27 @@ Sonuç: "şu bayrakla derlersen geçer" diye bir tarif **yok**. Güvenilir tek y
 - Engellenen dosya bozuk değildir: indirme SHA-256'sı Release `digest` ile aynıydı. Kullanıcıya doğru talimat: dosyayı silme, birkaç dakika bekleyip `%TEMP%\GitCleanArchiverUpdate\GitCleanArchiver-Setup-X.Y.Z.exe` dosyasına çift tıkla.
 - Eski sürüm uygulama (yeni yeniden deneme koduna sahip olmayan) engelde yalnızca genel hata gösterir; yeniden deneme / Gezgin'de gösterme **kurulu sürümde** çalışır. Bu yüzden bu kod bir sürüm sonra (kurulu sürüm ≥ 2.1.2 olduktan sonra) devreye girer; v2.1.1 → v2.1.2 geçişi elle kaldı.
 
-## 3. İmza: bu projede yapılmıyor
+## 3. Kararlı exe: her sürümde AYNI exe (asıl çözüm)
+
+Sorun, her sürümde yeni bir exe özeti çıkması ve Windows'un her seferinde yeni karar vermesiydi (v2.1.3'te kurulum başarılı oldu ama kurulan yeni exe engellendi, uygulama açılmadı). Çözüm: **exe'yi sürümler arasında bayt bayt aynı tutmak**.
+
+| Parça | Ne yapıldı |
+|---|---|
+| Giriş betiği | `packaging/launcher.py` (3 satır, **değiştirilmez**); gerçek mantık `src/qml_ui/app.py`. `main.py` yalnızca geliştirme için |
+| Python modülleri | `--debug=noarchive`: exe'ye gömülmez, `_internal` altında `.pyc` olarak durur (çalıştırılabilir dosya değil, sürümle değişir) |
+| Zaman damgası | `SOURCE_DATE_EPOCH` = `build_exe.LAUNCHER_EPOCH` (1700000000, değiştirilmez) |
+| Windows sürüm kaynağı | `packaging/launcher_version_info.txt`, sabit `1.0.0.0`. **Ürün sürümü** Inno'nun "Uygulamalar ve özellikler" kaydında, kurulum dosyasında ve uygulamanın başlığında; `tools/release.py` yalnızca `src/version.py` ve README rozetini yükseltir. Bedel: Gezgin'de exe'nin Özellikler sekmesi hep 1.0.0.0 gösterir |
+| Onay kapısı | `packaging/launcher.sha256` = Windows'ta denenmiş exe özeti; `build_exe` özet farklıysa **derlemeyi ve yayını durdurur** (`check_launcher_hash`). CI de bu kapıdan geçer: yerelde onaylanan exe CI'da birebir üretilemezse onaysız exe yayınlanmaz |
+
+**Ölçümler (2026-10-12):** `--debug=noarchive` tek başına yetmedi (aynı kaynaktan iki derlemede özet farklı: zaman damgası). `SOURCE_DATE_EPOCH` ile: yeniden derleme, kaynak kod değişimi ve **farklı kök klasörde (`C:\gcx_w\proje_kopyasi`) derleme** aynı özeti verdi (`fec37f4e25de832d…`, 382 KB). Bu exe Windows'ta ilk denemede açıldı (başlık v2.1.3, uygulama `.pyc`'lerden çalıştı).
+
+**Sonuç:** onaylanmış exe sürümler arasında değişmez, güncelleme yalnızca `.pyc` / veri dosyalarını ve kurulum dosyasını yeniler. Her sürümde yeni olan tek çalıştırılabilir dosya Inno kurulum dosyasıdır (ve kaldırıcı); uygulama içi güncelleme onu engel kalkana dek bekleyip yeniden dener (gözlem: ~1 dk).
+
+**Exe'yi bilerek değiştirmek** (PyInstaller / Python sürümü, simge, giriş betiği, epoch): derleme "özet DEĞİŞTİ" der ve durur. Yeni özet Windows'ta denenir (`build_verify.launch_check`); engellenirse `LAUNCHER_EPOCH` değiştirilip yeni özet üretilir (tek yol); açılan özet `python build_installer.py --update-launcher-hash` ile onaylanır. Giriş betiği ve sürüm kaynağı `tests/unit/test_release_packaging.py` içinde özetle sabitlenmiştir (değişirse test hatası nedenini söyler).
+
+**Bilinen sınır:** sabit exe'nin **ilk** özeti her yeni kullanıcı makinesinde bulut tarafından henüz bilinmeyebilir; ilk kurulumda engel çıkabilir (imzasız dağıtımın doğası). Karar özet başınadır: yerelde açılan özetin diğer makinelerde de açılacağı beklenir ama doğrulanmadı. CI'ın exe'yi yerelle birebir üretip üretmediği ilk yayında kapı ile görülecek.
+
+## 3b. İmza: bu projede yapılmıyor
 
 Tek deterministik çözüm kod imzalamadır (Microsoft'un güvenilir kök programındaki bir sertifikayla imzalı dosyaları SAC itibar sorgusu olmadan çalıştırır); ücretsiz yol (SignPath Foundation) ve ücretli yollar vardır.
 **Karar (2026-10-11): imzalama yapılmayacak** (üçüncü taraf hesabı / başvuru / sertifika yönetimi istenmiyor). Sonuç: engel riski kalır; aşağıdaki liste yalnızca riski azaltır.
@@ -59,7 +79,7 @@ Kullanıcıya düşen: engellenen dosyada "dosyayı yeniden indir / yeni sürüm
 
 ## 4. İmzasız dağıtımda yapılacaklar (kontrol listesi)
 
-1. **Dağıtmadan önce bu makinede dene, engellenirse yeniden derle.** `python build_installer.py` bunu yapar (`build_verify.py`): exe'yi başlatır, kurulum dosyasını geçici klasöre sessizce kurup açar ve kaldırır; engellenirse özet değişsin diye en çok 6 kez yeniden derler. CI'da (`CI` ortam değişkeni) ve `--no-verify` ile atlanır.
+1. **Dağıtmadan önce bu makinede dene.** `python build_installer.py` (`build_verify.py`): exe'yi başlatır; engellenirse derleme durur (yeniden derlemek aynı exe'yi verir, çözüm `LAUNCHER_EPOCH`, bölüm 3). Kurulum dosyasını geçici klasöre sessizce kurup açar ve kaldırır; engellenirse yalnızca uyarır (uygulama içi güncelleme bekler). CI'da (`CI` ortam değişkeni) ve `--no-verify` ile atlanır.
 2. **Denediğin dosyanın aynısını dağıt.** Dosyayı yeniden derleme, yeniden paketleme ya da yeniden adlandırma hash'i (ve itibarı) değiştirir; GitHub Release'e yüklediğin dosya denediğin dosya olmalı.
 3. **CI'da derlenen dosya yerelde denenmemiş dosyadır.** GitHub runner'da SAC yoktur; Release yayınlandıktan sonra **indirilmiş (MOTW'li) kopyayı** SAC'lı bir makinede aç. Engellenirse yerelde derleyip denenmiş dosyayı Release'e elle yükle.
 4. **`--noupx` (P013 de `upx=False`):** UPX, Python / Qt DLL'lerinin imzasını bozar ve antivirüs yanlış pozitifi artırır.

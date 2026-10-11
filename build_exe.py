@@ -1,3 +1,4 @@
+import hashlib
 import os
 import sys
 import shutil
@@ -81,17 +82,31 @@ def icon_args(root_dir: Path):
     return []
 
 
+# KARARLI EXE: exe'nin SHA-256 özeti sürümler arasında DEĞİŞMEZ. Windows Akıllı Uygulama Denetimi imzasız her yeni exe özetini yeniden
+# değerlendirir ve engelleyebilir; onaylanmış bir exe sabit kalırsa güncellemeler yeni bir çalıştırılabilir dosya getirmez.
+# Gereken üç şey: (1) sabit giriş betiği (`packaging/launcher.py`), (2) sabit derleme zamanı (`SOURCE_DATE_EPOCH`), (3) sabit sürüm kaynağı
+# (`packaging/launcher_version_info.txt`; ürün sürümü Inno kaydında ve uygulamada, `src/version.py`). `--debug=noarchive`: Python
+# modülleri exe'ye gömülmez, `_internal` altında `.pyc` olarak durur (bunlar çalıştırılabilir dosya değildir, sürümle değişir).
+# Epoch değerini DEĞİŞTİRME: değişirse exe özeti değişir (bilerek yeni bir özet denemek için tek yol).
+LAUNCHER_EPOCH = 1700000000
+LAUNCHER_ENTRY = Path("packaging") / "launcher.py"
+LAUNCHER_VERSION_INFO = Path("packaging") / "launcher_version_info.txt"
+LAUNCHER_HASH_FILE = Path("packaging") / "launcher.sha256"       # onaylanmış (Windows'ta denenmiş) exe özeti
+
+
 def pyinstaller_arguments(root_dir: Path, entry_point: Path):
     """PyInstaller komut satırı argümanları."""
-    version_info_path = root_dir / "version_info.txt"
+    version_info_path = root_dir / LAUNCHER_VERSION_INFO
     arguments = [
         str(entry_point),
+        f"--paths={root_dir}",                 # giriş betiği packaging/ altında: `src` paketi kökten bulunur
         "--name=GitCleanArchiver",
         "--onedir",            # Klasör (exe + _internal): Inno Setup tüm klasörü paketler. --onefile Akıllı Uygulama Denetimi'ne takılıyordu (docs/wiki/windows-exe-dagitim.md)
         "--windowed",          # Konsol penceresini gizle
         "--clean",             # Önbelleği temizle
         "--noconfirm",         # Onay sorma
         "--noupx",             # UPX sıkıştırmasını kapat (Virüs uyarısı riskini ciddi oranda düşürür)
+        "--debug=noarchive",   # Python modülleri exe dışında .pyc olarak: exe sürümler arasında bayt bayt aynı kalır
         "--collect-submodules=src.analyzers",  # Analizörler pkgutil ile dinamik yüklenir
     ]
 
@@ -108,6 +123,7 @@ def run_pyinstaller(arguments, dist_dir: Path):
     print(f"    Command: pyinstaller {' '.join(arguments[1:])}\n")
 
     try:
+        os.environ["SOURCE_DATE_EPOCH"] = str(LAUNCHER_EPOCH)         # sabit zaman damgası: aynı girdi -> aynı exe baytları
         import PyInstaller.__main__
         PyInstaller.__main__.run(arguments)
         print("\n" + "=" * 60)
@@ -120,7 +136,35 @@ def run_pyinstaller(arguments, dist_dir: Path):
         sys.exit(1)
 
 
-def build_executable():
+def exe_sha256(exe: Path) -> str:
+    return hashlib.sha256(exe.read_bytes()).hexdigest()
+
+
+def check_launcher_hash(root_dir: Path, exe: Path, update: bool = False) -> None:
+    """Derlenen exe, onaylanmış özetle (`packaging/launcher.sha256`) aynı olmalı; aksi hâlde derleme durur.
+
+    Neden: kararlı exe'nin tüm anlamı sürümler arasında aynı kalmasıdır. Özet kendiliğinden değişirse (PyInstaller / Python / giriş betiği / sürüm
+    kaynağı / epoch değişti) kullanıcılar yeni, onaylanmamış bir exe alır ve Windows onu engelleyebilir. Değişiklik bilerek yapıldıysa yeni özet
+    önce `build_verify` ile Windows'ta denenir, sonra `--update-launcher-hash` ile onaylanır. CI da bu denetimden geçer (yerelde onaylanan exe
+    CI'da birebir üretilemiyorsa yayın durur, onaysız exe yayınlanmaz).
+    """
+    actual = exe_sha256(exe)
+    hash_file = root_dir / LAUNCHER_HASH_FILE
+    if update:
+        hash_file.write_text(f"{actual} *GitCleanArchiver.exe\n", encoding="utf-8")
+        print(f"[OK] Onaylanan exe özeti yazıldı: {actual}")
+        return
+    approved = hash_file.read_text(encoding="utf-8").split()[0].lower() if hash_file.is_file() else ""
+    if approved == actual:
+        print(f"[OK] Kararlı exe özeti onaylananla aynı: {actual[:16]}...")
+        return
+    print(f"[X] Kararlı exe özeti DEĞİŞTİ.\n    onaylanan: {approved or '(yok)'}\n    derlenen : {actual}")
+    print("    Beklenmeyen bir değişiklikse (farklı PyInstaller / Python / ortam) yayınlama. Bilerek yaptıysan: yeni exe'yi Windows'ta dene "
+          "(build_verify.launch_check) ve `python build_installer.py --update-launcher-hash` ile onayla.")
+    sys.exit(1)
+
+
+def build_executable(update_launcher_hash: bool = False):
     print("=" * 60)
     print("      GitClean Archiver - EXE Build Wizard      ")
     print("=" * 60)
@@ -128,7 +172,7 @@ def build_executable():
     # Project root directory
     root_dir = Path(__file__).parent.resolve()
     ensure_pyinstaller(root_dir)
-    entry_point = root_dir / "main.py"
+    entry_point = root_dir / LAUNCHER_ENTRY
 
     if not entry_point.exists():
         print(f"[X] Entry point ({entry_point}) not found!")
@@ -137,7 +181,8 @@ def build_executable():
     clean_build_artifacts(root_dir)
     arguments = pyinstaller_arguments(root_dir, entry_point)
     run_pyinstaller(arguments, root_dir / "dist")
+    check_launcher_hash(root_dir, root_dir / "dist" / "GitCleanArchiver" / "GitCleanArchiver.exe", update=update_launcher_hash)
 
 
 if __name__ == "__main__":
-    build_executable()
+    build_executable(update_launcher_hash="--update-launcher-hash" in sys.argv[1:])

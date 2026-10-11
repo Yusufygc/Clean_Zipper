@@ -1,7 +1,7 @@
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(2, 1, 3, 0),
-    prodvers=(2, 1, 3, 0),
+    filevers=(1, 0, 0, 0),
+    prodvers=(1, 0, 0, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -16,13 +16,13 @@ VSVersionInfo(
         u'040904B0',
         [StringStruct(u'CompanyName', u'GitClean Archiver'),
         StringStruct(u'FileDescription', u'GitClean Archiver'),
-        StringStruct(u'FileVersion', u'2.1.3'),
+        StringStruct(u'FileVersion', u'1.0.0.0'),
         StringStruct(u'InternalName', u'GitCleanArchiver'),
-        StringStruct(u'LegalCopyright', u'Copyright (C) 2026'),
+        StringStruct(u'LegalCopyright', u'Copyright (C) 2026 Yusuf'),
         StringStruct(u'OriginalFilename', u'GitCleanArchiver.exe'),
         StringStruct(u'ProductName', u'GitClean Archiver'),
-        StringStruct(u'ProductVersion', u'2.1.3')])
-      ]), 
+        StringStruct(u'ProductVersion', u'1.0.0.0')])
+      ]),
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]
 )

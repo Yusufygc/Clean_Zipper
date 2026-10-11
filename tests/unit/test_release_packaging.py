@@ -26,11 +26,8 @@ def read(relative: str) -> str:
 # ---- sürüm kaynakları tutarlı -----------------------------------------------------------------------------------------------
 
 def test_every_version_source_matches_src_version():
-    major, minor, patch = (int(part) for part in __version__.split("."))
-    info = read("version_info.txt")
-    assert f"filevers=({major}, {minor}, {patch}, 0)" in info and f"prodvers=({major}, {minor}, {patch}, 0)" in info
-    assert f"u'FileVersion', u'{__version__}'" in info and f"u'ProductVersion', u'{__version__}'" in info
     assert f"badge/Version-{__version__}-orange" in read("README.md")
+    assert not (ROOT / "version_info.txt").exists()                              # sürümle değişen exe kaynağı kalmadı (kararlı exe)
 
 
 def test_the_version_is_plain_x_y_z_and_the_repo_matches_the_git_remote_url_in_the_docs():
@@ -49,7 +46,7 @@ def test_no_hardcoded_version_is_left_in_the_ui_or_the_application_id():
 
 @pytest.fixture
 def sandbox(tmp_path):
-    for relative in ("src/version.py", "version_info.txt", "README.md"):
+    for relative in ("src/version.py", "README.md"):
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, target)
@@ -58,11 +55,9 @@ def sandbox(tmp_path):
 
 def test_bump_files_updates_every_source_and_changes_nothing_else(sandbox):
     tool = load_release_tool()
-    before = {name: (sandbox / name).read_bytes() for name in ("src/version.py", "version_info.txt", "README.md")}
+    before = {name: (sandbox / name).read_bytes() for name in ("src/version.py", "README.md")}
     tool.bump_files(sandbox, "12.34.56")
     assert tool.read_version(sandbox) == "12.34.56"
-    info = (sandbox / "version_info.txt").read_text(encoding="utf-8")
-    assert "filevers=(12, 34, 56, 0)" in info and "prodvers=(12, 34, 56, 0)" in info and "u'FileVersion', u'12.34.56'" in info
     assert "badge/Version-12.34.56-orange" in (sandbox / "README.md").read_text(encoding="utf-8")
     for name, old in before.items():
         new = (sandbox / name).read_bytes()
@@ -197,3 +192,52 @@ def test_installer_relaunches_the_app_only_after_an_in_app_update_not_after_the_
     assert "WizardSilent and not HasParam('/VERYSILENT')" in script                      # /SILENT (güncelleme) açar, /VERYSILENT (deneme) açmaz
     from build_verify import installer_check  # noqa: F401
     assert "/VERYSILENT" in read("build_verify.py") and '"/SILENT"' in read("src/services/update_service.py")
+
+
+# ---- kararlı exe: özet sürümler arasında sabit kalmalı (Akıllı Uygulama Denetimi onayı) ----------------------------------------------------
+
+def test_launcher_script_and_version_resource_are_pinned_so_the_exe_hash_does_not_drift():
+    """Bu dosyalar exe'nin içine gömülür; içerikleri değişirse exe özeti değişir ve Windows yeniden değerlendirir.
+    Bilerek değiştiriliyorsa: yeni exe'yi Windows'ta dene, bu özetleri ve packaging/launcher.sha256'yı birlikte güncelle."""
+    import hashlib
+    def digest(relative):
+        return hashlib.sha256((ROOT / relative).read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+    assert digest("packaging/launcher.py") == "fc10d323ce532006cb00b091265ba4754ad3940a93a8a95d49c3742d4a98bcc3"
+    assert digest("packaging/launcher_version_info.txt") == "b1c30b9b51f9e5850fe0c78fb54decbea4e50f21a3b1b8f8c9ef52f68e2ac277"
+    import build_exe
+    assert build_exe.LAUNCHER_EPOCH == 1700000000 and str(build_exe.LAUNCHER_ENTRY).replace("\\", "/") == "packaging/launcher.py"
+
+
+def test_the_build_is_configured_for_a_byte_stable_exe():
+    import build_exe
+    arguments = build_exe.pyinstaller_arguments(ROOT, ROOT / build_exe.LAUNCHER_ENTRY)
+    assert "--debug=noarchive" in arguments and "--onedir" in arguments and "--noupx" in arguments
+    assert any(a.startswith("--version-file=") and a.replace("\\", "/").endswith("packaging/launcher_version_info.txt") for a in arguments)
+    assert f"--paths={ROOT}" in arguments
+    info = read("packaging/launcher_version_info.txt")
+    assert f"u'FileVersion', u'{__version__}'" not in info or __version__ == "1.0.0"      # sürümle değişmez
+    source = read("build_exe.py")
+    assert 'os.environ["SOURCE_DATE_EPOCH"] = str(LAUNCHER_EPOCH)' in source
+
+
+def test_the_approved_launcher_hash_is_a_sha256_and_the_check_gates_the_build(tmp_path):
+    import build_exe
+    approved = read("packaging/launcher.sha256").split()[0]
+    assert re.fullmatch(r"[0-9a-f]{64}", approved)
+    exe = tmp_path / "GitCleanArchiver.exe"
+    exe.write_bytes(b"MZ-onaysiz")
+    (tmp_path / "packaging").mkdir()
+    (tmp_path / "packaging" / "launcher.sha256").write_text(f"{approved} *GitCleanArchiver.exe\n", encoding="utf-8")
+    with pytest.raises(SystemExit):                                                  # özet farklı: derleme / yayın durur
+        build_exe.check_launcher_hash(tmp_path, exe)
+    build_exe.check_launcher_hash(tmp_path, exe, update=True)                        # bilerek onaylama: yeni özet yazılır
+    build_exe.check_launcher_hash(tmp_path, exe)                                     # artık aynı: geçer
+    assert build_exe.exe_sha256(exe) in (tmp_path / "packaging" / "launcher.sha256").read_text(encoding="utf-8")
+    with pytest.raises(SystemExit):
+        build_exe.check_launcher_hash(tmp_path / "bos", exe)                         # onay dosyası yoksa da durur
+
+
+def test_the_release_workflow_builds_through_the_hash_gate():
+    workflow = read(".github/workflows/release.yml")
+    assert "python build_installer.py" in workflow and "--no-verify" not in workflow
+    assert "build_exe.build_executable" in read("build_installer.py")                # build_installer exe'yi kapıdan geçirerek derler
