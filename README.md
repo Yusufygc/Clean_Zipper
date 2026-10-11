@@ -251,7 +251,7 @@ python main.py
 
 [Releases](https://github.com/Yusufygc/Clean_Zipper/releases) sayfasından `GitCleanArchiver-Setup-X.Y.Z.exe` dosyasını indirip çalıştırın. Yönetici hakkı gerekmez (varsayılan: kullanıcıya özel kurulum); Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve kaldırıcı eklenir. Yeni sürümün üstüne kurulum eski sürümü günceller; ayarlarınız (`~/.gitclean`) korunur. Dosyanın yanındaki `.sha256` ile özetini doğrulayabilirsiniz. Kurulum dosyası imzasızdır: SmartScreen uyarısında **Ek bilgi → Yine de çalıştır**. Windows 11 **Akıllı Uygulama Denetimi** imzasız dosyaları dosya başına rastgele engelleyebilir ("Uygulama Denetimi ilkesi bu dosyayı engelledi"); nedenleri, teşhisi ve alınacak önlemler: [`docs/wiki/windows-exe-dagitim.md`](docs/wiki/windows-exe-dagitim.md).
 
-Uygulama açılışta GitHub'a yalnızca "en son sürüm nedir" diye sorar; daha yeni bir sürüm varsa sürüm notlarıyla bir pencere açar (**İndir** kurulum dosyasını tarayıcıda açar, **Sonra**, **Bu Sürümü Atla**). Hiçbir şey kendiliğinden indirilip çalıştırılmaz, proje ya da kişisel veri gönderilmez. Kapatmak için **Ayarlar → Güncellemeler** ya da ortam değişkeni `GITCLEAN_NO_UPDATE_CHECK=1`.
+Uygulama açılışta GitHub'a yalnızca "en son sürüm nedir" diye sorar; daha yeni bir sürüm varsa sürüm notlarıyla bir pencere açar: **Güncelle** kurulum dosyasını indirir, SHA-256 özetini doğrular, uygulamayı kapatır, kurulum üstüne yazar ve uygulama yeniden açılır (ayarlarınız ve yedekleriniz korunur); **Sonra**; **Bu Sürümü Atla**. Proje ya da kişisel veri gönderilmez. Kapatmak için **Ayarlar → Güncellemeler** ya da ortam değişkeni `GITCLEAN_NO_UPDATE_CHECK=1`. Ayrıntı: [`docs/wiki/guncelleme-sistemi.md`](docs/wiki/guncelleme-sistemi.md).
 
 ### Tek Komutla Kurulum (Windows)
 
@@ -860,20 +860,11 @@ GitClean Archiver [MIT lisansı](LICENSE) ile dağıtılır (telif: Yusuf). Dağ
 
 ---
 
-## 🔏 Kod İmzalama Politikası
-
-Ücretsiz kod imzalama [SignPath.io](https://about.signpath.io/) tarafından sağlanır, sertifika [SignPath Foundation](https://signpath.org/) tarafından verilir.
-
-- **Yalnızca bu depodaki kaynaktan** GitHub Actions ile derlenen sürümler imzalanır (`.github/workflows/release.yml`, `v*` etiketi); imzalama isteği iş akışından otomatik gönderilir.
-- **Roller:** Yazar, gözden geçiren ve onaylayıcı: [Yusufygc](https://github.com/Yusufygc).
-- İmzalı dosyalar: `GitCleanArchiver.exe` ve `GitCleanArchiver-Setup-X.Y.Z.exe`. Özetler (SHA-256) Release sayfasındaki `.sha256` dosyasındadır.
-- Kod imzalama hazırlığı sürüyor; imza yapılandırılana kadar yayınlanan dosyalar imzasız olabilir ([ayrıntı](docs/wiki/windows-exe-dagitim.md)).
-
 ## 🔒 Gizlilik
 
 Uygulama proje dosyalarınızı, analiz sonuçlarınızı ya da kişisel verilerinizi **hiçbir yere göndermez**; tüm analiz yereldir. Tek ağ isteği **güncelleme denetimidir**:
 açılışta `https://api.github.com/repos/Yusufygc/Clean_Zipper/releases/latest` adresine kimlik bilgisi göndermeden tek bir GET yapılır ve yalnızca sürüm numarası okunur.
-**Ayarlar → Güncellemeler** bölümünden ya da `GITCLEAN_NO_UPDATE_CHECK=1` ortam değişkeniyle kapatılabilir; hiçbir şey kendiliğinden indirilmez ya da çalıştırılmaz.
+**Ayarlar → Güncellemeler** bölümünden ya da `GITCLEAN_NO_UPDATE_CHECK=1` ortam değişkeniyle kapatılabilir; kurulum dosyası yalnızca **Güncelle**'ye bastığınızda indirilir ve doğrulanır.
 
 ---
 

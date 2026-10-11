@@ -3,8 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "../singletons"
 
-// "Yeni sürüm var" penceresi (XP iletişim kutusu): sürüm notları, kurulum dosyası bilgisi; İndir / Sonra / Bu Sürümü Atla.
-// Uygulama hiçbir şey indirip çalıştırmaz: "İndir" kurulum dosyasını tarayıcıda açar.
+// "Yeni sürüm var" penceresi (XP iletişim kutusu): sürüm notları, kurulum dosyası bilgisi; Güncelle / Sonra / Bu Sürümü Atla.
+// "Güncelle": kurulum dosyası indirilir (ilerleme çubuğu), SHA-256 doğrulanır, kurulum başlar ve uygulama kapanır.
 Popup {
     id: root
     objectName: "updateDialog"
@@ -15,7 +15,7 @@ Popup {
     focus: true
     padding: 0
     width: Math.min(560, parent ? parent.width - 40 : 560)
-    closePolicy: Popup.CloseOnEscape
+    closePolicy: updateVM.isDownloading ? Popup.NoAutoClose : Popup.CloseOnEscape       // indirme sürerken kapanmaz
 
     Overlay.modal: Rectangle { color: "#66000000" }
 
@@ -114,7 +114,7 @@ Popup {
             }
 
             Text {
-                text: "Kurulum dosyası: " + updateVM.installerLabel
+                text: "İndirilecek dosya: " + updateVM.installerLabel
                 color: AppTheme.textSecondary
                 font.family: AppTheme.fontFamily
                 font.pixelSize: AppTheme.fontSizeSmall
@@ -124,10 +124,39 @@ Popup {
             }
 
             Text {
-                text: "Dosya tarayıcınızda açılır; kurulumu siz başlatırsınız. Uygulama kendi kendine bir şey indirmez ya da çalıştırmaz."
+                text: "Güncelle: kurulum dosyası indirilir ve SHA-256 özeti doğrulanır, uygulama kapanır, kurulum üstüne yazar ve uygulama yeniden açılır. Ayarlarınız ve yedekleriniz korunur."
                 color: AppTheme.textMuted
                 font.family: AppTheme.fontFamily
                 font.pixelSize: AppTheme.fontSizeSmall
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+                renderType: Text.NativeRendering
+            }
+
+            Rectangle {                                                // indirme ilerlemesi
+                objectName: "downloadProgress"
+                Layout.fillWidth: true
+                Layout.preferredHeight: 10
+                visible: updateVM.isDownloading
+                color: AppTheme.trackBg
+                border.color: AppTheme.border
+                border.width: 1
+
+                Rectangle {
+                    width: parent.width * (updateVM.downloadProgress / 100)
+                    height: parent.height
+                    color: AppTheme.accent
+                }
+            }
+
+            Text {
+                objectName: "updateError"
+                visible: updateVM.errorMessage !== ""
+                text: updateVM.errorMessage
+                color: AppTheme.danger
+                font.family: AppTheme.fontFamily
+                font.pixelSize: AppTheme.fontSizeSmall
+                font.bold: true
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
                 renderType: Text.NativeRendering
@@ -140,6 +169,7 @@ Popup {
 
                 CustomButton {
                     objectName: "skipVersionButton"
+                    enabled: !updateVM.isDownloading
                     text: "Bu Sürümü Atla"
                     variant: "ghost"
                     onClicked: { updateVM.skipVersion(); root.close() }
@@ -149,6 +179,7 @@ Popup {
 
                 CustomButton {
                     objectName: "laterButton"
+                    enabled: !updateVM.isDownloading
                     text: "Sonra"
                     variant: "secondary"
                     onClicked: root.close()
@@ -156,10 +187,11 @@ Popup {
 
                 CustomButton {
                     objectName: "downloadButton"
-                    text: "İndir"
+                    enabled: !updateVM.isDownloading
+                    text: updateVM.isDownloading ? "İndiriliyor… %" + updateVM.downloadProgress : (updateVM.canInstall ? "Güncelle" : "Sürüm Sayfası")
                     variant: "primary"
                     iconSource: AppIcons.download
-                    onClicked: { updateVM.openDownload(); root.close() }
+                    onClicked: updateVM.startUpdate()
                 }
             }
         }

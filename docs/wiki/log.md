@@ -1,5 +1,13 @@
 # Değişiklik Günlüğü
 
+## [2026-10-11] [FEAT] | SignPath kaldırıldı; uygulama içi güncelleme ve yayın süreci P013 desenine getirildi
+- **İstek (kullanıcı):** SignPath başvurusu ve üçüncü taraf işleri istenmiyor, kaldırılsın; `P013-Proje_Yonetim_Platformu` gibi exe + güncelleme sistemi olsun, md ona göre güncellensin.
+- **P013 incelendi** (`services/update_service.py`, `UpdateViewModel`, `installer/windows.iss`, `release.yml`, wiki `surum-yayinlama` / `guncelleme-sistemi`): onedir + Inno, açılışta `releases/latest`, **Güncelle** = indir + boyut / SHA-256 doğrula + `/SILENT /CLOSEAPPLICATIONS` + uygulamayı kapat + kurulum sonrası yeniden aç, etiketle yayın. **Bulgu:** P013'ün 8 Ekim tarihli onedir exe'si bu makinede Akıllı Uygulama Denetimi tarafından **engelleniyor** (eski onefile exe'si çalışıyor); yani aynı deseni kopyalamak engeli çözmez. Ayrıca P013'ün kendi wiki'si release iş akışının hiç koşmadığını yazıyor.
+- **Kaldırılanlar:** `.signpath/`, `release.yml` imza adımları, README "Kod İmzalama Politikası", `build_installer.py --checksum-only`, imza testleri. **Kalanlar:** MIT `LICENSE` ve `THIRD_PARTY_NOTICES.md` (Qt LGPL yükümlülüğü).
+- **Eklenenler:** `update_service.download_installer` (boyut, SHA-256: `digest` ya da `.sha256`; sıkı ad, host denetimi, 400 MB sınırı) ve `launch_installer` (sabit argümanlar, kabuk yok); `UpdateViewModel.startUpdate` (arka plan indirme, ilerleme, `quitRequested`); `UpdateDialog` Güncelle düğmesi + ilerleme çubuğu + hata; Inno `[Code] RelaunchAfterUpdate`; wiki sayfaları `surum-yayinlama`, `guncelleme-sistemi`; rehber P013 karşılaştırmasıyla güncellendi.
+- **Doğrulama:** yeni birim testleri (özet çözümleme, indirme: başarı / bozuk içerik / eksik / fazla / yönlendirme / özet yok / sıkı ad, kurulum argümanları, ViewModel akışları, gerçek pencerede Güncelle düğmesi ve indirme sırasında kilit); `.iss` ISCC ile derlendi.
+- **Doğrulanmadı:** Release iş akışı ve gerçek Release üzerinden güncelleme hiç koşmadı; güncelleme sırasında kurulu uygulamanın kapanıp yeniden açılması elle denenmedi; Akıllı Uygulama Denetimi engeli devam ediyor (imza yok).
+
 ## [2026-10-11] [FEAT] | MIT lisansı, üçüncü taraf bildirimleri ve SignPath imza hazırlığı
 - **Lisans:** `LICENSE` (MIT, telif Yusuf), README rozeti ve Lisans bölümü; kurulum sihirbazı lisans sayfasını gösterir ve `LICENSE` + `THIRD_PARTY_NOTICES.md` dosyalarını uygulamayla birlikte kurar. `LICENSE` eksikliği uygulamanın kendi analizinin de bulgusuydu.
 - **`THIRD_PARTY_NOTICES.md`:** `tools/third_party_notices.py` ile üretilir (Qt LGPL-3.0 + yeniden bağlama notu, pathspec MPL-2.0, Send2Trash BSD-3, tomli MIT, Python, PyInstaller); testle `requirements.txt` sürümlerine bağlı (sürüm değişince yeniden üretilmezse test kırılır).

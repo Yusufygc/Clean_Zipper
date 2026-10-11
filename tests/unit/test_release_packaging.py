@@ -171,43 +171,29 @@ def test_installer_ships_the_license_and_the_notices_and_shows_the_license_page(
     assert r'Source: "..\LICENSE"' in script and r'Source: "..\THIRD_PARTY_NOTICES.md"' in script
 
 
-def test_readme_has_the_code_signing_policy_and_the_privacy_statement():
+def test_readme_has_the_privacy_statement_and_no_code_signing_policy():
     from src.services.update_service import OPT_OUT_ENV
     readme = read("README.md")
-    assert "## 🔏 Kod İmzalama Politikası" in readme and "SignPath.io" in readme and "SignPath Foundation" in readme
+    assert "SignPath" not in readme and "Kod İmzalama Politikası" not in readme            # imzalama bu projede yapılmıyor (karar: 2026-10-11)
     assert "## 🔒 Gizlilik" in readme and OPT_OUT_ENV in readme                    # gizlilik metni gerçek kapatma yoluyla tutarlı
     assert "api.github.com/repos/Yusufygc/Clean_Zipper/releases/latest" in readme
 
 
-def test_signpath_artifact_configurations_are_well_formed_and_match_the_workflow():
-    import xml.etree.ElementTree as ET
+def test_no_signpath_leftovers_in_the_workflow_or_the_repo_root():
     workflow = read(".github/workflows/release.yml")
-    expected = {"app": "GitCleanArchiver.exe", "installer": "GitCleanArchiver-Setup-*.exe"}
-    for slug, pe_path in expected.items():
-        root = ET.fromstring(read(f".signpath/artifact-configurations/{slug}.xml").split("?>", 1)[1])
-        assert root.tag.endswith("artifact-configuration")
-        assert [e.get("path") for e in root.iter() if e.tag.endswith("pe-file")] == [pe_path]
-        assert f"artifact-configuration-slug: {slug}" in workflow
+    assert "signpath" not in workflow.lower() and "SIGNING" not in workflow
+    assert not (ROOT / ".signpath").exists()
 
 
-def test_signing_steps_run_only_when_configured_and_never_hardcode_credentials():
+def test_release_workflow_builds_with_build_installer_and_publishes_the_installer_and_its_checksum():
     workflow = read(".github/workflows/release.yml")
-    assert "SIGNING: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}" in workflow
-    signing_steps = workflow.count("if: ${{ env.SIGNING == 'true' }}")
-    assert signing_steps == 6 and workflow.count("signpath/github-action-submit-signing-request@v1") == 2
-    assert "api-token: ${{ secrets.SIGNPATH_API_TOKEN }}" in workflow and "organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}" in workflow
-    assert "build_installer.py --checksum-only" in workflow                        # imza dosyayı değiştirir: özet yenilenir
+    assert "python build_installer.py" in workflow and "--skip-build" not in workflow and "checksum-only" not in workflow
+    assert "gh release create" in workflow and "dist/installer/" in workflow and "--verify-tag" in workflow
 
 
-def test_checksums_are_rewritten_for_every_installer(tmp_path, monkeypatch):
-    import build_installer
-    monkeypatch.setattr(build_installer, "OUTPUT", tmp_path)
-    (tmp_path / "GitCleanArchiver-Setup-2.1.0.exe").write_bytes(b"signed-bytes")
-    (tmp_path / "GitCleanArchiver-Setup-2.1.0.exe.sha256").write_text("eski", encoding="utf-8")
-    build_installer.write_checksums()
-    import hashlib
-    expected = hashlib.sha256(b"signed-bytes").hexdigest()
-    assert (tmp_path / "GitCleanArchiver-Setup-2.1.0.exe.sha256").read_text(encoding="utf-8") == f"{expected} *GitCleanArchiver-Setup-2.1.0.exe\n"
-    monkeypatch.setattr(build_installer, "OUTPUT", tmp_path / "bos")
-    with pytest.raises(SystemExit):
-        build_installer.write_checksums()
+def test_installer_relaunches_the_app_only_after_an_in_app_update_not_after_the_build_check():
+    script = read("packaging/GitCleanArchiver.iss")
+    assert "Check: RelaunchAfterUpdate" in script
+    assert "WizardSilent and not HasParam('/VERYSILENT')" in script                      # /SILENT (güncelleme) açar, /VERYSILENT (deneme) açmaz
+    from build_verify import installer_check  # noqa: F401
+    assert "/VERYSILENT" in read("build_verify.py") and '"/SILENT"' in read("src/services/update_service.py")

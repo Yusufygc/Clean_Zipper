@@ -72,5 +72,27 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+; Uygulama içi güncelleme (/SILENT) sonrası uygulama kendiliğinden yeniden açılır; derleme sonrası deneme (/VERYSILENT) uygulamayı açmaz.
+Filename: "{app}\{#AppExe}"; Flags: nowait; Check: RelaunchAfterUpdate
 
 ; Kullanıcı ayarları (~\.gitclean) ve proje yedekleri kaldırıcı tarafından SİLİNMEZ: kullanıcı verisidir.
+
+[Code]
+// /VERYSILENT yalnızca derleme sonrası denemede kullanılır (build_verify.py): uygulamayı yeniden açmaz.
+function HasParam(const Name: String): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), Name) = 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+end;
+
+function RelaunchAfterUpdate: Boolean;
+begin
+  Result := WizardSilent and not HasParam('/VERYSILENT');
+end;

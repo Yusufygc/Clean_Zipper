@@ -1,7 +1,7 @@
 # Windows exe dağıtımı: Akıllı Uygulama Denetimi rehberi
 
 Bu sayfa, imzasız bir Windows uygulamasını (PyInstaller exe + Inno Setup kurulum dosyası) dağıtırken Windows **Akıllı Uygulama Denetimi**'ne
-(Smart App Control, SAC) takılmamak için bilinmesi gerekenleri toplar. Başka projelere de uygulanabilir. İlgili kararlar: [[decisions]]; günlük: [[log]].
+(Smart App Control, SAC) takılmamak için bilinmesi gerekenleri toplar. Başka projelere de uygulanabilir. Dağıtım ve güncelleme deseni `P013-Proje_Yonetim_Platformu` ile aynıdır: [[surum-yayinlama]], [[guncelleme-sistemi]]. İlgili kararlar: [[decisions]]; günlük: [[log]].
 
 ## 1. Belirti ve teşhis
 
@@ -33,6 +33,7 @@ Karar **dosya başına ve öngörülemez**: aynı kaynak koddan, aynı bayraklar
 | `--onedir` exe, 5 derleme | 3 çalıştı, 2 engellendi |
 | Inno Setup kurulum dosyası, 4 derleme | 3 çalıştı, 1 engellendi (çalışanlar sessiz kurulup kaldırıldı) |
 | Kullanıcının diğer projeleri (imzasız PyInstaller exe + Inno kurulum, 16-98 günlük) | 8 çalıştı, 2 engellendi (en eski ikisi) |
+| **P013 (Proje Takip Platformu), desenin kaynağı:** onedir exe (8 Ekim, `upx=False`, sürüm bilgisi gömülü) | **engellendi**; aynı projenin eski `--onefile` exe'si (Temmuz) çalıştı |
 | Engellenen exe'nin **aynı hash'li kopyası başka klasörde** | yine engellendi: konuma bağlı değil, içeriğe bağlı |
 | İndirilmiş dosya işareti (MOTW, `Zone.Identifier` ZoneId=3) ekli kopya | çalışanlarda sonucu değiştirmedi |
 | Yetki düzeyi (yönetici / kullanıcıya özel kurulum) | belirgin etkisi görülmedi |
@@ -40,32 +41,18 @@ Karar **dosya başına ve öngörülemez**: aynı kaynak koddan, aynı bayraklar
 
 Sonuç: "şu bayrakla derlersen geçer" diye bir tarif **yok**. Güvenilir tek yol imzalamaktır; imzasız dağıtımda risk azaltılabilir, sıfırlanamaz.
 
-## 3. Kalıcı çözüm: kod imzalama
+## 3. İmza: bu projede yapılmıyor
 
-SAC, Microsoft'un güvenilir kök programındaki bir sertifikayla imzalı dosyaları itibar sorgusuna gerek kalmadan çalıştırır.
-Kendinden imzalı sertifika SAC'ı **geçmez** (yalnızca o makinede güven deposuna eklenirse ve bu bir güvenlik ayarıdır; önerilmez).
-
-- **SignPath Foundation (seçilen, 2026-10-11):** açık kaynak projelere ücretsiz, GitHub Actions ile çalışır; sertifikayı SignPath Foundation verir, yayıncı adı büyük olasılıkla "SignPath Foundation" görünür. Depo hazır: public, MIT `LICENSE`, `THIRD_PARTY_NOTICES.md`, README'de **Kod İmzalama Politikası** ve **Gizlilik**, `release.yml` iki aşamalı imza adımları, `.signpath/artifact-configurations/{app,installer}.xml`.
-  Başvuru şartlarını, süresini ve ayrıntılı iş akışını bu repodan değil signpath.org'dan teyit et; aşağıdaki liste yazım anındaki bilgiye dayanır ve **doğrulanmadı**.
-- **Azure Trusted Signing:** ücretli, kolay; bireysel / kurumsal hesabın ülke uygunluğu kontrol edilmeli (Türkiye için doğrulanmadı).
-- **Ticari OV / EV sertifika:** yıllık ücretli; OV sertifikalar donanım anahtarı / HSM ister.
-- İmzalanacaklar: uygulama exe'si, Inno kurulum dosyası **ve** kaldırıcı (`SignedUninstaller=yes`); `signtool sign /fd SHA256 /tr <zaman damgası> /td SHA256`. Zaman damgası olmadan sertifika bitince imza geçersiz olur.
-
-### SignPath başvuru ve kurulum adımları (kullanıcıya düşenler)
-
-1. signpath.org üzerinden açık kaynak (ücretsiz) başvurusu: proje adresi `https://github.com/Yusufygc/Clean_Zipper`, lisans MIT, kısa açıklama. Onay gelene kadar `release.yml` imzasız yayın yapmaya devam eder.
-2. Onaydan sonra SignPath'te: proje (slug `gitclean-archiver`), imzalama politikası (slug `release-signing`), artifact yapılandırmaları (`app` ve `installer`: repodaki XML'ler içe aktarılır), GitHub'ı güvenilir derleme sistemi olarak bağlama (derleme yalnızca GitHub-hosted runner'da, bu depodan).
-3. GitHub depo ayarları: Variables `SIGNPATH_ORGANIZATION_ID` (+ gerekirse `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_POLICY_SLUG`), Secrets `SIGNPATH_API_TOKEN`. Değişken tanımlanınca iş akışı imza adımlarını kendiliğinden çalıştırır.
-4. İlk imzalı etiket: Release'teki dosyaları indirip (MOTW'li) SAC'lı makinede aç; `Get-AuthenticodeSignature` `Valid` ve yayıncı SignPath Foundation olmalı.
-
-Bilinen riskler / açık sorular: (a) uygulama açılışta kendiliğinden bir güncelleme denetimi yapıyor; SignPath Foundation'ın gizlilik şartları kullanıcı isteği dışında ağ iletişimini kısıtlıyorsa başvuruda sorun çıkabilir (gerekirse denetim varsayılan kapalı yapılır); (b) Inno kaldırıcısı (`unins000.exe`) kurulum sırasında üretilir ve uzaktan imzalanamaz, imzasız kalır; (c) SmartScreen itibarı imzayla bile zamanla oluşur, ilk indirmelerde uyarı çıkabilir; (d) artifact yapılandırma şeması ve action parametreleri SignPath belgeleriyle henüz doğrulanmadı.
+Tek deterministik çözüm kod imzalamadır (Microsoft'un güvenilir kök programındaki bir sertifikayla imzalı dosyaları SAC itibar sorgusu olmadan çalıştırır); ücretsiz yol (SignPath Foundation) ve ücretli yollar vardır.
+**Karar (2026-10-11): imzalama yapılmayacak** (üçüncü taraf hesabı / başvuru / sertifika yönetimi istenmiyor). Sonuç: engel riski kalır; aşağıdaki liste yalnızca riski azaltır.
+Kullanıcıya düşen: engellenen dosyada "dosyayı yeniden indir / yeni sürümü bekle"; SAC'ı kapatmak önerilmez (Windows'ta kapatılınca yeniden açmak için sıfırlama gerekir).
 
 ## 4. İmzasız dağıtımda yapılacaklar (kontrol listesi)
 
 1. **Dağıtmadan önce bu makinede dene, engellenirse yeniden derle.** `python build_installer.py` bunu yapar (`build_verify.py`): exe'yi başlatır, kurulum dosyasını geçici klasöre sessizce kurup açar ve kaldırır; engellenirse özet değişsin diye en çok 6 kez yeniden derler. CI'da (`CI` ortam değişkeni) ve `--no-verify` ile atlanır.
 2. **Denediğin dosyanın aynısını dağıt.** Dosyayı yeniden derleme, yeniden paketleme ya da yeniden adlandırma hash'i (ve itibarı) değiştirir; GitHub Release'e yüklediğin dosya denediğin dosya olmalı.
 3. **CI'da derlenen dosya yerelde denenmemiş dosyadır.** GitHub runner'da SAC yoktur; Release yayınlandıktan sonra **indirilmiş (MOTW'li) kopyayı** SAC'lı bir makinede aç. Engellenirse yerelde derleyip denenmiş dosyayı Release'e elle yükle.
-4. **`--noupx`:** UPX, Python / Qt DLL'lerinin imzasını bozar ve antivirüs yanlış pozitifi artırır.
+4. **`--noupx` (P013 de `upx=False`):** UPX, Python / Qt DLL'lerinin imzasını bozar ve antivirüs yanlış pozitifi artırır.
 5. **PyInstaller `--onedir` + Inno Setup** tercih edilir (SAC için kanıtlı bir üstünlüğü yok; kurulum dosyası 62 → 40 MB, her açılışta `%TEMP%`'e 60 MB açma yok).
 6. **Sürüm bilgisi (`--version-file`) ve simge** gömülü olsun (kurumsal görünüm, SmartScreen / antivirüs güveni); tek başına SAC'ı geçirmez.
 7. **Kullanıcıya not:** SmartScreen uyarısında "Ek bilgi → Yine de çalıştır". SAC engelinde bu seçenek yoktur; kullanıcıya "dosyayı kaldırıp yeni sürümü indir" ya da imzalı sürümü bekle de. **SAC'ı kapatmayı önerme:** Windows'ta kapatılınca yeniden açmak için sıfırlama gerekir.
@@ -84,7 +71,7 @@ Bilinen riskler / açık sorular: (a) uygulama açılışta kendiliğinden bir g
 ```text
 python build_installer.py              # build_exe.py (onedir, noupx) → exe dene → Inno derle → kurulum dosyasını dene → .sha256
 python build_installer.py --no-verify  # denemeden
-python tools/release.py X.Y.Z          # sürüm + commit + etiket (push elle)
+python tools/release.py X.Y.Z          # sürüm + commit + etiket (push elle) -> Release iş akışı: [[surum-yayinlama]]
 ```
 
 Çıktılar `dist/GitCleanArchiver/` (onedir) ve `dist/installer/GitCleanArchiver-Setup-X.Y.Z.exe` (+ `.sha256`). Güncelleme denetimi bu dosya adını arar (`update_service.INSTALLER_PATTERN`).

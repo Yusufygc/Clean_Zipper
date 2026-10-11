@@ -32,16 +32,46 @@ class UpdateWorker(QThread):
             self.failed.emit("Güncelleme denetimi yapılamadı.")
 
 
+class DownloadWorker(QThread):
+    """Arka planda kurulum dosyasını indirir ve doğrular; ilerleme yüzdesini bildirir."""
+
+    progress = Signal(int)
+    downloaded = Signal(str)                  # indirilen kurulum dosyasının yolu
+    failed = Signal(str)
+
+    def __init__(self, download: Callable[[UpdateInfo, Callable[[int], None]], Path], info: UpdateInfo):
+        super().__init__()
+        self._download, self._info = download, info
+
+    def run(self):
+        try:
+            self.downloaded.emit(str(self._download(self._info, self.progress.emit)))
+        except UpdateCheckError as e:
+            self.failed.emit(str(e))
+        except Exception as e:                                   # beklenmeyen hata arayüzü düşürmemeli
+            logger.warning("Güncelleme indirilemedi: %s", e, exc_info=True)
+            self.failed.emit("Güncelleme indirilemedi.")
+
+
 class UpdateViewModel(QObject):
-    """Güncelleme penceresi ve ayarlar kartı köprüsü. Açılışta sessiz denetim; hata sessizce yutulur, elle denetimde gösterilir."""
+    """Güncelleme penceresi ve ayarlar kartı köprüsü. Açılışta sessiz denetim; hata sessizce yutulur, elle denetimde gösterilir.
+
+    "Güncelle": kurulum dosyası indirilir, SHA-256 doğrulanır, kurulum başlatılır ve uygulama kapanır (`quitRequested`)."""
 
     stateChanged = Signal()
     popupRequested = Signal()                 # yeni sürüm bulundu: pencere açılmalı
+    quitRequested = Signal()                  # kurulum başlatıldı: uygulama kapanmalı
 
     def __init__(self, check: Optional[Callable[[], Optional[UpdateInfo]]] = None, preferences_file: Optional[Path] = None,
-                 parent: Optional[QObject] = None):
+                 download: Optional[Callable[[UpdateInfo, Callable[[int], None]], Path]] = None,
+                 launcher: Optional[Callable[[Path], None]] = None, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._check = check or (lambda: update_service.check_for_update(__version__, RELEASE_REPO))
+        self._download = download or update_service.download_installer
+        self._launcher = launcher or update_service.launch_installer
+        self._downloading = False
+        self._progress = 0
+        self._error = ""
         self._preferences_file = preferences_file
         self._preferences = update_service.load_preferences(preferences_file)
         self._worker: Optional[UpdateWorker] = None
@@ -93,6 +123,23 @@ class UpdateViewModel(QObject):
     @Property(bool, notify=stateChanged)
     def checkEnabled(self) -> bool:
         return self._preferences.check_enabled
+
+    @Property(bool, notify=stateChanged)
+    def isDownloading(self) -> bool:
+        return self._downloading
+
+    @Property(int, notify=stateChanged)
+    def downloadProgress(self) -> int:
+        return self._progress
+
+    @Property(str, notify=stateChanged)
+    def errorMessage(self) -> str:
+        return self._error
+
+    @Property(bool, notify=stateChanged)
+    def canInstall(self) -> bool:
+        """Kurulum dosyası indirilebilir mi (Release'te kurulum dosyası var mı)."""
+        return bool(self._info and self._info.download_url)
 
     # ── Denetim ──
 
@@ -148,10 +195,36 @@ class UpdateViewModel(QObject):
             update_service.save_preferences(self._preferences, self._preferences_file)
 
     @Slot()
-    def openDownload(self) -> None:
-        """Kurulum dosyasını (yoksa sürüm sayfasını) varsayılan tarayıcıda açar; uygulama hiçbir şey indirip çalıştırmaz."""
-        if self._info:
-            QDesktopServices.openUrl(QUrl(self._info.download_url or self._info.page_url))
+    def startUpdate(self) -> None:
+        """Kurulum dosyasını indirir ve doğrular; sonra kurulum başlar ve uygulama kapanır."""
+        if self._info is None or self._downloading:
+            return
+        if not self._info.download_url:
+            self.openReleasePage()                  # Release'te kurulum dosyası yok: sayfa açılır
+            return
+        self._error, self._progress, self._downloading = "", 0, True
+        self.stateChanged.emit()
+        self._worker = DownloadWorker(self._download, self._info)
+        self._worker.progress.connect(self._on_progress)
+        self._worker.downloaded.connect(self._on_downloaded)
+        self._worker.failed.connect(self._on_download_failed)
+        self._worker.start()
+
+    def _on_progress(self, percent: int) -> None:
+        self._progress = percent
+        self.stateChanged.emit()
+
+    def _on_downloaded(self, path: str) -> None:
+        try:
+            self._launcher(Path(path))
+        except (UpdateCheckError, OSError) as e:
+            self._on_download_failed(str(e) if isinstance(e, UpdateCheckError) else "Kurulum başlatılamadı.")
+            return
+        self.quitRequested.emit()
+
+    def _on_download_failed(self, message: str) -> None:
+        self._downloading, self._error = False, message
+        self.stateChanged.emit()
 
     @Slot()
     def openReleasePage(self) -> None:
