@@ -141,7 +141,7 @@ ComboBox {
             boundsBehavior: Flickable.StopAtBounds
             model: root.popup.visible ? root.delegateModel : null
             currentIndex: root.highlightedIndex
-            ScrollBar.vertical: ScrollBar { }
+            ScrollBar.vertical: ThemedScrollBar { }
         }
         background: Rectangle {
             radius: AppTheme.radiusBase

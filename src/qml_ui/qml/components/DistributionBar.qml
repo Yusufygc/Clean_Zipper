@@ -60,7 +60,7 @@ CardFrame {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 6
                         radius: 3
-                        color: AppTheme.isDark ? "#1E293B" : "#E2E8F0"
+                        color: AppTheme.trackBg
 
                         Rectangle {
                             width: parent.width * (modelData.pct / 100)

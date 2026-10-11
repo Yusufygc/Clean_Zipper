@@ -13,3 +13,4 @@ FindingCard 1.0 FindingCard.qml
 AppCheckBox 1.0 AppCheckBox.qml
 SegmentedFilter 1.0 SegmentedFilter.qml
 FilterComboBox 1.0 FilterComboBox.qml
+ThemedScrollBar 1.0 ThemedScrollBar.qml

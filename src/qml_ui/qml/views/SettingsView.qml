@@ -39,6 +39,8 @@ Item {
         anchors.margins: 20
         contentWidth: availableWidth
         clip: true
+        rightPadding: AppTheme.scrollGutter
+        ScrollBar.vertical: ThemedScrollBar { }
         // Uçlarda dur: içerik uçtan öteye sürüklenip bırakılınca geri sıçramasın
         Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
         // İçerik yüksekliği düzenin gerçek yüksekliğidir; aksi hâlde son satır kesik kalır (kaydırma ucu erken biter)

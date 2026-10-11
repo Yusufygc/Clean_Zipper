@@ -158,7 +158,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 6
                     radius: 3
-                    color: AppTheme.isDark ? "#1E293B" : "#E2E8F0"
+                    color: AppTheme.trackBg
 
                     Rectangle {
                         width: parent.width * (archiveVM.progressPercent / 100)
@@ -189,7 +189,9 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
+            rightPadding: AppTheme.scrollGutter
             contentWidth: availableWidth
+            ScrollBar.vertical: ThemedScrollBar { }
             // Uçlarda dur: içerik uçtan öteye sürüklenip bırakılınca geri sıçramasın
             Component.onCompleted: contentItem.boundsBehavior = Flickable.StopAtBounds
             // İçerik yüksekliği düzenin gerçek yüksekliğidir; aksi hâlde son satır kesik kalır (kaydırma ucu erken biter)

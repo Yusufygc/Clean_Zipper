@@ -155,7 +155,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 6
                     radius: 3
-                    color: AppTheme.isDark ? "#1E293B" : "#E2E8F0"
+                    color: AppTheme.trackBg
 
                     Rectangle {
                         width: parent.width * (findingsVM.progressPercent / 100)
@@ -291,7 +291,7 @@ Item {
                 visible: findingsList.count > 0
 
                 delegate: FindingCard {
-                    width: findingsList.width
+                    width: findingsList.width - AppTheme.scrollGutter
                     title: model.title
                     description: model.description
                     severity: model.severity
@@ -309,10 +309,7 @@ Item {
                     onDisableRuleRequested: function(ruleId) { settingsVM.disableRule(ruleId) }
                 }
 
-                ScrollBar.vertical: ScrollBar {
-                    active: true
-                    policy: ScrollBar.AsNeeded
-                }
+                ScrollBar.vertical: ThemedScrollBar { active: true }
             }
         }
     }

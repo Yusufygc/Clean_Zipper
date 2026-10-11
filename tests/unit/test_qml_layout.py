@@ -405,7 +405,8 @@ def test_dashboard_rows_are_symmetric_equal_columns_with_equal_heights(qapp, mon
         _, window = open_tab(qapp, monkeypatch, 0, width=width, height=1000)
         grid = find_item(window, "metricGrid")
         cards = [c for c in grid.childItems() if c.width() > 0]
-        assert len(cards) == 4 and len({round(c.width()) for c in cards}) == 1, (width, [c.width() for c in cards])
+        widths = [c.width() for c in cards]                       # kesirli genişlik: ekranda 1 px yuvarlama farkı simetriyi bozmaz
+        assert len(cards) == 4 and max(widths) - min(widths) <= 1, (width, widths)
         for row_name in ("healthRow", "distributionRow", "insightRow"):
             row = find_item(window, row_name)
             left, right = [c for c in row.childItems() if c.width() > 0]

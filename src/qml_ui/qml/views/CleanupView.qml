@@ -98,7 +98,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 6
                     radius: 3
-                    color: AppTheme.isDark ? "#1E293B" : "#E2E8F0"
+                    color: AppTheme.trackBg
 
                     Rectangle {
                         width: parent.width * (cleanupVM.progressPercent / 100)
@@ -274,7 +274,7 @@ Item {
             Layout.fillWidth: true
             implicitHeight: 38
             radius: AppTheme.radiusSmall
-            color: AppTheme.isDark ? "#111827" : "#F8FAFC"
+            color: AppTheme.codeBg
             border.color: AppTheme.border
             border.width: 1
 
@@ -400,7 +400,7 @@ Item {
                     visible: cleanupVM.previewFiles.length > 0
 
                     delegate: Rectangle {
-                        width: cleanListView.width
+                        width: cleanListView.width - AppTheme.scrollGutter
                         implicitHeight: 36
                         radius: AppTheme.radiusSmall
                         color: AppTheme.surfaceHover
@@ -456,10 +456,7 @@ Item {
                         }
                     }
 
-                    ScrollBar.vertical: ScrollBar {
-                        active: true
-                        policy: ScrollBar.AsNeeded
-                    }
+                    ScrollBar.vertical: ThemedScrollBar { active: true }
                 }
             }
         }

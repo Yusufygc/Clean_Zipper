@@ -37,7 +37,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 8
             radius: 4
-            color: AppTheme.isDark ? "#1E293B" : "#E2E8F0"
+            color: AppTheme.trackBg
 
             Rectangle {
                 width: parent.width * Math.min(Math.max(root.score, 0), 100) / 100

@@ -99,7 +99,7 @@ Rectangle {
             Badge {
                 text: root.ruleLabel !== "" ? root.ruleLabel : root.rule
                 textColor: AppTheme.accent
-                badgeColor: AppTheme.isDark ? "#111827" : "#F1F5F9"
+                badgeColor: AppTheme.tileBg
                 borderColor: AppTheme.border
                 fontSize: 12
                 visible: root.rule !== ""
@@ -170,7 +170,7 @@ Rectangle {
             Layout.fillWidth: true
             implicitHeight: sugLayout.implicitHeight + 12
             radius: AppTheme.radiusSmall
-            color: AppTheme.isDark ? "#111827" : "#F8FAFC"
+            color: AppTheme.codeBg
             border.color: AppTheme.border
             border.width: 1
             visible: root.suggestion !== ""
