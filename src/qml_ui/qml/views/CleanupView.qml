@@ -160,6 +160,7 @@ Item {
                     RowLayout {
                         spacing: 10
                         AppCheckBox {
+                            accessibleName: "Python önbelleği"
                             checked: cleanupVM.categoryPythonCache
                             onToggled: cleanupVM.setCategory("python_cache", checked)
                         }
@@ -187,6 +188,7 @@ Item {
                     RowLayout {
                         spacing: 10
                         AppCheckBox {
+                            accessibleName: "Geçici dosyalar"
                             checked: cleanupVM.categoryTempFiles
                             onToggled: cleanupVM.setCategory("temp_files", checked)
                         }
@@ -214,6 +216,7 @@ Item {
                     RowLayout {
                         spacing: 10
                         AppCheckBox {
+                            accessibleName: "Log dosyaları"
                             checked: cleanupVM.categoryLogs
                             onToggled: cleanupVM.setCategory("logs", checked)
                         }
@@ -241,6 +244,7 @@ Item {
                     RowLayout {
                         spacing: 10
                         AppCheckBox {
+                            accessibleName: "Yedek dosyaları"
                             checked: cleanupVM.categoryBackups
                             onToggled: cleanupVM.setCategory("backups", checked)
                         }
@@ -335,7 +339,7 @@ Item {
 
                     // Önizleme Bilgi Rozetleri
                     Badge {
-                        text: cleanupVM.previewCount + " dosya tespit edildi"
+                        text: cleanupVM.previewCount + " öğe tespit edildi"
                         textColor: AppTheme.accent
                         badgeColor: AppTheme.surfaceActive
                         visible: cleanupVM.previewCount > 0
@@ -448,7 +452,7 @@ Item {
                             }
 
                             Badge {
-                                text: modelData.sizeKb + " KB"
+                                text: modelData.sizeKb < 1 ? "< 1 KB" : modelData.sizeKb + " KB"
                                 textColor: AppTheme.textSecondary
                                 badgeColor: AppTheme.surfaceActive
                                 fontSize: 12

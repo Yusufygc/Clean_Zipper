@@ -7,6 +7,7 @@ from typing import Dict
 from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import QApplication
 from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQuickControls2 import QQuickStyle
 from PySide6.QtCore import QCoreApplication, QEvent, QObject, QTimer, QUrl
 
 from src.qml_ui.viewmodels.app_viewmodel import AppViewModel
@@ -51,18 +52,30 @@ def _create_view_models() -> Dict[str, QObject]:
 
     # Varsayılan ajan klasörü proje adına bağlı; bir kural kapatılıp açılınca bulgular yeni kurallarla yeniden hesaplanır
     app_vm.projectChanged.connect(settings_vm.onProjectChanged)
-    settings_vm.rulesChanged.connect(
-        lambda: (scan_vm.startQuickScan(), findings_vm.startDeepDiagnosis()) if app_vm.hasProject else None)
+    def refresh_analysis():
+        if app_vm.hasProject:
+            scan_vm.startQuickScan()
+            findings_vm.startDeepDiagnosis()
+
+    settings_vm.rulesChanged.connect(refresh_analysis)
+
+    archive_vm = ArchiveViewModel(app_vm.service)
+    cleanup_vm = CleanupViewModel(app_vm.service)
+    # Temizlik ya da proje içine yazılan zip / kopya sonrası dashboard ve bulgu listesi bayat kalmasın
+    cleanup_vm.projectModified.connect(refresh_analysis)
+    archive_vm.projectModified.connect(refresh_analysis)
 
     return {"appVM": app_vm, "scanVM": scan_vm, "findingsVM": findings_vm,
-            "archiveVM": ArchiveViewModel(app_vm.service), "cleanupVM": CleanupViewModel(app_vm.service),
-            "settingsVM": settings_vm}
+            "archiveVM": archive_vm, "cleanupVM": cleanup_vm, "settingsVM": settings_vm}
 
 
 def create_qml_app():
     setup_logging()
     app = _configure_application()
 
+    # Tüm denetimler (onay kutusu, kaydırma çubuğu, açılır liste) kendi görünümünü çizer: özelleştirilebilen Basic stili
+    # açıkça seçilir. Varsayılan yerel Windows stili özelleştirmeyi desteklemez ve ekransız ortamda uyarı üretir.
+    QQuickStyle.setStyle("Basic")
     engine = QQmlApplicationEngine()
     qml_dir = Path(__file__).parent / "qml"
     for folder in ("", "singletons", "components", "views"):

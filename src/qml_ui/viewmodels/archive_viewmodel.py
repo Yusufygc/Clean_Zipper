@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 EMPTY_RESULT: Dict[str, Any] = {
     "success": False, "complete": False, "mode": "", "error": "", "outputPath": "", "totalFiles": 0,
     "addedFiles": 0, "skippedFiles": 0, "failedFilesCount": 0, "failedFiles": [], "backupSizeMb": 0.0,
-    "excludedDirsCount": 0, "removedBackups": 0,
+    "excludedDirsCount": 0, "removedBackups": 0, "sensitiveCount": 0, "sensitiveFiles": [],
 }
 
 
@@ -71,6 +71,7 @@ class ArchiveViewModel(QObject):
     processStarted = Signal()
     processProgress = Signal(int, str)
     processFinished = Signal()
+    projectModified = Signal()            # zip / kopya proje klasörünün içine yazıldı: analiz bayat
     processError = Signal(str)
     stateChanged = Signal()
     profilesChanged = Signal()
@@ -231,6 +232,8 @@ class ArchiveViewModel(QObject):
             "backupSizeMb": round(result.get("size", 0) / (1024 * 1024), 2),
             "excludedDirsCount": int(result.get("excluded_dir_count", 0)),
             "removedBackups": len(result.get("removed_backups", [])),
+            "sensitiveCount": len(result.get("sensitive_files", [])),
+            "sensitiveFiles": list(result.get("sensitive_files", []))[:20],
         }
         if formatted["removedBackups"]:
             self._progress_text += f" ({formatted['removedBackups']} eski yedek Geri Dönüşüm Kutusu'na taşındı)"
@@ -241,6 +244,19 @@ class ArchiveViewModel(QObject):
         self.processProgress.emit(100, self._progress_text)
         self.stateChanged.emit()
         self.processFinished.emit()
+        if self._wrote_inside_project(formatted):
+            self.projectModified.emit()
+
+    def _wrote_inside_project(self, formatted: Dict[str, Any]) -> bool:
+        """Zip ya da kopya çıktısı proje klasörünün içindeyse sonraki analiz yeni dosyayı da görür."""
+        project = self.service.current_project
+        if not (project and formatted["success"] and formatted["mode"] in ("zip", "copy") and formatted["outputPath"]):
+            return False
+        try:
+            Path(formatted["outputPath"]).resolve().relative_to(project)
+        except (ValueError, OSError):
+            return False
+        return True
 
     def _on_error(self, err_msg: str):
         self._is_processing = False

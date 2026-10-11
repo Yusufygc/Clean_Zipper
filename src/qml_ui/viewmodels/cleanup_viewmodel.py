@@ -52,6 +52,7 @@ class CleanupViewModel(QObject):
     processStarted = Signal()
     processProgress = Signal(int, str)
     processFinished = Signal()
+    projectModified = Signal()            # gerçek temizlik bitti: proje klasörü değişti, analiz bayat
     processError = Signal(str)
     stateChanged = Signal()
 
@@ -229,6 +230,8 @@ class CleanupViewModel(QObject):
         self.processProgress.emit(100, self._progress_text)
         self.stateChanged.emit()
         self.processFinished.emit()
+        if action != "preview":
+            self.projectModified.emit()
 
     def _on_error(self, err_msg: str):
         self._is_processing = False
