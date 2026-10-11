@@ -1,4 +1,4 @@
-"""QA denetiminde (QA_RAPORU.md) bulunan hataların gerileme testleri: her test, düzeltmeden önce kırmızıydı."""
+"""QA denetiminde (2026-10-11 uçtan uca QA) bulunan hataların gerileme testleri: her test, düzeltmeden önce kırmızıydı."""
 import re
 import sys
 import time

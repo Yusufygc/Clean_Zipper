@@ -52,7 +52,7 @@ Birim testleri tek başına yetmez: her aşamada sonuçlar, **farklı bir araçl
 | Rapor sayıları | analiz bulgularının `Counter`'ı, 44 sır bulgusunun kaynak satırı | birebir; 0 sızıntı |
 
 ## Uçtan uca QA ve erişilebilirlik
-- `QA_RAPORU.md` (kök dizin) gerçek QML penceresi + `QTest.mouseClick` ile yapılan uçtan uca denetimin kaydıdır; düzeltmelerin gerileme testleri `tests/unit/test_qa_fixes.py` içindedir.
+- Gerçek QML penceresi + `QTest.mouseClick` ile uçtan uca denetim yapıldı (2026-10-11); rapor (`QA_RAPORU.md`) ve ekran görüntüleri (`docs/qa/`) 2026-10-12'de kullanıcı kararıyla silindi, git geçmişinde durur. Düzeltmelerin gerileme testleri `tests/unit/test_qa_fixes.py` içindedir.
 - **QML ekli özellikleri (`Accessible.name`) `item.property(...)` ile okunamaz;** ölçüm için `QAccessible.setActive(True)` + `QAccessible.queryAccessibleInterface(item).text(QAccessible.Text.Name)` kullanılır. İlk QA turunda yanlış yöntemle "0 öğe" sayılmıştı (kaynakta gerçekten `Accessible` yoktu, sonuç doğru çıktı, yöntem yanlıştı).
 - Pencere nesnesi `contentItem()` / `grabWindow` gibi `QQuickWindow` yöntemlerini yalnızca `QtQuick` modülü uygulamadan **önce** içe aktarılmışsa sunar (aksi hâlde `QWindow` olarak çözülür).
 - Ekransız (`offscreen`) modda SVG simgeleri boş çizilir ve Qt, stil özelleştirmesi hakkında uyarı verir; görsel ve uyarı kontrolü gerçek platformda (`QT_QPA_PLATFORM=windows`) yapılır. İlk QA turundaki 48 uyarı yalnızca ekransız ortam artefaktıydı.

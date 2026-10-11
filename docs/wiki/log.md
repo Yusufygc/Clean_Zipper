@@ -1,5 +1,8 @@
 # Değişiklik Günlüğü
 
+## [2026-10-12] [CHORE] | QA raporu ve ekran görüntüleri silindi
+- **Kullanıcı kararı:** `QA_RAPORU.md` ve `docs/qa/` (6 ekran görüntüsü) kaldırıldı; içerik git geçmişinde durur (önceki log kayıtlarındaki `QA_RAPORU.md` anıları tarihseldir). `testing.md` ve `test_qa_fixes` açıklaması buna göre düzeltildi; gerileme testleri yerinde.
+
 ## [2026-10-12] [DOCS] | Yeni proje altyapı rehberi
 - **İstek (kullanıcı):** yeni projede altyapı, test ve denetim tedbirleri baştan alınabilsin diye, bu projede sonradan eklenenleri toplayan bir rehber.
 - **Yapılan:** `proje-altyapi-rehberi.md`: ilk gün / ilk hafta / yayın öncesi listeleri, depo hijyeni (LF, BOM, UTF-8), ayrık sabit bağımlılıklar + `pip-audit`, ruff, `pytest.ini` + kullanıcı verisi yalıtımı, bekçi testleri (katman, sessiz hata yutma, BOM, wiki), CI şablonu, loglama, güvenlik tasarım ilkeleri, wiki / AI çalışma düzeni, doğrulama yöntemleri, "geç kalınan önlemler" tablosu ve ajana verilecek başlangıç talimatı. Kaynak: `testing`, `rules`, `decisions`, `architecture`, kod ve CI dosyaları.
