@@ -96,7 +96,7 @@ Tam liste ve gerekçeler: [[decisions]]. Özet: önce backend (UI sonradan sıf�
 - Analiz iptal edilemiyor (UI'da iptal düğmesi yok); proje değişince yeni teşhis eskisini bekler ([[decisions]], kapsam dışı).
 - `read_text` 2 MB üstü dosyaları atlıyor: büyük kaynak dosyalar karmaşıklık ve sızıntı taramasına girmez (`skipped_files` ile görünür).
 - Java/Go yalnızca örnek kodla doğrulandı (diskte gerçek kod yoktu); C#, JS/TS ve Rust gerçek projelerde doğrulandı. Kotlin/PHP/Swift: yalnızca yeni bir `LanguageSpec` gerekir.
-- **Kurulum sihirbazı imzasız ve Smart App Control'lü makinede engelleniyor** (2026-10-11, bu makinede doğrulandı); PyInstaller EXE'si açılıyor. Bu makinede kurulum / kaldırma akışı denenemedi. Çözüm: kod imzalama ([[log]]).
+- **Akıllı Uygulama Denetimi imzasız her yeni exe / kurulum dosyasını hash başına rastgele engelliyor** (2026-10-11, bu makinede 13 derlemeyle ölçüldü): derleme sonrası deneme + yeniden derleme riski azaltır, yok etmez ([[windows-exe-dagitim]]). Kalıcı çözüm: kod imzalama (SignPath Foundation için depoya OSI lisansı gerekir; Azure Trusted Signing ülke uygunluğu doğrulanmadı).
 - İmzasız EXE başka makinelerde SmartScreen "tanınmayan uygulama" uyarısı verebilir ("Yine de çalıştır"); imza yalnızca geniş dağıtımda gerekir.
 - UI yazılırken: arşiv/yedek sonucunda `complete=False` ve `failed_files` kullanıcıya gösterilmeli; `skipped_files` ve `failed_analyzers` "analiz tam mı" göstergesi olmalı ([[backend-api]]).
 - Kendi taramamızın bilinçli bırakılan bulguları: QML ViewModel'lerinin `class-size` bulguları (`ScanViewModel`, `SettingsViewModel`, `FindingsViewModel`: her `@Property` / `@Slot` bir metot sayılır, sınıf QML'e açılan yüzeydir) ve `BaseAnalyzer._create_result` (7 parametreli genel API).

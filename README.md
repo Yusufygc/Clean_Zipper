@@ -178,7 +178,8 @@ gitclean-archiver-pro/
 │
 ├── main.py                       # 🚀 Ana giriş noktası (QML arayüzü)
 ├── build_exe.py                  # 🔨 Build script'i
-├── build_installer.py            # 📦 EXE + Inno Setup kurulum sihirbazı (dist/installer)
+├── build_installer.py            # 📦 EXE (onedir) + Inno Setup sihirbazı; bu makinede dener, engellenirse yeniden derler (dist/installer)
+├── build_verify.py               # ✅ Derleme sonrası deneme: exe açılıyor mu, kurulum dosyası sessizce kurulup kaldırılıyor mu
 ├── packaging/                    # 📦 Inno Setup betiği (GitCleanArchiver.iss) ve sihirbaz görselleri
 ├── tools/release.py              # 🏷️ Sürüm yükseltme + etiket (tag) aracı
 ├── build_icons.py                # 🎨 Uygulama ikonunu vektörden (app.svg) üretir: app.png + çok boyutlu app_icon.ico
@@ -247,7 +248,7 @@ python main.py
 
 ### Kurulum Sihirbazı (önerilen, Windows)
 
-[Releases](https://github.com/Yusufygc/Clean_Zipper/releases) sayfasından `GitCleanArchiver-Setup-X.Y.Z.exe` dosyasını indirip çalıştırın. Yönetici hakkı gerekmez (varsayılan: kullanıcıya özel kurulum); Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve kaldırıcı eklenir. Yeni sürümün üstüne kurulum eski sürümü günceller; ayarlarınız (`~/.gitclean`) korunur. Dosyanın yanındaki `.sha256` ile özetini doğrulayabilirsiniz. Kurulum dosyası imzasızdır: SmartScreen uyarısında **Ek bilgi → Yine de çalıştır**.
+[Releases](https://github.com/Yusufygc/Clean_Zipper/releases) sayfasından `GitCleanArchiver-Setup-X.Y.Z.exe` dosyasını indirip çalıştırın. Yönetici hakkı gerekmez (varsayılan: kullanıcıya özel kurulum); Başlat menüsü kısayolu, isteğe bağlı masaüstü kısayolu ve kaldırıcı eklenir. Yeni sürümün üstüne kurulum eski sürümü günceller; ayarlarınız (`~/.gitclean`) korunur. Dosyanın yanındaki `.sha256` ile özetini doğrulayabilirsiniz. Kurulum dosyası imzasızdır: SmartScreen uyarısında **Ek bilgi → Yine de çalıştır**. Windows 11 **Akıllı Uygulama Denetimi** imzasız dosyaları dosya başına rastgele engelleyebilir ("Uygulama Denetimi ilkesi bu dosyayı engelledi"); nedenleri, teşhisi ve alınacak önlemler: [`docs/wiki/windows-exe-dagitim.md`](docs/wiki/windows-exe-dagitim.md).
 
 Uygulama açılışta GitHub'a yalnızca "en son sürüm nedir" diye sorar; daha yeni bir sürüm varsa sürüm notlarıyla bir pencere açar (**İndir** kurulum dosyasını tarayıcıda açar, **Sonra**, **Bu Sürümü Atla**). Hiçbir şey kendiliğinden indirilip çalıştırılmaz, proje ya da kişisel veri gönderilmez. Kapatmak için **Ayarlar → Güncellemeler** ya da ortam değişkeni `GITCLEAN_NO_UPDATE_CHECK=1`.
 
@@ -790,14 +791,15 @@ Doğrulama yöntemi (bağımsız araçlarla karşılaştırma, refactor öncesi/
 python build_exe.py
 ```
 
-**Çıktı:** `dist/GitCleanArchiver.exe`
+**Çıktı:** `dist/GitCleanArchiver/` klasörü (`GitCleanArchiver.exe` + `_internal`)
 
 ### Kurulum Sihirbazı (Inno Setup)
 
 ```bash
 # Önce: Inno Setup 6 (https://jrsoftware.org/isdl.php) ve pip install -r requirements-build.txt
-python build_installer.py                 # EXE'yi derler, sonra dist/installer/GitCleanArchiver-Setup-<sürüm>.exe + .sha256 üretir
-python build_installer.py --skip-build    # dist/GitCleanArchiver.exe hazırsa yalnızca sihirbaz
+python build_installer.py                 # EXE'yi derler, bu makinede dener (Akıllı Uygulama Denetimi engellerse en çok 6 kez yeniden derler), sonra dist/installer/GitCleanArchiver-Setup-<sürüm>.exe + .sha256
+python build_installer.py --no-verify     # denemeden (CI'da `CI` ortam değişkeniyle otomatik)
+python build_installer.py --skip-build    # dist/GitCleanArchiver/ hazırsa yalnızca sihirbaz (tek deneme)
 ```
 
 Sürüm tek kaynaktan gelir: `src/version.py`. Sihirbaz Türkçe ve İngilizcedir; `AppId` sabittir (sürümler birbirinin üstüne kurulur, değiştirmeyin).
@@ -818,7 +820,7 @@ Uygulamanın sorunsuz, taşınabilir ve güvenilir bir biçimde derlenmesi için
 
 | Parametre | Açıklama |
 |-----------|----------|
-| `--onefile` | Tüm uygulamayı tek bir bağımsız `.exe` dosyası haline getirir |
+| `--onedir` | exe + `_internal` klasörü üretir; Inno Setup tüm klasörü paketler (kurulum dosyası ~40 MB, her açılışta `%TEMP%`'e açma yok) |
 | `--windowed` | Arka planda konsol penceresinin açılmasını engeller |
 | `--icon=...` | Uygulama exe'sine ve görev çubuğuna özel `app_icon.ico` ikonunu gömer |
 | `--noupx` | UPX sıkıştırmasını devre dışı bırakarak yanlış pozitif virüs algılamalarını önler |
@@ -826,7 +828,7 @@ Uygulamanın sorunsuz, taşınabilir ve güvenilir bir biçimde derlenmesi için
 | `--add-data=...` | QML arayüz dosyaları (`src/qml_ui/qml`), arayüz simgeleri ve `resources/` (kurallar, profiller, ikon); eksik klasör derlemeyi durdurur |
 | `--collect-submodules=src.analyzers` | Kendini kaydeden analizörlerin pakete girmesini sağlar |
 
-EXE imzasızdır ve bu makinede doğrudan açılır; başka bilgisayarlarda Windows SmartScreen "tanınmayan uygulama" uyarısı gösterebilir (**Ek bilgi → Yine de çalıştır**). Geniş dağıtım için kod imzalama sertifikası önerilir.
+EXE ve kurulum dosyası imzasızdır: Windows SmartScreen "tanınmayan uygulama" uyarısı gösterebilir (**Ek bilgi → Yine de çalıştır**) ve Windows 11 Akıllı Uygulama Denetimi bazı derlemeleri tümüyle engelleyebilir; bu yüzden dağıtımdan önce `build_installer.py` dosyayı dener. Kalıcı çözüm kod imzalamadır ([rehber](docs/wiki/windows-exe-dagitim.md)).
 
 ---
 

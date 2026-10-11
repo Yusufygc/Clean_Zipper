@@ -1,5 +1,13 @@
 # Değişiklik Günlüğü
 
+## [2026-10-11] [FIX] | Akıllı Uygulama Denetimi engeli: onedir + Inno, derleme sonrası deneme, rehber
+- **Sorun (kullanıcı):** "Windows exeyi kurdurmuyor, Akıllı Uygulama Denetimi engelliyor"; "diğer programlarımda sorun olmadı, onlar gibi yap". **Teşhis:** Olay günlüğü 3077 (SAC politikası `{0283ac0f-...}`, "Enterprise signing level"), Python `OSError [WinError 4551]`.
+- **Kullanıcının diğer projeleri ölçüldü** (`C:\2UYGULAMALAR\P0xx`, hepsi PyInstaller `--onedir` + Inno, imzasız): 10 dosyadan 8 çalıştı, 2 engellendi (en eski ikisi). Yani "onlarda sorun olmadı" kısmen doğru; engel dosya başına. Onefile / onedir / Inno denemeleri (bu repoda 13 derleme): hiçbir bayrak sonucu belirlemedi (ayrıntı [[windows-exe-dagitim]]).
+- **Yapılanlar:** (1) Kendini kuran exe denenip geri alındı (`7bc9f5e`): engel exe'nin kendisinde. (2) `build_exe.py` `--onedir`, `.iss` klasörün tamamını paketliyor (kurulum dosyası 62 → 40 MB). (3) `build_verify.py` + `build_installer.py`: exe'yi başlatır, kurulum dosyasını geçici klasöre sessizce kurup açar ve kaldırır; engellenirse özet değişsin diye en çok 6 kez yeniden derler (CI'da atlanır). (4) Rehber [[windows-exe-dagitim]]: teşhis, ölçümler, kalıcı çözüm (imzalama), kontrol listesi, yapılmaması gerekenler.
+- **Doğrulama:** gerçek derleme: 1. deneme engellendi, 2. deneme geçti (exe açıldı, kurulum dosyası sessiz kuruldu, kurulu kopya açıldı, kaldırıldı); sonuç dosyası ayrıca elle açıldı (başlık v2.1.0, yanıt veriyor); kalıntı yok (kayıt, kısayol, süreç). `build_verify` birim testleri (engel, çöken exe, çalışan exe, başarısız kurulum, yeniden deneme mantığı).
+- **Kaza ve ders:** engelli mi diye bir Inno kurulum dosyasını elle başlatıp 5 sn sonra öldürmeye çalışmak gerçek bir kurulum bıraktı (yükseltilmiş sihirbaz öldürülemedi, `C:\Program Files\GitClean Archiver` + `HKLM` kaydı + Başlat grubu); `unins000.exe /VERYSILENT` ile temizlendi. Kural: kurulum dosyası denemesi yalnızca sessiz + geçici klasör + kaldırma ile.
+- **Doğrulanmadı / kalan:** başka makinelerde SAC sonucu (bulut kararı dosya başına; CI'da derlenen dosya yerelde denenmemiş dosyadır); imza yok (kalıcı çözüm, lisans + SignPath / sertifika kararı kullanıcıda); GitHub Release iş akışı hiç koşmadı (YAML ayrıştırılamadı, elle okundu).
+
 ## [2026-10-11] [FEAT] | Kurulum sihirbazı, sürüm etiketi ve güncelleme bildirimi
 - **Birleştirme:** `ui/xp-retro-tema` → `main` (`21ceda2`, `--no-ff`); dal silinmedi.
 - **Sürüm tek kaynak:** `src/version.py` (`__version__`, `RELEASE_REPO`). AppUserModelID sürümsüz (`gitclean.archiver.qml`; eskisi `2.0.0` içeriyordu, güncellemede görev çubuğu sabitlemesini bozardı). `AppStrings.appVersion` kaldırıldı, başlık `updateVM.currentVersion` gösterir.
