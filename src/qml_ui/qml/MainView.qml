@@ -15,7 +15,7 @@ ApplicationWindow {
     minimumWidth: Math.min(900, Screen.desktopAvailableWidth)       // küçük ekranda ekrandan büyük asgari boyut olmaz
     minimumHeight: Math.min(600, Screen.desktopAvailableHeight)
     visible: true
-    title: AppStrings.appTitle + "  " + AppStrings.appVersion
+    title: AppStrings.appTitle + "  v" + updateVM.currentVersion
     color: AppTheme.bg
 
     // Animasyonlu arka plan rengi geçişi
@@ -34,6 +34,14 @@ ApplicationWindow {
         height = Math.round(Math.min(Math.max(Screen.desktopAvailableHeight * 0.85, minimumHeight), 1000, Screen.desktopAvailableHeight))
         x = Math.round((Screen.desktopAvailableWidth - width) / 2)
         y = Math.round((Screen.desktopAvailableHeight - height) / 2)
+    }
+
+    // Yeni sürüm bulununca açılan pencere (açılışta sessiz denetim; ayarlardan elle denetim)
+    UpdateDialog { id: updateDialog }
+
+    Connections {
+        target: updateVM
+        function onPopupRequested() { updateDialog.open() }
     }
 
     // Klasör Seçim Diyaloğu
@@ -109,7 +117,7 @@ ApplicationWindow {
 
                     Badge {
                         visible: !window.compactHeader
-                        text: AppStrings.appVersion
+                        text: "v" + updateVM.currentVersion
                         textColor: AppTheme.titleText
                         badgeColor: Qt.rgba(1, 1, 1, 0.2)
                         borderColor: Qt.rgba(1, 1, 1, 0.45)

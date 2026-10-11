@@ -17,3 +17,4 @@ ThemedScrollBar 1.0 ThemedScrollBar.qml
 FocusRing 1.0 FocusRing.qml
 SeverityBadge 1.0 SeverityBadge.qml
 FindingGroupHeader 1.0 FindingGroupHeader.qml
+UpdateDialog 1.0 UpdateDialog.qml

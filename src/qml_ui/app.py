@@ -16,6 +16,7 @@ from src.qml_ui.viewmodels.findings_viewmodel import FindingsViewModel
 from src.qml_ui.viewmodels.archive_viewmodel import ArchiveViewModel
 from src.qml_ui.viewmodels.cleanup_viewmodel import CleanupViewModel
 from src.qml_ui.viewmodels.settings_viewmodel import SettingsViewModel
+from src.qml_ui.viewmodels.update_viewmodel import UpdateViewModel
 from src.utils.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -33,14 +34,14 @@ def _configure_application() -> QApplication:
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
     try:
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("gitclean.archiver.2.0.0.qml")
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("gitclean.archiver.qml")   # sürümsüz: güncellemede görev çubuğu sabitlemesi bozulmaz
     except Exception:
         logger.debug("AppUserModelID ayarlanamadı", exc_info=True)
     return app
 
 
 def _create_view_models() -> Dict[str, QObject]:
-    """Altı ViewModel'i kurar ve birbirine bağlar; anahtarlar QML'deki context property adlarıdır."""
+    """Yedi ViewModel'i kurar ve birbirine bağlar; anahtarlar QML'deki context property adlarıdır."""
     app_vm = AppViewModel()
     scan_vm = ScanViewModel(app_vm.service)
     findings_vm = FindingsViewModel(app_vm.service)
@@ -65,8 +66,9 @@ def _create_view_models() -> Dict[str, QObject]:
     cleanup_vm.projectModified.connect(refresh_analysis)
     archive_vm.projectModified.connect(refresh_analysis)
 
+    # Güncelleme denetimi projeden bağımsızdır: `ProjectService` kullanmaz, kendi servisiyle konuşur
     return {"appVM": app_vm, "scanVM": scan_vm, "findingsVM": findings_vm,
-            "archiveVM": archive_vm, "cleanupVM": cleanup_vm, "settingsVM": settings_vm}
+            "archiveVM": archive_vm, "cleanupVM": cleanup_vm, "settingsVM": settings_vm, "updateVM": UpdateViewModel()}
 
 
 def create_qml_app():
@@ -110,8 +112,9 @@ def shutdown_qml_app(engine: QQmlApplicationEngine) -> None:
     view_models = list(getattr(engine, "viewmodels", []))
     for view_model in view_models:
         worker = getattr(view_model, "_worker", None)
-        if worker is not None and worker.isRunning():
-            worker.wait(WORKER_WAIT_MS)                    # çalışan QThread yok edilirse süreç çöker
+        if worker is not None and worker.isRunning() and not worker.wait(WORKER_WAIT_MS):
+            worker.terminate()                             # çalışan QThread yok edilirse süreç çöker (ör. ağda takılan güncelleme denetimi)
+            worker.wait(WORKER_WAIT_MS)
     for root in engine.rootObjects():
         root.deleteLater()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
@@ -120,9 +123,15 @@ def shutdown_qml_app(engine: QQmlApplicationEngine) -> None:
     view_models.clear()
 
 
+UPDATE_CHECK_DELAY_MS = 3000
+
+
 def run(quit_after_ms: int = 0):
     """Uygulamayı çalıştırır. `quit_after_ms` yalnızca testler içindir (0 = pencere kapanana dek)."""
     app, engine = create_qml_app()
+    # Açılışta sessiz güncelleme denetimi: pencere çizildikten sonra, `create_qml_app` içinde değil (testler ağa çıkmasın)
+    update_vm = next(vm for vm in engine.viewmodels if isinstance(vm, UpdateViewModel))
+    QTimer.singleShot(UPDATE_CHECK_DELAY_MS, update_vm.startupCheck)
     if quit_after_ms:
         QTimer.singleShot(quit_after_ms, app.quit)
     code = app.exec()
