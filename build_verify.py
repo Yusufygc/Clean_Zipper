@@ -52,6 +52,7 @@ def installer_check(installer: Path, seconds: float = 8.0) -> bool:
     except OSError as e:
         if is_blocked(e):
             print(f"[X] Windows kurulum dosyasını engelledi (Akıllı Uygulama Denetimi): {installer}")
+            shutil.rmtree(workdir, ignore_errors=True)
             return False
         raise
     installed = target / EXE_NAME

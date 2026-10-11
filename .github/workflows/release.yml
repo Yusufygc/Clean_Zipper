@@ -1,12 +1,6 @@
-# Yayın: `vX.Y.Z` etiketi itilince testleri koşar, uygulamayı ve Inno kurulum dosyasını derler, (yapılandırılmışsa) SignPath ile imzalar
-# ve GitHub Release olarak yayınlar. Etiket `python tools/release.py X.Y.Z` ile oluşturulur.
-# Uygulamanın güncelleme denetimi bu Release'in `GitCleanArchiver-Setup-X.Y.Z.exe` dosyasını ve sürüm notunu kullanır.
-#
-# İmzalama (SignPath Foundation) yalnızca depo ayarlarında şu değerler tanımlıysa çalışır; yoksa imzasız yayın yapılır:
-#   Variables: SIGNPATH_ORGANIZATION_ID (+ isteğe bağlı SIGNPATH_PROJECT_SLUG, SIGNPATH_POLICY_SLUG)
-#   Secrets:   SIGNPATH_API_TOKEN
-# SignPath tarafında artifact yapılandırmaları `.signpath/artifact-configurations/` altındadır (slug: app, installer).
-# DOĞRULANMADI: imza adımları SignPath başvurusu kabul edilmeden denenemedi (docs/wiki/windows-exe-dagitim.md).
+# Yayın: `vX.Y.Z` etiketi itilince testleri koşar, uygulamayı (onedir) ve Inno kurulum dosyasını derler, GitHub Release olarak yayınlar.
+# Etiket `python tools/release.py X.Y.Z` ile oluşturulur. Kurulu uygulamalar açılışta bu Release'i görüp güncelleme teklif eder
+# (src/services/update_service.py: `GitCleanArchiver-Setup-X.Y.Z.exe` + `.sha256`). Ayrıntı: docs/wiki/surum-yayinlama.md
 name: Release
 
 on:
@@ -20,11 +14,10 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 40
     env:
       QT_QPA_PLATFORM: offscreen
       PYTHONIOENCODING: utf-8
-      SIGNING: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,70 +41,14 @@ jobs:
         env:
           PYTHONWARNDEFAULTENCODING: "1"
         run: python -m pytest -q
-
-      # ── 1. Uygulama (onedir) ──
-      - name: Uygulamayı derle
-        run: python build_exe.py
-      - name: İmzasız uygulamayı yükle
-        id: upload-app
-        if: ${{ env.SIGNING == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-app
-          path: dist/GitCleanArchiver
-      - name: Uygulamayı imzala (SignPath)
-        if: ${{ env.SIGNING == 'true' }}
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'gitclean-archiver' }}
-          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
-          artifact-configuration-slug: app
-          github-artifact-id: ${{ steps.upload-app.outputs.artifact-id }}
-          wait-for-completion: true
-          output-artifact-directory: signed-app
-      - name: İmzalı exe'yi yerine koy
-        if: ${{ env.SIGNING == 'true' }}
-        shell: pwsh
-        run: Copy-Item signed-app/GitCleanArchiver.exe dist/GitCleanArchiver/GitCleanArchiver.exe -Force
-
-      # ── 2. Kurulum dosyası ──
       - name: Inno Setup
         shell: pwsh
         run: |
           if (-not (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
             choco install innosetup -y --no-progress
           }
-      - name: Kurulum dosyasını derle
-        run: python build_installer.py --skip-build --no-verify
-      - name: İmzasız kurulum dosyasını yükle
-        id: upload-installer
-        if: ${{ env.SIGNING == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-installer
-          path: dist/installer/GitCleanArchiver-Setup-*.exe
-      - name: Kurulum dosyasını imzala (SignPath)
-        if: ${{ env.SIGNING == 'true' }}
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'gitclean-archiver' }}
-          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
-          artifact-configuration-slug: installer
-          github-artifact-id: ${{ steps.upload-installer.outputs.artifact-id }}
-          wait-for-completion: true
-          output-artifact-directory: signed-installer
-      - name: İmzalı kurulum dosyasını yerine koy ve özetleri yenile
-        if: ${{ env.SIGNING == 'true' }}
-        shell: pwsh
-        run: |
-          Copy-Item signed-installer/GitCleanArchiver-Setup-*.exe dist/installer/ -Force
-          python build_installer.py --checksum-only
-
-      # ── 3. Yayın ──
+      - name: Uygulamayı ve kurulum dosyasını derle
+        run: python build_installer.py                                 # CI ortamında (CI=true) Akıllı Uygulama Denetimi denemesi atlanır
       - name: GitHub Release
         shell: pwsh
         env:

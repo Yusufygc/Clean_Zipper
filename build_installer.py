@@ -8,7 +8,6 @@ Kullanım:
     python build_installer.py                 # derler, dener (engellenirse yeniden derler), kurulum dosyasını üretir
     python build_installer.py --no-verify     # denemeden derler (CI'da otomatik: CI ortam değişkeni varsa denenmez)
     python build_installer.py --skip-build    # dist/GitCleanArchiver/ hazırsa yalnızca kurulum dosyası (tek deneme)
-    python build_installer.py --checksum-only # dist/installer içindeki dosyaların .sha256 özetlerini yeniden yazar (imzalamadan sonra)
 """
 import hashlib
 import os
@@ -100,23 +99,7 @@ def build_installer(skip_build: bool = False, verify: bool = True) -> Path:
     return installer
 
 
-def write_checksums() -> list:
-    """İmzalama dosyayı değiştirir: `dist/installer` içindeki kurulum dosyalarının özetleri yeniden yazılır."""
-    written = []
-    for installer in sorted(OUTPUT.glob("GitCleanArchiver-Setup-*.exe")):
-        checksum = sha256_of(installer)
-        (OUTPUT / (installer.name + ".sha256")).write_text(f"{checksum} *{installer.name}\n", encoding="utf-8")
-        print(f"[OK] {installer.name}  SHA-256: {checksum}")
-        written.append(installer)
-    if not written:
-        sys.exit(f"[X] {OUTPUT} içinde kurulum dosyası yok.")
-    return written
-
-
 if __name__ == "__main__":
     arguments = sys.argv[1:]
-    if "--checksum-only" in arguments:
-        write_checksums()
-        sys.exit(0)
     on_ci = bool(os.environ.get("CI"))                       # GitHub Actions: Akıllı Uygulama Denetimi yok, deneme gereksiz
     build_installer(skip_build="--skip-build" in arguments, verify="--no-verify" not in arguments and not on_ci)
