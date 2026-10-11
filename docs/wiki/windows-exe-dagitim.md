@@ -45,10 +45,20 @@ Sonuç: "şu bayrakla derlersen geçer" diye bir tarif **yok**. Güvenilir tek y
 SAC, Microsoft'un güvenilir kök programındaki bir sertifikayla imzalı dosyaları itibar sorgusuna gerek kalmadan çalıştırır.
 Kendinden imzalı sertifika SAC'ı **geçmez** (yalnızca o makinede güven deposuna eklenirse ve bu bir güvenlik ayarıdır; önerilmez).
 
-- **SignPath Foundation:** açık kaynak projelere ücretsiz, GitHub Actions ile çalışır. Başvuru için depoda OSI uyumlu **lisans** gerekir (bu repoda `LICENSE` yok).
+- **SignPath Foundation (seçilen, 2026-10-11):** açık kaynak projelere ücretsiz, GitHub Actions ile çalışır; sertifikayı SignPath Foundation verir, yayıncı adı büyük olasılıkla "SignPath Foundation" görünür. Depo hazır: public, MIT `LICENSE`, `THIRD_PARTY_NOTICES.md`, README'de **Kod İmzalama Politikası** ve **Gizlilik**, `release.yml` iki aşamalı imza adımları, `.signpath/artifact-configurations/{app,installer}.xml`.
+  Başvuru şartlarını, süresini ve ayrıntılı iş akışını bu repodan değil signpath.org'dan teyit et; aşağıdaki liste yazım anındaki bilgiye dayanır ve **doğrulanmadı**.
 - **Azure Trusted Signing:** ücretli, kolay; bireysel / kurumsal hesabın ülke uygunluğu kontrol edilmeli (Türkiye için doğrulanmadı).
 - **Ticari OV / EV sertifika:** yıllık ücretli; OV sertifikalar donanım anahtarı / HSM ister.
 - İmzalanacaklar: uygulama exe'si, Inno kurulum dosyası **ve** kaldırıcı (`SignedUninstaller=yes`); `signtool sign /fd SHA256 /tr <zaman damgası> /td SHA256`. Zaman damgası olmadan sertifika bitince imza geçersiz olur.
+
+### SignPath başvuru ve kurulum adımları (kullanıcıya düşenler)
+
+1. signpath.org üzerinden açık kaynak (ücretsiz) başvurusu: proje adresi `https://github.com/Yusufygc/Clean_Zipper`, lisans MIT, kısa açıklama. Onay gelene kadar `release.yml` imzasız yayın yapmaya devam eder.
+2. Onaydan sonra SignPath'te: proje (slug `gitclean-archiver`), imzalama politikası (slug `release-signing`), artifact yapılandırmaları (`app` ve `installer`: repodaki XML'ler içe aktarılır), GitHub'ı güvenilir derleme sistemi olarak bağlama (derleme yalnızca GitHub-hosted runner'da, bu depodan).
+3. GitHub depo ayarları: Variables `SIGNPATH_ORGANIZATION_ID` (+ gerekirse `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_POLICY_SLUG`), Secrets `SIGNPATH_API_TOKEN`. Değişken tanımlanınca iş akışı imza adımlarını kendiliğinden çalıştırır.
+4. İlk imzalı etiket: Release'teki dosyaları indirip (MOTW'li) SAC'lı makinede aç; `Get-AuthenticodeSignature` `Valid` ve yayıncı SignPath Foundation olmalı.
+
+Bilinen riskler / açık sorular: (a) uygulama açılışta kendiliğinden bir güncelleme denetimi yapıyor; SignPath Foundation'ın gizlilik şartları kullanıcı isteği dışında ağ iletişimini kısıtlıyorsa başvuruda sorun çıkabilir (gerekirse denetim varsayılan kapalı yapılır); (b) Inno kaldırıcısı (`unins000.exe`) kurulum sırasında üretilir ve uzaktan imzalanamaz, imzasız kalır; (c) SmartScreen itibarı imzayla bile zamanla oluşur, ilk indirmelerde uyarı çıkabilir; (d) artifact yapılandırma şeması ve action parametreleri SignPath belgeleriyle henüz doğrulanmadı.
 
 ## 4. İmzasız dağıtımda yapılacaklar (kontrol listesi)
 

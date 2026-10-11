@@ -1,5 +1,12 @@
 # Değişiklik Günlüğü
 
+## [2026-10-11] [FEAT] | MIT lisansı, üçüncü taraf bildirimleri ve SignPath imza hazırlığı
+- **Lisans:** `LICENSE` (MIT, telif Yusuf), README rozeti ve Lisans bölümü; kurulum sihirbazı lisans sayfasını gösterir ve `LICENSE` + `THIRD_PARTY_NOTICES.md` dosyalarını uygulamayla birlikte kurar. `LICENSE` eksikliği uygulamanın kendi analizinin de bulgusuydu.
+- **`THIRD_PARTY_NOTICES.md`:** `tools/third_party_notices.py` ile üretilir (Qt LGPL-3.0 + yeniden bağlama notu, pathspec MPL-2.0, Send2Trash BSD-3, tomli MIT, Python, PyInstaller); testle `requirements.txt` sürümlerine bağlı (sürüm değişince yeniden üretilmezse test kırılır).
+- **SignPath hazırlığı:** README'de Kod İmzalama Politikası ve Gizlilik bölümleri (gizlilik metni gerçek davranışı anlatır: tek ağ isteği güncelleme denetimi, kapatma yolları); `.signpath/artifact-configurations/{app,installer}.xml`; `release.yml` iki aşamalı (exe imzala → Inno derle → kurulum dosyasını imzala → özetleri yenile → Release), `SIGNPATH_ORGANIZATION_ID` değişkeni yoksa imza adımları atlanır; `build_installer.py --checksum-only`.
+- **Doğrulama:** 7 yeni test (lisans, bildirimlerin güncelliği, README bölümleri ve gizlilik–kapatma tutarlılığı, XML yapılandırmaları iş akışıyla uyumlu, imza adımlarının koşula bağlılığı, özet yenileme).
+- **Doğrulanmadı:** SignPath başvurusu henüz yapılmadı; XML şeması ve action parametreleri SignPath belgeleriyle denenmedi; imza adımları hiç koşmadı; kaldırıcı imzalanamıyor; otomatik güncelleme denetimi SignPath gizlilik şartlarına takılabilir (rehberde açık risk olarak yazıldı).
+
 ## [2026-10-11] [FIX] | Akıllı Uygulama Denetimi engeli: onedir + Inno, derleme sonrası deneme, rehber
 - **Sorun (kullanıcı):** "Windows exeyi kurdurmuyor, Akıllı Uygulama Denetimi engelliyor"; "diğer programlarımda sorun olmadı, onlar gibi yap". **Teşhis:** Olay günlüğü 3077 (SAC politikası `{0283ac0f-...}`, "Enterprise signing level"), Python `OSError [WinError 4551]`.
 - **Kullanıcının diğer projeleri ölçüldü** (`C:\2UYGULAMALAR\P0xx`, hepsi PyInstaller `--onedir` + Inno, imzasız): 10 dosyadan 8 çalıştı, 2 engellendi (en eski ikisi). Yani "onlarda sorun olmadı" kısmen doğru; engel dosya başına. Onefile / onedir / Inno denemeleri (bu repoda 13 derleme): hiçbir bayrak sonucu belirlemedi (ayrıntı [[windows-exe-dagitim]]).

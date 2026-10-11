@@ -138,3 +138,76 @@ def test_release_workflow_triggers_on_version_tags_and_does_not_interpolate_the_
 def test_installer_and_build_outputs_are_not_committed():
     ignore = read(".gitignore")
     assert "dist/" in ignore and "build/" in ignore
+
+
+# ---- lisans, üçüncü taraf bildirimleri, kod imzalama (SignPath) ------------------------------------------------------------------
+
+def test_the_repo_has_an_mit_license_with_the_copyright_holder():
+    text = read("LICENSE")
+    assert text.startswith("MIT License") and "Copyright (c) 2026 Yusuf" in text
+    assert "THE SOFTWARE IS PROVIDED \"AS IS\"" in text
+    assert "MIT" in read("README.md") and "LICENSE" in read("README.md")
+
+
+def test_third_party_notices_cover_every_runtime_dependency_at_its_pinned_version():
+    tool = load_third_party_tool()
+    notices = read("THIRD_PARTY_NOTICES.md")
+    for package, version in tool.requirement_versions().items():
+        assert f"### {package} {version}" in notices, (package, version)         # sürüm değişince dosya yeniden üretilmeli
+    assert "shiboken6" in notices and "LGPL" in notices and "yeniden bağlama" in notices
+    assert notices == tool.render()                                              # elle düzenlenmemiş, güncel
+
+
+def load_third_party_tool():
+    spec = importlib.util.spec_from_file_location("third_party_tool", ROOT / "tools" / "third_party_notices.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_installer_ships_the_license_and_the_notices_and_shows_the_license_page():
+    script = read("packaging/GitCleanArchiver.iss")
+    assert r"LicenseFile=..\LICENSE" in script
+    assert r'Source: "..\LICENSE"' in script and r'Source: "..\THIRD_PARTY_NOTICES.md"' in script
+
+
+def test_readme_has_the_code_signing_policy_and_the_privacy_statement():
+    from src.services.update_service import OPT_OUT_ENV
+    readme = read("README.md")
+    assert "## 🔏 Kod İmzalama Politikası" in readme and "SignPath.io" in readme and "SignPath Foundation" in readme
+    assert "## 🔒 Gizlilik" in readme and OPT_OUT_ENV in readme                    # gizlilik metni gerçek kapatma yoluyla tutarlı
+    assert "api.github.com/repos/Yusufygc/Clean_Zipper/releases/latest" in readme
+
+
+def test_signpath_artifact_configurations_are_well_formed_and_match_the_workflow():
+    import xml.etree.ElementTree as ET
+    workflow = read(".github/workflows/release.yml")
+    expected = {"app": "GitCleanArchiver.exe", "installer": "GitCleanArchiver-Setup-*.exe"}
+    for slug, pe_path in expected.items():
+        root = ET.fromstring(read(f".signpath/artifact-configurations/{slug}.xml").split("?>", 1)[1])
+        assert root.tag.endswith("artifact-configuration")
+        assert [e.get("path") for e in root.iter() if e.tag.endswith("pe-file")] == [pe_path]
+        assert f"artifact-configuration-slug: {slug}" in workflow
+
+
+def test_signing_steps_run_only_when_configured_and_never_hardcode_credentials():
+    workflow = read(".github/workflows/release.yml")
+    assert "SIGNING: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}" in workflow
+    signing_steps = workflow.count("if: ${{ env.SIGNING == 'true' }}")
+    assert signing_steps == 6 and workflow.count("signpath/github-action-submit-signing-request@v1") == 2
+    assert "api-token: ${{ secrets.SIGNPATH_API_TOKEN }}" in workflow and "organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}" in workflow
+    assert "build_installer.py --checksum-only" in workflow                        # imza dosyayı değiştirir: özet yenilenir
+
+
+def test_checksums_are_rewritten_for_every_installer(tmp_path, monkeypatch):
+    import build_installer
+    monkeypatch.setattr(build_installer, "OUTPUT", tmp_path)
+    (tmp_path / "GitCleanArchiver-Setup-2.1.0.exe").write_bytes(b"signed-bytes")
+    (tmp_path / "GitCleanArchiver-Setup-2.1.0.exe.sha256").write_text("eski", encoding="utf-8")
+    build_installer.write_checksums()
+    import hashlib
+    expected = hashlib.sha256(b"signed-bytes").hexdigest()
+    assert (tmp_path / "GitCleanArchiver-Setup-2.1.0.exe.sha256").read_text(encoding="utf-8") == f"{expected} *GitCleanArchiver-Setup-2.1.0.exe\n"
+    monkeypatch.setattr(build_installer, "OUTPUT", tmp_path / "bos")
+    with pytest.raises(SystemExit):
+        build_installer.write_checksums()

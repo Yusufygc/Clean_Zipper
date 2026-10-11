@@ -6,6 +6,7 @@
 [![CI](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml/badge.svg)](https://github.com/Yusufygc/Clean_Zipper/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/Version-2.1.0-orange.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
@@ -855,7 +856,24 @@ Sanal ortamlar, `node_modules`, derleme çıktıları, sembolik bağ / junction 
 
 ## 📄 Lisans
 
-Depoda henüz bir `LICENSE` dosyası yok; lisans seçimi depo sahibine aittir. Lisans eklenene kadar tüm hakları saklıdır.
+GitClean Archiver [MIT lisansı](LICENSE) ile dağıtılır (telif: Yusuf). Dağıtılan pakette Qt (LGPL-3.0), pathspec (MPL-2.0), Send2Trash (BSD-3-Clause) ve tomli (MIT) bulunur; lisansları ve kaynak adresleri [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) dosyasındadır (`python tools/third_party_notices.py` ile üretilir).
+
+---
+
+## 🔏 Kod İmzalama Politikası
+
+Ücretsiz kod imzalama [SignPath.io](https://about.signpath.io/) tarafından sağlanır, sertifika [SignPath Foundation](https://signpath.org/) tarafından verilir.
+
+- **Yalnızca bu depodaki kaynaktan** GitHub Actions ile derlenen sürümler imzalanır (`.github/workflows/release.yml`, `v*` etiketi); imzalama isteği iş akışından otomatik gönderilir.
+- **Roller:** Yazar, gözden geçiren ve onaylayıcı: [Yusufygc](https://github.com/Yusufygc).
+- İmzalı dosyalar: `GitCleanArchiver.exe` ve `GitCleanArchiver-Setup-X.Y.Z.exe`. Özetler (SHA-256) Release sayfasındaki `.sha256` dosyasındadır.
+- Kod imzalama hazırlığı sürüyor; imza yapılandırılana kadar yayınlanan dosyalar imzasız olabilir ([ayrıntı](docs/wiki/windows-exe-dagitim.md)).
+
+## 🔒 Gizlilik
+
+Uygulama proje dosyalarınızı, analiz sonuçlarınızı ya da kişisel verilerinizi **hiçbir yere göndermez**; tüm analiz yereldir. Tek ağ isteği **güncelleme denetimidir**:
+açılışta `https://api.github.com/repos/Yusufygc/Clean_Zipper/releases/latest` adresine kimlik bilgisi göndermeden tek bir GET yapılır ve yalnızca sürüm numarası okunur.
+**Ayarlar → Güncellemeler** bölümünden ya da `GITCLEAN_NO_UPDATE_CHECK=1` ortam değişkeniyle kapatılabilir; hiçbir şey kendiliğinden indirilmez ya da çalıştırılmaz.
 
 ---
 
