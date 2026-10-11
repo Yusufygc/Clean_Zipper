@@ -50,4 +50,4 @@ Tercihler ayrı dosyada (`~/.gitclean/updates.json`: açılış denetimi, atlana
 - Yalnızca Windows.
 - Release iş akışı ve uygulama içi indirme / kurulum zinciri gerçek bir Release ile hiç koşmadı (doğrulanan: birim testleri, sahte sunucu ile indirme / doğrulama, kurulum dosyasının sessiz kurulumu, `RelaunchAfterUpdate`'in derlenmesi).
 - İndirme sürerken pencere kapatılamaz; iptal düğmesi yok.
-- Engelin kalkması zamana ya da başlatan sürece bağlı olabilir; hangisi olduğu ayrıştırılamadı (tek gözlem: ~10 dk). Otomatik yeniden deneme bu gözleme dayanır ve gerçek engelde denenmedi; engel sürerse kullanıcı dosyayı elle çalıştırır.
+- Engelin kalkması zamana ya da başlatan sürece bağlı olabilir; hangisi olduğu ayrıştırılamadı (iki gözlem: v2.1.1 ~10 dk, v2.1.2 birkaç dk; ikisinde de elle çift tıklama sonunda çalıştı). Otomatik yeniden deneme bu gözleme dayanır ve gerçek engelde denenmedi; engel sürerse kullanıcı dosyayı elle çalıştırır.

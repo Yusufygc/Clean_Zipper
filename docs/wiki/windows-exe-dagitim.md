@@ -37,12 +37,19 @@ Karar **dosya başına ve öngörülemez**: aynı kaynak koddan, aynı bayraklar
 | Engellenen exe'nin **aynı hash'li kopyası başka klasörde** | yine engellendi: konuma bağlı değil, içeriğe bağlı |
 | **CI'da derlenen v2.1.1 kurulum dosyası**, kurulu uygulamanın başlattığı süreçten (`CreateProcess`) | engellendi (olay 3077, başlatan: kurulu `GitCleanArchiver.exe`); SHA-256 doğrulaması geçmişti |
 | **Aynı dosya (aynı SHA-256), ~10 dk sonra**, Gezgin (`ShellExecute`) ve `CreateProcess` ile | **başladı** (sihirbaz açıldı): verdict zamanla ya da başlatan sürece göre değişmiş; hangisi olduğu ayrıştırılamadı |
+| **v2.1.2 (CI derlemesi), 2026-10-11 23:35-23:4x:** v2.1.1 uygulaması indirip başlatınca "Kurulum başlatılamadı." (eski kod) ve Windows bildirimi "Bu uygulamanın bir kısmı engellendi"; benim Gezgin denemem SAC penceresi çıkardı ("Yayımcısı doğrulanamadığı için... Microsoft, uygulamanın güvenli olup olmadığını doğrulamak için **inceleyecek**", olay 3077); kullanıcı dakikalar içinde aynı dosyaya `%TEMP%`'ten çift tıkladı ve **bekletmeden açıldı**, kurulum tamamlandı | engel kısa sürdü; bulut incelemesi (zaman) ya da çift tıklama yolu etkili, ayrıştırılamadı |
 | Doğrulamalı derleme turu (6 deneme, 2026-10-11 akşam) | 5 exe + 1 kaldırıcı (`unins000.exe`) engellendi, geçen derleme çıkmadı: oran zamanla kötüleşiyor gibi, ama örnek küçük |
 | İndirilmiş dosya işareti (MOTW, `Zone.Identifier` ZoneId=3) ekli kopya | çalışanlarda sonucu değiştirmedi |
 | Yetki düzeyi (yönetici / kullanıcıya özel kurulum) | belirgin etkisi görülmedi |
 | `onefile` ile `onedir` ayrımı | istatistiksel fark görülmedi (onedir yalnızca daha küçük kurulum dosyası ve hızlı açılış verir) |
 
 Sonuç: "şu bayrakla derlersen geçer" diye bir tarif **yok**. Güvenilir tek yol imzalamaktır; imzasız dağıtımda risk azaltılabilir, sıfırlanamaz.
+
+### Pratik çıkarım (v2.1.1 ve v2.1.2 gözlemleri)
+
+- SAC penceresi engeli "Microsoft inceleyecek" diye açıklıyor: karar bulutta verilir, aynı dosya birkaç dakika içinde açılabilir. İki vakada da (v2.1.1 ~10 dk, v2.1.2 birkaç dk) engel kısa sürdü.
+- Engellenen dosya bozuk değildir: indirme SHA-256'sı Release `digest` ile aynıydı. Kullanıcıya doğru talimat: dosyayı silme, birkaç dakika bekleyip `%TEMP%\GitCleanArchiverUpdate\GitCleanArchiver-Setup-X.Y.Z.exe` dosyasına çift tıkla.
+- Eski sürüm uygulama (yeni yeniden deneme koduna sahip olmayan) engelde yalnızca genel hata gösterir; yeniden deneme / Gezgin'de gösterme **kurulu sürümde** çalışır. Bu yüzden bu kod bir sürüm sonra (kurulu sürüm ≥ 2.1.2 olduktan sonra) devreye girer; v2.1.1 → v2.1.2 geçişi elle kaldı.
 
 ## 3. İmza: bu projede yapılmıyor
 

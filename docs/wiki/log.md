@@ -1,5 +1,11 @@
 # Değişiklik Günlüğü
 
+## [2026-10-11] [RELEASE] | v2.1.2 yayınlandı; ilk gerçek güncelleme denemesi ve gözlemler
+- **Yayın:** `tools/release.py 2.1.2` → `b50abe3`, `main` ve `v2.1.2` itildi; Release iş akışı başarıyla bitti (~4,5 dk), `GitCleanArchiver-Setup-2.1.2.exe` (41,7 MB) + `.sha256` yüklendi. İlk kez bir Release iş akışı gerçekten koştu ve etiket → Release zinciri doğrulandı.
+- **İlk gerçek güncelleme (v2.1.1 → v2.1.2):** uygulama denetledi, pencereyi açtı, indirdi ve SHA-256'yı doğruladı (zincirin bu kısmı gerçek Release ile çalıştı); kurulumu başlatma Akıllı Uygulama Denetimi'ne takıldı. Kurulu v2.1.1 yeni yeniden deneme koduna sahip olmadığı için yalnızca "Kurulum başlatılamadı." gösterdi. Kullanıcı indirilmiş dosyaya `%TEMP%`'ten çift tıkladı: bekletmeden açıldı, kurulum tamamlandı.
+- **Gözlem:** SAC penceresi engeli "Microsoft inceleyecek" diye açıklıyor (bulut kararı); iki vakada da engel dakikalar içinde kalktı. Ayrıntı ve çıkarım: [[windows-exe-dagitim]]. Otomatik bekleme ve Gezgin yoluna düşme v2.1.2'den itibaren kurulu sürümde; ilk tam otomatik deneme sonraki güncellemede (v2.1.2 → v2.1.3).
+- **Doğrulanmadı:** otomatik bekleme + yeniden denemenin gerçek engelde çalışması (bir sonraki güncellemede görülecek); engel sürerken Gezgin'de gösterme akışı.
+
 ## [2026-10-11] [FIX] | Güncelleme sırasında Windows kurulumu engelledi: Gezgin yoluna düşme; deneme gerçek kurulumu ezmesin
 - **Sorun (kullanıcı):** v2.1.0 → v2.1.1 güncellemesinde "Kurulum başlatılamadı"; Akıllı Uygulama Denetimi indirilen kurulum dosyasını engelledi. **Doğrulandı:** indirme ve SHA-256 doğrulaması geçti (hash GitHub `digest` ile aynı); olay günlüğü 3077, başlatan süreç kurulu uygulama. Aynı dosya ~10 dk sonra Gezgin'den ve `CreateProcess` ile başladı.
 - **Kullanıcı gözlemi:** P013'te sorun yoktu çünkü exe elle indirilip elle kuruluyordu; burada bunu otomatikleştirmek gerekiyor. **Çözüm:** `launch_installer` engelde Gezgin yolunu (`ShellExecute`) dener; o da engellenirse `InstallerBlockedError`: dosya Gezgin'de seçili gösterilir, pencere açıklayıcı mesaj ve Sürüm Sayfası düğmesi gösterir (P013'teki elle kuruluma düşer). Eski mesaj "Kurulum başlatılamadı." nedeni söylemiyordu.
