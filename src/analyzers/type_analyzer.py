@@ -12,7 +12,7 @@ class TypeAnalyzer(BaseAnalyzer):
 
     @property
     def name(self) -> str:
-        return "Dosya Turu Analizoru"
+        return "Dosya Türü Analizörü"
 
     @property
     def category(self) -> str:

@@ -14,7 +14,7 @@ class StructureAnalyzer(BaseAnalyzer):
 
     @property
     def name(self) -> str:
-        return "Yapi Analizoru"
+        return "Yapı Analizörü"
 
     @property
     def category(self) -> str:
@@ -24,7 +24,7 @@ class StructureAnalyzer(BaseAnalyzer):
         if index.max_depth <= self.MAX_DEPTH:
             return []
         return [self._create_result(
-            title=f"Derin klasor yapisi: {index.max_depth} seviye",
-            description="Klasor yapisini basitlestirmeyi dusunun.",
+            title=f"Derin klasör yapısı: {index.max_depth} seviye",
+            description="Klasör yapısını basitleştirmeyi düşünün.",
             severity=Severity.MEDIUM, rule='deep-structure', max_depth=index.max_depth,
         )]

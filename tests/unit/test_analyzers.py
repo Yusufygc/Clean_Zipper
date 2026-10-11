@@ -48,7 +48,7 @@ def test_structure_analyzer_flags_only_deeper_than_ten(tmp_path):
     assert StructureAnalyzer().analyze(ProjectIndex.build(tmp_path)) == []
     write(tmp_path.joinpath(*["d"] * 11) / "f.txt")
     results = StructureAnalyzer().analyze(ProjectIndex.build(tmp_path))
-    assert titles(results) == ["Derin klasor yapisi: 11 seviye"]
+    assert titles(results) == ["Derin klasör yapısı: 11 seviye"]
 
 
 def test_empty_folder_finder(tmp_path):

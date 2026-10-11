@@ -18,7 +18,7 @@ class EmptyFolderFinder(BaseAnalyzer):
 
     @property
     def name(self) -> str:
-        return "Bos Klasor Bulucu"
+        return "Boş Klasör Bulucu"
 
     @property
     def category(self) -> str:

@@ -124,7 +124,7 @@ def test_progress_is_reported_in_order_and_stays_within_bounds(tmp_path):
     doctor(DuplicateFinder(), EmptyFolderFinder()).diagnose(tmp_path, progress=lambda p, t: seen.append((p, t)))
     percents = [p for p, _ in seen]
     assert percents == sorted(percents) and 0 <= percents[0] and percents[-1] < 100
-    assert any("Cift Dosya Bulucu" in t for _, t in seen)
+    assert any("Çift Dosya Bulucu" in t for _, t in seen)
 
 
 def test_project_service_registers_all_builtin_analyzers_without_ui(tmp_path):

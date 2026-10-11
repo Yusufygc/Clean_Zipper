@@ -15,7 +15,7 @@ class SizeAnalyzer(BaseAnalyzer):
 
     @property
     def name(self) -> str:
-        return "Boyut Analizoru"
+        return "Boyut Analizörü"
 
     @property
     def category(self) -> str:
@@ -35,7 +35,7 @@ class SizeAnalyzer(BaseAnalyzer):
         for entry in sorted(large_files, key=lambda f: f.size, reverse=True)[:10]:
             size_mb = entry.size / MB
             results.append(self._create_result(
-                title=f"Buyuk dosya: {entry.path.name}",
+                title=f"Büyük dosya: {entry.path.name}",
                 description=f"{size_mb:.1f} MB",
                 severity=Severity.HIGH if size_mb > 50 else Severity.MEDIUM,
                 file_path=entry.path, size_impact=entry.size,

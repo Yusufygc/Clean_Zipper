@@ -17,7 +17,7 @@ class DuplicateFinder(BaseAnalyzer):
 
     @property
     def name(self) -> str:
-        return "Cift Dosya Bulucu"
+        return "Çift Dosya Bulucu"
 
     @property
     def category(self) -> str:
@@ -28,7 +28,7 @@ class DuplicateFinder(BaseAnalyzer):
         for group in self._find_duplicate_groups(index):
             waste = sum(f.size for f in group[1:])
             results.append(self._create_result(
-                title=f"Cift dosyalar: {group[0].path.name}",
+                title=f"Çift dosyalar: {group[0].path.name}",
                 description=f"{len(group)-1} kopya, {waste/(1024*1024):.1f} MB gereksiz",
                 severity=Severity.HIGH, size_impact=waste,
                 file_path=group[0].path,
